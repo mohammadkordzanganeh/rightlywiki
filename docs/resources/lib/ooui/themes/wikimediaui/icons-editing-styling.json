@@ -14,14 +14,8 @@
 		"destructive": {
 			"color": "#d33"
 		},
-		"error": {
-			"color": "#d33"
-		},
 		"warning": {
-			"color": "#fc3"
-		},
-		"success": {
-			"color": "#14866d"
+			"color": "#ff5d00"
 		}
 	},
 	"images": {
@@ -60,8 +54,7 @@
 					"ka": "images/icons/bold-geor-man.svg",
 					"ky,ru,uk": "images/icons/bold-cyrl-zhe.svg",
 					"nl": "images/icons/bold-v.svg",
-					"os": "images/icons/bold-cyrl-be.svg",
-					"ur": "images/icons/bold-arab-jeem.svg"
+					"os": "images/icons/bold-cyrl-be.svg"
 				}
 			}
 		},
@@ -81,8 +74,7 @@
 					"hu": "images/icons/italic-d.svg",
 					"hy": "images/icons/italic-armn-sha.svg",
 					"ksh": "images/icons/italic-s.svg",
-					"ka": "images/icons/italic-geor-kan.svg",
-					"ur": "images/icons/italic-arab-teh.svg"
+					"ka": "images/icons/italic-geor-kan.svg"
 				}
 			}
 		},

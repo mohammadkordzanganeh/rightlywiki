@@ -93,7 +93,6 @@ class PopulatePPSortKey extends LoggedUpdateMaintenance {
 		}
 
 		$this->output( "Populating page_props.pp_sortkey complete.\n" );
-		return true;
 	}
 
 	protected function getUpdateKey() {

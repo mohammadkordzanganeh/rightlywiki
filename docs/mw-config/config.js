@@ -18,9 +18,7 @@
 		$( '.config-help-field-data' ).hide()
 			.closest( '.config-help-field-container' ).find( '.config-help-field-hint' )
 			.show()
-			.on( 'click', function () {
-				// FIXME: Use CSS transition
-				// eslint-disable-next-line no-jquery/no-slide
+			.click( function () {
 				$( this ).closest( '.config-help-field-container' ).find( '.config-help-field-data' )
 					.slideToggle( 'fast' );
 			} );
@@ -31,14 +29,11 @@
 			$( document.getElementById( $( this ).attr( 'rel' ) ) ).hide();
 		} );
 		$( document.getElementById( $( '.dbRadio:checked' ).attr( 'rel' ) ) ).show();
-		$( '.dbRadio' ).on( 'click', function () {
+		$( '.dbRadio' ).click( function () {
 			var $checked = $( '.dbRadio:checked' ),
 				$wrapper = $( document.getElementById( $checked.attr( 'rel' ) ) );
 			if ( $wrapper.is( ':hidden' ) ) {
-				// FIXME: Use CSS transition
-				// eslint-disable-next-line no-jquery/no-animate-toggle
 				$( '.dbWrapper' ).hide( 'slow' );
-				// eslint-disable-next-line no-jquery/no-animate-toggle
 				$wrapper.show( 'slow' );
 			}
 		} );
@@ -49,38 +44,29 @@
 		} );
 
 		// Show/hide Creative Commons thingy
-		$( '.licenseRadio' ).on( 'click', function () {
+		$( '.licenseRadio' ).click( function () {
 			var $wrapper = $( '#config-cc-wrapper' );
 			if ( $( '#config__LicenseCode_cc-choose' ).is( ':checked' ) ) {
-				// FIXME: Use CSS transition
-				// eslint-disable-next-line no-jquery/no-animate-toggle
 				$wrapper.show( 'slow' );
 			} else {
-				// eslint-disable-next-line no-jquery/no-animate-toggle
 				$wrapper.hide( 'slow' );
 			}
 		} );
 
 		// Show/hide random stuff (email, upload)
-		$( '.showHideRadio' ).on( 'click', function () {
+		$( '.showHideRadio' ).click( function () {
 			var $wrapper = $( '#' + $( this ).attr( 'rel' ) );
 			if ( $( this ).is( ':checked' ) ) {
-				// FIXME: Use CSS transition
-				// eslint-disable-next-line no-jquery/no-animate-toggle
 				$wrapper.show( 'slow' );
 			} else {
-				// eslint-disable-next-line no-jquery/no-animate-toggle
 				$wrapper.hide( 'slow' );
 			}
 		} );
-		$( '.hideShowRadio' ).on( 'click', function () {
+		$( '.hideShowRadio' ).click( function () {
 			var $wrapper = $( '#' + $( this ).attr( 'rel' ) );
 			if ( $( this ).is( ':checked' ) ) {
-				// FIXME: Use CSS transition
-				// eslint-disable-next-line no-jquery/no-animate-toggle
 				$wrapper.hide( 'slow' );
 			} else {
-				// eslint-disable-next-line no-jquery/no-animate-toggle
 				$wrapper.show( 'slow' );
 			}
 		} );
@@ -92,15 +78,12 @@
 		}
 
 		// Enable/disable "other" textboxes
-		$( '.enableForOther' ).on( 'click', function () {
+		$( '.enableForOther' ).click( function () {
 			var $textbox = $( document.getElementById( $( this ).attr( 'rel' ) ) );
 			// FIXME: Ugh, this is ugly
 			if ( $( this ).val() === 'other' ) {
-				// FIXME: Use CSS transition
-				// eslint-disable-next-line no-jquery/no-slide
 				$textbox.prop( 'readonly', false ).closest( '.config-block' ).slideDown( 'fast' );
 			} else {
-				// eslint-disable-next-line no-jquery/no-slide
 				$textbox.prop( 'readonly', true ).closest( '.config-block' ).slideUp( 'fast' );
 			}
 		} );
@@ -112,14 +95,11 @@
 		$( '#config_wgSitename' ).on( 'keyup change', syncText ).each( syncText );
 
 		// Show/Hide memcached servers when needed
-		$( 'input[name$="config__MainCacheType"]' ).on( 'change', function () {
+		$( 'input[name$="config__MainCacheType"]' ).change( function () {
 			var $memc = $( '#config-memcachewrapper' );
 			if ( $( 'input[name$="config__MainCacheType"]:checked' ).val() === 'memcached' ) {
-				// FIXME: Use CSS transition
-				// eslint-disable-next-line no-jquery/no-animate-toggle
 				$memc.show( 'slow' );
 			} else {
-				// eslint-disable-next-line no-jquery/no-animate-toggle
 				$memc.hide( 'slow' );
 			}
 		} );

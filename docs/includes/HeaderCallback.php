@@ -22,12 +22,8 @@ class HeaderCallback {
 		// Prevent caching of responses with cookies (T127993)
 		$headers = [];
 		foreach ( headers_list() as $header ) {
-			$header = explode( ':', $header, 2 );
-
-			// Note: The code below (currently) does not care about value-less headers
-			if ( isset( $header[1] ) ) {
-				$headers[ strtolower( trim( $header[0] ) ) ][] = trim( $header[1] );
-			}
+			list( $name, $value ) = explode( ':', $header, 2 );
+			$headers[strtolower( trim( $name ) )][] = trim( $value );
 		}
 
 		if ( isset( $headers['set-cookie'] ) ) {

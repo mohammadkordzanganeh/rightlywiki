@@ -13,7 +13,7 @@ class DatabaseDomainTest extends PHPUnit\Framework\TestCase {
 	public static function provideConstruct() {
 		return [
 			'All strings' =>
-				[ 'foo', 'bar', 'baz_', 'foo-bar-baz_' ],
+				[ 'foo', 'bar', 'baz', 'foo-bar-baz' ],
 			'Nothing' =>
 				[ null, null, '', '' ],
 			'Invalid $database' =>
@@ -23,9 +23,9 @@ class DatabaseDomainTest extends PHPUnit\Framework\TestCase {
 			'Invalid $prefix' =>
 				[ 'foo', 'bar', 0, '', true ],
 			'Dash' =>
-				[ 'foo-bar', 'baz', 'baa_', 'foo?hbar-baz-baa_' ],
+				[ 'foo-bar', 'baz', 'baa', 'foo?hbar-baz-baa' ],
 			'Question mark' =>
-				[ 'foo?bar', 'baz', 'baa_', 'foo??bar-baz-baa_' ],
+				[ 'foo?bar', 'baz', 'baa', 'foo??bar-baz-baa' ],
 		];
 	}
 
@@ -53,17 +53,17 @@ class DatabaseDomainTest extends PHPUnit\Framework\TestCase {
 			'Basic' =>
 				[ 'foo', 'foo', null, '' ],
 			'db+prefix' =>
-				[ 'foo-bar_', 'foo', null, 'bar_' ],
+				[ 'foo-bar', 'foo', null, 'bar' ],
 			'db+schema+prefix' =>
-				[ 'foo-bar-baz_', 'foo', 'bar', 'baz_' ],
+				[ 'foo-bar-baz', 'foo', 'bar', 'baz' ],
 			'?h -> -' =>
-				[ 'foo?hbar-baz-baa_', 'foo-bar', 'baz', 'baa_' ],
+				[ 'foo?hbar-baz-baa', 'foo-bar', 'baz', 'baa' ],
 			'?? -> ?' =>
-				[ 'foo??bar-baz-baa_', 'foo?bar', 'baz', 'baa_' ],
+				[ 'foo??bar-baz-baa', 'foo?bar', 'baz', 'baa' ],
 			'? is left alone' =>
-				[ 'foo?bar-baz-baa_', 'foo?bar', 'baz', 'baa_' ],
+				[ 'foo?bar-baz-baa', 'foo?bar', 'baz', 'baa' ],
 			'too many parts' =>
-				[ 'foo-bar-baz-baa_', '', '', '', true ],
+				[ 'foo-bar-baz-baa', '', '', '', true ],
 			'from instance' =>
 				[ DatabaseDomain::newUnspecified(), null, null, '' ],
 		];
@@ -90,13 +90,13 @@ class DatabaseDomainTest extends PHPUnit\Framework\TestCase {
 			'Basic' =>
 				[ 'foo', 'foo', null, '' ],
 			'db+prefix' =>
-				[ 'foo-bar_', 'foo', null, 'bar_' ],
+				[ 'foo-bar', 'foo', null, 'bar' ],
 			'db+schema+prefix' =>
-				[ 'foo-bar-baz_', 'foo', 'bar', 'baz_' ],
+				[ 'foo-bar-baz', 'foo', 'bar', 'baz' ],
 			'?h -> -' =>
-				[ 'foo?hbar-baz-baa_', 'foo-bar', 'baz', 'baa_' ],
+				[ 'foo?hbar-baz-baa', 'foo-bar', 'baz', 'baa' ],
 			'?? -> ?' =>
-				[ 'foo??bar-baz-baa_', 'foo?bar', 'baz', 'baa_' ],
+				[ 'foo??bar-baz-baa', 'foo?bar', 'baz', 'baa' ],
 			'Nothing' =>
 				[ '', null, null, '' ],
 		];
@@ -136,21 +136,23 @@ class DatabaseDomainTest extends PHPUnit\Framework\TestCase {
 			'Basic' =>
 				[ 'foo', 'foo', null, '', true ],
 			'db+prefix' =>
-				[ 'foo-bar_', 'foo', null, 'bar_', true ],
+				[ 'foo-bar', 'foo', null, 'bar', true ],
 			'db+schema+prefix' =>
-				[ 'foo-bar-baz_', 'foo', 'bar', 'baz_', true ],
+				[ 'foo-bar-baz', 'foo', 'bar', 'baz', true ],
 			'db+dontcare_schema+prefix' =>
-				[ 'foo-bar-baz_', 'foo', null, 'baz_', false ],
+				[ 'foo-bar-baz', 'foo', null, 'baz', false ],
 			'?h -> -' =>
-				[ 'foo?hbar-baz-baa_', 'foo-bar', 'baz', 'baa_', true ],
+				[ 'foo?hbar-baz-baa', 'foo-bar', 'baz', 'baa', true ],
 			'?? -> ?' =>
-				[ 'foo??bar-baz-baa_', 'foo?bar', 'baz', 'baa_', true ],
+				[ 'foo??bar-baz-baa', 'foo?bar', 'baz', 'baa', true ],
 			'Nothing' =>
 				[ '', null, null, '', true ],
 			'dontcaredb+dontcaredbschema+prefix' =>
-				[ 'mywiki-mediawiki-prefix_', null, null, 'prefix_', false ],
+				[ 'mywiki-mediawiki-prefix', null, null, 'prefix', false ],
+			'dontcaredb+schema+prefix' =>
+				[ 'mywiki-schema-prefix', null, 'schema', 'prefix', false ],
 			'db+dontcareschema+prefix' =>
-				[ 'mywiki-schema-prefix_', 'mywiki', null, 'prefix_', false ],
+				[ 'mywiki-schema-prefix', 'mywiki', null, 'prefix', false ],
 			'postgres-db-jobqueue' =>
 				[ 'postgres-mediawiki-', 'postgres', null, '', false ]
 		];
@@ -176,11 +178,13 @@ class DatabaseDomainTest extends PHPUnit\Framework\TestCase {
 	public static function provideIsCompatible2() {
 		return [
 			'db+schema+prefix' =>
-				[ 'mywiki-schema-prefix_', 'thatwiki', 'schema', 'prefix_' ],
+				[ 'mywiki-schema-prefix', 'thatwiki', 'schema', 'prefix' ],
 			'dontcaredb+dontcaredbschema+prefix' =>
-				[ 'thatwiki-mediawiki-otherprefix_', null, null, 'prefix_' ],
+				[ 'thatwiki-mediawiki-otherprefix', null, null, 'prefix' ],
+			'dontcaredb+schema+prefix' =>
+				[ 'mywiki-otherschema-prefix', null, 'schema', 'prefix' ],
 			'db+dontcareschema+prefix' =>
-				[ 'notmywiki-schema-prefix_', 'mywiki', null, 'prefix_' ],
+				[ 'notmywiki-schema-prefix', 'mywiki', null, 'prefix' ],
 		];
 	}
 
@@ -196,20 +200,6 @@ class DatabaseDomainTest extends PHPUnit\Framework\TestCase {
 
 		$this->assertFalse( $fromId->isCompatible( $id ), 'constructed equals string' );
 		$this->assertFalse( $fromId->isCompatible( $compareIdObj ), 'fromId equals string' );
-	}
-
-	/**
-	 * @expectedException InvalidArgumentException
-	 */
-	public function testSchemaWithNoDB1() {
-		new DatabaseDomain( null, 'schema', '' );
-	}
-
-	/**
-	 * @expectedException InvalidArgumentException
-	 */
-	public function testSchemaWithNoDB2() {
-		DatabaseDomain::newFromId( '-schema-prefix' );
 	}
 
 	/**

@@ -35,6 +35,7 @@ use Language;
 use MWException;
 use WANObjectCache;
 use Wikimedia\Assert\Assert;
+use Wikimedia\Rdbms\Database;
 use Wikimedia\Rdbms\IDatabase;
 use Wikimedia\Rdbms\LoadBalancer;
 
@@ -274,7 +275,9 @@ class SqlBlobStore implements IDBAccessObject, BlobStore {
 			$this->getCacheKey( $blobAddress ),
 			$this->getCacheTTL(),
 			function ( $unused, &$ttl, &$setOpts ) use ( $blobAddress, $queryFlags ) {
-				// Ignore $setOpts; blobs are immutable and negatives are not cached
+				list( $index ) = DBAccessObjectUtils::getDBOptions( $queryFlags );
+				$setOpts += Database::getCacheSetOptions( $this->getDBConnection( $index ) );
+
 				return $this->fetchBlob( $blobAddress, $queryFlags );
 			},
 			[ 'pcGroup' => self::TEXT_CACHE_GROUP, 'pcTTL' => IExpiringStore::TTL_PROC_LONG ]
@@ -414,7 +417,7 @@ class SqlBlobStore implements IDBAccessObject, BlobStore {
 					$this->getCacheKey( $cacheKey ),
 					$this->getCacheTTL(),
 					function () use ( $url, $flags ) {
-						// Ignore $setOpts; blobs are immutable and negatives are not cached
+						// No negative caching per BlobStore::getBlob()
 						$blob = ExternalStore::fetchFromURL( $url, [ 'wiki' => $this->wikiId ] );
 
 						return $blob === false ? false : $this->decompressData( $blob, $flags );
@@ -606,14 +609,12 @@ class SqlBlobStore implements IDBAccessObject, BlobStore {
 	/**
 	 * Splits a blob address into three parts: the schema, the ID, and parameters/flags.
 	 *
-	 * @since 1.33
-	 *
 	 * @param string $address
 	 *
 	 * @throws InvalidArgumentException
 	 * @return array [ $schema, $id, $parameters ], with $parameters being an assoc array.
 	 */
-	public static function splitBlobAddress( $address ) {
+	private static function splitBlobAddress( $address ) {
 		if ( !preg_match( '/^(\w+):(\w+)(\?(.*))?$/', $address, $m ) ) {
 			throw new InvalidArgumentException( "Bad blob address: $address" );
 		}

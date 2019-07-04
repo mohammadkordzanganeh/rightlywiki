@@ -387,10 +387,12 @@ class WebRequest {
 		$name = strtr( $name, '.', '_' );
 		if ( isset( $arr[$name] ) ) {
 			$data = $arr[$name];
-			if ( isset( $_GET[$name] ) && is_string( $data ) ) {
+			if ( isset( $_GET[$name] ) && !is_array( $data ) ) {
 				# Check for alternate/legacy character encoding.
 				$contLang = MediaWikiServices::getInstance()->getContentLanguage();
-				$data = $contLang->checkTitleEncoding( $data );
+				if ( $contLang ) {
+					$data = $contLang->checkTitleEncoding( $data );
+				}
 			}
 			$data = $this->normalizeUnicode( $data );
 			return $data;
@@ -1307,7 +1309,7 @@ HTML;
 	 *
 	 * This means that the client is not requesting any state changes and that database writes
 	 * are not inherently required. Ideally, no visible updates would happen at all. If they
-	 * must, then they should not be publicly attributed to the end user.
+	 * must, then they should not be publically attributed to the end user.
 	 *
 	 * In more detail:
 	 *   - Cache populations and refreshes MAY occur.

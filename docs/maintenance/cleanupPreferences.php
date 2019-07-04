@@ -60,6 +60,7 @@ class CleanupPreferences extends Maintenance {
 		global $wgHiddenPrefs, $wgDefaultUserOptions;
 
 		$dbw = $this->getDB( DB_MASTER );
+		$didWork = false;
 		$hidden = $this->hasOption( 'hidden' );
 		$unknown = $this->hasOption( 'unknown' );
 		$bogus = $this->hasOption( 'bogus' );
@@ -99,6 +100,9 @@ class CleanupPreferences extends Maintenance {
 		}
 	}
 
+	/**
+	 *
+	 */
 	private function deleteByWhere( $dbw, $startMessage, $where ) {
 		$this->output( $startMessage . "...\n" );
 		$total = 0;
@@ -114,6 +118,7 @@ class CleanupPreferences extends Maintenance {
 			$numRows = $res->numRows();
 			$total += $numRows;
 			if ( $res->numRows() <= 0 ) {
+				// All done!
 				$this->output( "DONE! (handled $total entries)\n" );
 				break;
 			}

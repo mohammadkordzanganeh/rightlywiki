@@ -24,8 +24,6 @@
  * @ingroup Maintenance
  */
 
-use MediaWiki\Shell\Shell;
-
 /**
  * Stream wrapper around 7za filter program.
  * Required since we can't pass an open file resource to XMLReader->open()
@@ -50,7 +48,7 @@ class SevenZipStream {
 		} else {
 			return false;
 		}
-		$arg = Shell::escape( $this->stripPath( $path ) );
+		$arg = wfEscapeShellArg( $this->stripPath( $path ) );
 		$command = "7za $options $arg";
 		if ( !wfIsWindows() ) {
 			// Suppress the stupid messages on stderr

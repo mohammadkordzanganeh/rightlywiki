@@ -12,8 +12,7 @@
 			"Александр Сигачёв",
 			"Mouse21",
 			"Happy13241",
-			"Movses",
-			"Vlad5250"
+			"Movses"
 		]
 	},
 	"replacetext": "Заменить текст",
@@ -49,7 +48,7 @@
 	"replacetext_continue": "Продолжить",
 	"replacetext_announce": "Сообщить об этих изменениях через $1 и списки наблюдения",
 	"replacetext_editsummary": "Замена текста — «$1» на «$2»",
-	"right-replacetext": "Выполнение замен текста во всей вики",
+	"right-replacetext": "выполнение замен текста во всей вики",
 	"action-replacetext": "замену строк по всему проекту",
 	"replacetext_reminder": "Чтобы изменить ссылки на эту страницу на других страницах, перейдите к $1."
 }

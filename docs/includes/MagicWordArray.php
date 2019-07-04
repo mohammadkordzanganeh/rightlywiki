@@ -268,7 +268,10 @@ class MagicWordArray {
 			return $hash[1][$text];
 		}
 		$lc = $this->factory->getContentLanguage()->lc( $text );
-		return $hash[0][$lc] ?? false;
+		if ( isset( $hash[0][$lc] ) ) {
+			return $hash[0][$lc];
+		}
+		return false;
 	}
 
 	/**

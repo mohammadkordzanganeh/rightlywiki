@@ -190,7 +190,8 @@ class ArticleViewTest extends MediaWikiTestCase {
 			->willReturn( new ParserOutput( 'Structured Output' ) );
 		$content->method( 'getModel' )
 			->willReturn( 'NotText' );
-		$content->expects( $this->never() )->method( 'getNativeData' );
+		$content->method( 'getNativeData' )
+			->willReturn( [ (object)[ 'x' => 'stuff' ] ] );
 		$content->method( 'copy' )
 			->willReturn( $content );
 
@@ -446,7 +447,7 @@ class ArticleViewTest extends MediaWikiTestCase {
 			'ArticleContentViewCustom',
 			function ( Content $content, Title $title, OutputPage $output ) use ( $page ) {
 				$this->assertSame( $page->getTitle(), $title, '$title' );
-				$this->assertSame( 'Test A', $content->getText(), '$content' );
+				$this->assertSame( 'Test A', $content->getNativeData(), '$content' );
 
 				$output->addHTML( 'Hook Text' );
 				return false;
@@ -482,8 +483,9 @@ class ArticleViewTest extends MediaWikiTestCase {
 			'ArticleRevisionViewCustom',
 			function ( RevisionRecord $rev, Title $title, $oldid, OutputPage $output ) use ( $page ) {
 				$content = $rev->getContent( SlotRecord::MAIN );
+
 				$this->assertSame( $page->getTitle(), $title, '$title' );
-				$this->assertSame( 'Test A', $content->getText(), '$content' );
+				$this->assertSame( 'Test A', $content->getNativeData(), '$content' );
 
 				$output->addHTML( 'Hook Text' );
 				return false;
@@ -515,7 +517,7 @@ class ArticleViewTest extends MediaWikiTestCase {
 			'ArticleAfterFetchContentObject',
 			function ( Article &$articlePage, Content &$content ) use ( $page, $article ) {
 				$this->assertSame( $article, $articlePage, '$articlePage' );
-				$this->assertSame( 'Test A', $content->getText(), '$content' );
+				$this->assertSame( 'Test A', $content->getNativeData(), '$content' );
 
 				$content = new WikitextContent( 'Hook Text' );
 			}

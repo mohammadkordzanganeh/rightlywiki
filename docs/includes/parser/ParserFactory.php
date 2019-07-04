@@ -18,7 +18,6 @@
  * @file
  * @ingroup Parser
  */
-use MediaWiki\Linker\LinkRendererFactory;
 
 use MediaWiki\Special\SpecialPageFactory;
 
@@ -27,7 +26,7 @@ use MediaWiki\Special\SpecialPageFactory;
  */
 class ParserFactory {
 	/** @var array */
-	private $parserConf;
+	private $conf;
 
 	/** @var MagicWordFactory */
 	private $magicWordFactory;
@@ -41,33 +40,23 @@ class ParserFactory {
 	/** @var SpecialPageFactory */
 	private $specialPageFactory;
 
-	/** @var Config */
-	private $siteConfig;
-
-	/** @var LinkRendererFactory */
-	private $linkRendererFactory;
-
 	/**
-	 * @param array $parserConf See $wgParserConf documentation
+	 * @param array $conf See $wgParserConf documentation
 	 * @param MagicWordFactory $magicWordFactory
 	 * @param Language $contLang Content language
 	 * @param string $urlProtocols As returned from wfUrlProtocols()
 	 * @param SpecialPageFactory $spFactory
-	 * @param Config $siteConfig
-	 * @param LinkRendererFactory $linkRendererFactory
 	 * @since 1.32
 	 */
 	public function __construct(
-		array $parserConf, MagicWordFactory $magicWordFactory, Language $contLang, $urlProtocols,
-		SpecialPageFactory $spFactory, Config $siteConfig, LinkRendererFactory $linkRendererFactory
+		array $conf, MagicWordFactory $magicWordFactory, Language $contLang, $urlProtocols,
+		SpecialPageFactory $spFactory
 	) {
-		$this->parserConf = $parserConf;
+		$this->conf = $conf;
 		$this->magicWordFactory = $magicWordFactory;
 		$this->contLang = $contLang;
 		$this->urlProtocols = $urlProtocols;
 		$this->specialPageFactory = $spFactory;
-		$this->siteConfig = $siteConfig;
-		$this->linkRendererFactory = $linkRendererFactory;
 	}
 
 	/**
@@ -75,8 +64,7 @@ class ParserFactory {
 	 * @since 1.32
 	 */
 	public function create() : Parser {
-		return new Parser( $this->parserConf, $this->magicWordFactory, $this->contLang, $this,
-			$this->urlProtocols, $this->specialPageFactory, $this->siteConfig,
-			$this->linkRendererFactory );
+		return new Parser( $this->conf, $this->magicWordFactory, $this->contLang, $this,
+			$this->urlProtocols, $this->specialPageFactory );
 	}
 }

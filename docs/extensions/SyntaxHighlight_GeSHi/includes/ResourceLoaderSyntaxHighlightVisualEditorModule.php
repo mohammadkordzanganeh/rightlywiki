@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -46,6 +47,15 @@ class ResourceLoaderSyntaxHighlightVisualEditorModule extends ResourceLoaderFile
 	}
 
 	/**
+	 * Don't break debug mode by only showing file URLs
+	 * @param ResourceLoaderContext $context
+	 * @return array
+	 */
+	public function getScriptURLsForDebug( ResourceLoaderContext $context ) {
+		return ResourceLoaderModule::getScriptURLsForDebug( $context );
+	}
+
+	/**
 	 * Get a full list of available languages
 	 * @return array
 	 */
@@ -53,17 +63,7 @@ class ResourceLoaderSyntaxHighlightVisualEditorModule extends ResourceLoaderFile
 		return array_keys( require __DIR__ . '/../SyntaxHighlight.lexers.php' );
 	}
 
-	/**
-	 * @return bool
-	 */
 	public function enableModuleContentVersion() {
 		return true;
-	}
-
-	/**
-	 * @return bool
-	 */
-	public function supportsURLLoading() {
-		return false;
 	}
 }

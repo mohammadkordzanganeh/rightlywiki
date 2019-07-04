@@ -12,14 +12,6 @@ class OutputPageTest extends MediaWikiTestCase {
 	const SCREEN_MEDIA_QUERY = 'screen and (min-width: 982px)';
 	const SCREEN_ONLY_MEDIA_QUERY = 'only screen and (min-width: 982px)';
 
-	// @codingStandardsIgnoreStart Generic.Files.LineLength
-	const RSS_RC_LINK = '<link rel="alternate" type="application/rss+xml" title=" RSS feed" href="/w/index.php?title=Special:RecentChanges&amp;feed=rss"/>';
-	const ATOM_RC_LINK = '<link rel="alternate" type="application/atom+xml" title=" Atom feed" href="/w/index.php?title=Special:RecentChanges&amp;feed=atom"/>';
-
-	const RSS_TEST_LINK = '<link rel="alternate" type="application/rss+xml" title="&quot;Test&quot; RSS feed" href="fake-link"/>';
-	const ATOM_TEST_LINK = '<link rel="alternate" type="application/atom+xml" title="&quot;Test&quot; Atom feed" href="fake-link"/>';
-	// @codingStandardsIgnoreEnd
-
 	// Ensure that we don't affect the global ResourceLoader state.
 	protected function setUp() {
 		parent::setUp();
@@ -59,64 +51,6 @@ class OutputPageTest extends MediaWikiTestCase {
 		];
 	}
 
-	private function setupFeedLinks( $feed, $types ) {
-		$outputPage = $this->newInstance( [
-			'AdvertisedFeedTypes' => $types,
-			'Feed' => $feed,
-			'OverrideSiteFeed' => false,
-			'Script' => '/w',
-			'Sitename' => false,
-		] );
-		$outputPage->setTitle( Title::makeTitle( NS_MAIN, 'Test' ) );
-		$this->setMwGlobals( [
-			'wgScript' => '/w/index.php',
-		] );
-		return $outputPage;
-	}
-
-	private function assertFeedLinks( $outputPage, $message, $present, $non_present ) {
-		$links = $outputPage->getHeadLinksArray();
-		foreach ( $present as $link ) {
-			$this->assertContains( $link, $links, $message );
-		}
-		foreach ( $non_present as $link ) {
-			$this->assertNotContains( $link, $links, $message );
-		}
-	}
-
-	private function assertFeedUILinks( $outputPage, $ui_links ) {
-		if ( $ui_links ) {
-			$this->assertTrue( $outputPage->isSyndicated(), 'Syndication should be offered' );
-			$this->assertGreaterThan( 0, count( $outputPage->getSyndicationLinks() ),
-				'Some syndication links should be there' );
-		} else {
-			$this->assertFalse( $outputPage->isSyndicated(), 'No syndication should be offered' );
-			$this->assertEquals( 0, count( $outputPage->getSyndicationLinks() ),
-				'No syndication links should be there' );
-		}
-	}
-
-	public static function provideFeedLinkData() {
-		return [
-			[
-				true, [ 'rss' ], 'Only RSS RC link should be offerred',
-				[ self::RSS_RC_LINK ], [ self::ATOM_RC_LINK ]
-			],
-			[
-				true, [ 'atom' ], 'Only Atom RC link should be offerred',
-				[ self::ATOM_RC_LINK ], [ self::RSS_RC_LINK ]
-			],
-			[
-				true, [], 'No RC feed formats should be offerred',
-				[], [ self::ATOM_RC_LINK, self::RSS_RC_LINK ]
-			],
-			[
-				false, [ 'atom' ], 'No RC feeds should be offerred',
-				[], [ self::ATOM_RC_LINK, self::RSS_RC_LINK ]
-			],
-		];
-	}
-
 	/**
 	 * @covers OutputPage::setCopyrightUrl
 	 * @covers OutputPage::getHeadLinksArray
@@ -129,67 +63,6 @@ class OutputPageTest extends MediaWikiTestCase {
 			Html::element( 'link', [ 'rel' => 'license', 'href' => 'http://example.com' ] ),
 			$op->getHeadLinksArray()['copyright']
 		);
-	}
-
-	/**
-	 * @dataProvider provideFeedLinkData
-	 * @covers OutputPage::getHeadLinksArray
-	 */
-	public function testRecentChangesFeed( $feed, $advertised_feed_types,
-				$message, $present, $non_present ) {
-		$outputPage = $this->setupFeedLinks( $feed, $advertised_feed_types );
-		$this->assertFeedLinks( $outputPage, $message, $present, $non_present );
-	}
-
-	public static function provideAdditionalFeedData() {
-		return [
-			[
-				true, [ 'atom' ], 'Additional Atom feed should be offered',
-				'atom',
-				[ self::ATOM_TEST_LINK, self::ATOM_RC_LINK ],
-				[ self::RSS_TEST_LINK, self::RSS_RC_LINK ],
-				true,
-			],
-			[
-				true, [ 'rss' ], 'Additional RSS feed should be offered',
-				'rss',
-				[ self::RSS_TEST_LINK, self::RSS_RC_LINK ],
-				[ self::ATOM_TEST_LINK, self::ATOM_RC_LINK ],
-				true,
-			],
-			[
-				true, [ 'rss' ], 'Additional Atom feed should NOT be offered with RSS enabled',
-				'atom',
-				[ self::RSS_RC_LINK ],
-				[ self::RSS_TEST_LINK, self::ATOM_TEST_LINK, self::ATOM_RC_LINK ],
-				false,
-			],
-			[
-				false, [ 'atom' ], 'Additional Atom feed should NOT be offered, all feeds disabled',
-				'atom',
-				[],
-				[
-					self::RSS_TEST_LINK, self::ATOM_TEST_LINK,
-					self::ATOM_RC_LINK, self::ATOM_RC_LINK,
-				],
-				false,
-			],
-		];
-	}
-
-	/**
-	 * @dataProvider provideAdditionalFeedData
-	 * @covers OutputPage::getHeadLinksArray
-	 * @covers OutputPage::addFeedLink
-	 * @covers OutputPage::getSyndicationLinks
-	 * @covers OutputPage::isSyndicated
-	 */
-	public function testAdditionalFeeds( $feed, $advertised_feed_types, $message,
-			$additional_feed_type, $present, $non_present, $any_ui_links ) {
-		$outputPage = $this->setupFeedLinks( $feed, $advertised_feed_types );
-		$outputPage->addFeedLink( $additional_feed_type, 'fake-link' );
-		$this->assertFeedLinks( $outputPage, $message, $present, $non_present );
-		$this->assertFeedUILinks( $outputPage, $any_ui_links );
 	}
 
 	// @todo How to test setStatusCode?
@@ -924,19 +797,13 @@ class OutputPageTest extends MediaWikiTestCase {
 	 * @covers OutputPage::isSyndicated
 	 */
 	public function testSetSyndicated() {
-		$op = $this->newInstance( [ 'Feed' => true ] );
+		$op = $this->newInstance();
 		$this->assertFalse( $op->isSyndicated() );
 
 		$op->setSyndicated();
 		$this->assertTrue( $op->isSyndicated() );
 
 		$op->setSyndicated( false );
-		$this->assertFalse( $op->isSyndicated() );
-
-		$op = $this->newInstance(); // Feed => false by default
-		$this->assertFalse( $op->isSyndicated() );
-
-		$op->setSyndicated();
 		$this->assertFalse( $op->isSyndicated() );
 	}
 
@@ -947,7 +814,7 @@ class OutputPageTest extends MediaWikiTestCase {
 	 * @covers OutputPage::getSyndicationLinks()
 	 */
 	public function testFeedLinks() {
-		$op = $this->newInstance( [ 'Feed' => true ] );
+		$op = $this->newInstance();
 		$this->assertSame( [], $op->getSyndicationLinks() );
 
 		$op->addFeedLink( 'not a supported format', 'abc' );
@@ -972,13 +839,6 @@ class OutputPageTest extends MediaWikiTestCase {
 			$expected[$type] = $op->getTitle()->getLocalURL( "feed=$type&apples=oranges" );
 		}
 		$this->assertSame( $expected, $op->getSyndicationLinks() );
-
-		$op = $this->newInstance(); // Feed => false by default
-		$this->assertSame( [], $op->getSyndicationLinks() );
-
-		$op->addFeedLink( $feedTypes[0], 'def' );
-		$this->assertFalse( $op->isSyndicated() );
-		$this->assertSame( [], $op->getSyndicationLinks() );
 	}
 
 	/**
@@ -1052,7 +912,7 @@ class OutputPageTest extends MediaWikiTestCase {
 	 * @param array $args Array of form [ category name => sort key ]
 	 * @param array $fakeResults Array of form [ category name => value to return from mocked
 	 *   LinkBatch ]
-	 * @param callable $variantLinkCallback Callback to replace findVariantLink() call
+	 * @param callback $variantLinkCallback Callback to replace findVariantLink() call
 	 * @param array $expectedNormal Expected return value of getCategoryLinks['normal']
 	 * @param array $expectedHidden Expected return value of getCategoryLinks['hidden']
 	 */
@@ -1582,13 +1442,10 @@ class OutputPageTest extends MediaWikiTestCase {
 		$op = $this->newInstance();
 		$this->assertSame( '', $op->getHTML() );
 
-		$this->hideDeprecated( 'OutputPage::addWikiText' );
 		$this->hideDeprecated( 'OutputPage::addWikiTextTitle' );
 		$this->hideDeprecated( 'OutputPage::addWikiTextWithTitle' );
 		$this->hideDeprecated( 'OutputPage::addWikiTextTidy' );
 		$this->hideDeprecated( 'OutputPage::addWikiTextTitleTidy' );
-		$this->hideDeprecated( 'disabling tidy' );
-
 		if ( in_array(
 			$method,
 			[ 'addWikiTextWithTitle', 'addWikiTextTitleTidy', 'addWikiTextTitle' ]
@@ -1626,7 +1483,7 @@ class OutputPageTest extends MediaWikiTestCase {
 					"<p><b>Bold</b>\n</p>",
 				], 'No section edit links' => [
 					[ '== Title ==' ],
-					"<h2><span class=\"mw-headline\" id=\"Title\">Title</span></h2>",
+					"<h2><span class=\"mw-headline\" id=\"Title\">Title</span></h2>\n",
 				],
 			],
 			'addWikiTextWithTitle' => [
@@ -1655,7 +1512,7 @@ class OutputPageTest extends MediaWikiTestCase {
 					'<p>* Not a list</p>',
 				], 'No section edit links' => [
 					[ '== Title ==' ],
-					"<h2><span class=\"mw-headline\" id=\"Title\">Title</span></h2>",
+					"<h2><span class=\"mw-headline\" id=\"Title\">Title</span></h2>\n",
 				], 'With title at start' => [
 					[ '* {{PAGENAME}}', true, Title::newFromText( 'Talk:Some page' ) ],
 					"<ul><li>Some page</li></ul>\n",
@@ -1671,10 +1528,10 @@ class OutputPageTest extends MediaWikiTestCase {
 				// Preferred interface: output is tidied
 				'SpecialNewimages' => [
 					[ "<p lang='en' dir='ltr'>\nMy message" ],
-					'<p lang="en" dir="ltr">' . "\nMy message</p>"
+					'<p lang="en" dir="ltr">' . "\nMy message\n</p>"
 				], 'List at start' => [
 					[ '* List' ],
-					"<ul><li>List</li></ul>",
+					"<ul><li>List</li></ul>\n",
 				], 'List not at start' => [
 					[ '* <b>Not a list', false ],
 					'<p>* <b>Not a list</b></p>',
@@ -1686,7 +1543,7 @@ class OutputPageTest extends MediaWikiTestCase {
 					"<p>* Some page</p>",
 				], 'EditPage' => [
 					[ "<div class='mw-editintro'>{{PAGENAME}}", true, Title::newFromText( 'Talk:Some page' ) ],
-					'<div class="mw-editintro">' . "Some page</div>"
+					'<div class="mw-editintro">' . "Some page\n</div>"
 				],
 			],
 			'wrapWikiTextAsInterface' => [
@@ -1695,7 +1552,7 @@ class OutputPageTest extends MediaWikiTestCase {
 					"<div class=\"wrapperClass\"><p>text\n</p></div>"
 				], 'Spurious </div>' => [
 					[ 'wrapperClass', 'text</div><div>more' ],
-					"<div class=\"wrapperClass\"><p>text</p><div>more</div></div>"
+					"<div class=\"wrapperClass\"><p>text</p><div>more\n</div></div>"
 				], 'Extra newlines would break <p> wrappers' => [
 					[ 'two classes', "1\n\n2\n\n3" ],
 					"<div class=\"two classes\"><p>1\n</p><p>2\n</p><p>3\n</p></div>"
@@ -1757,7 +1614,6 @@ class OutputPageTest extends MediaWikiTestCase {
 	 * @covers OutputPage::addWikiText
 	 */
 	public function testAddWikiTextNoTitle() {
-		$this->hideDeprecated( 'OutputPage::addWikiText' );
 		$this->setExpectedException( MWException::class, 'Title is null' );
 
 		$op = $this->newInstance( [], null, 'notitle' );
@@ -1794,8 +1650,9 @@ class OutputPageTest extends MediaWikiTestCase {
 		$op = $this->newInstance();
 		$this->assertSame( '', $op->getHTML() );
 		$op->addWikiMsg( 'parentheses', "<b>a" );
-		// The input is bad unbalanced HTML, but the output is tidied
-		$this->assertSame( "<p>(<b>a)\n</b></p>", $op->getHTML() );
+		// This is known to be bad unbalanced HTML; this will be fixed
+		// by I743f4185a03403f8d9b9db010ff1ee4e9342e062 (T198214)
+		$this->assertSame( "<p>(<b>a)\n</p>", $op->getHTML() );
 	}
 
 	/**
@@ -1808,8 +1665,9 @@ class OutputPageTest extends MediaWikiTestCase {
 		$op = $this->newInstance();
 		$this->assertSame( '', $op->getHTML() );
 		$op->wrapWikiMsg( '[$1]', [ 'parentheses', "<b>a" ] );
-		// The input is bad unbalanced HTML, but the output is tidied
-		$this->assertSame( "<p>[(<b>a)]\n</b></p>", $op->getHTML() );
+		// This is known to be bad unbalanced HTML; this will be fixed
+		// by I743f4185a03403f8d9b9db010ff1ee4e9342e062 (T198214)
+		$this->assertSame( "<p>[(<b>a)]\n</p>", $op->getHTML() );
 	}
 
 	/**
@@ -1884,6 +1742,7 @@ class OutputPageTest extends MediaWikiTestCase {
 	// @todo Make sure to test the following in addParserOutputMetadata() as well when we add tests
 	// for them:
 	//   * addModules()
+	//   * addModuleScripts()
 	//   * addModuleStyles()
 	//   * addJsConfigVars()
 	//   * enableOOUI()
@@ -1945,7 +1804,6 @@ class OutputPageTest extends MediaWikiTestCase {
 	 * @param string $expectedHTML Expected return value for parseInline(), if different
 	 */
 	public function testParse( array $args, $expectedHTML ) {
-		$this->hideDeprecated( 'OutputPage::parse' );
 		$op = $this->newInstance();
 		$this->assertSame( $expectedHTML, $op->parse( ...$args ) );
 	}
@@ -1960,7 +1818,6 @@ class OutputPageTest extends MediaWikiTestCase {
 			$this->assertTrue( true );
 			return;
 		}
-		$this->hideDeprecated( 'OutputPage::parseInline' );
 		$op = $this->newInstance();
 		$this->assertSame( $expectedHTMLInline ?? $expectedHTML, $op->parseInline( ...$args ) );
 	}
@@ -1969,12 +1826,12 @@ class OutputPageTest extends MediaWikiTestCase {
 		return [
 			'List at start of line (content)' => [
 				[ '* List', true, false ],
-				"<div class=\"mw-parser-output\"><ul><li>List</li></ul></div>",
-				"<ul><li>List</li></ul>",
+				"<div class=\"mw-parser-output\"><ul><li>List</li></ul>\n</div>",
+				"<ul><li>List</li></ul>\n",
 			],
 			'List at start of line (interface)' => [
 				[ '* List', true, true ],
-				"<ul><li>List</li></ul>",
+				"<ul><li>List</li></ul>\n",
 			],
 			'List not at start (content)' => [
 				[ "* ''Not'' list", false, false ],
@@ -2012,8 +1869,9 @@ class OutputPageTest extends MediaWikiTestCase {
 			'No section edit links' => [
 				[ '== Header ==' ],
 				'<div class="mw-parser-output"><h2><span class="mw-headline" id="Header">' .
-					"Header</span></h2></div>",
-				'<h2><span class="mw-headline" id="Header">Header</span></h2>',
+					"Header</span></h2>\n</div>",
+				'<h2><span class="mw-headline" id="Header">Header</span></h2>' .
+					"\n",
 			]
 		];
 	}
@@ -2064,7 +1922,7 @@ class OutputPageTest extends MediaWikiTestCase {
 		return [
 			'List at start of line' => [
 				[ '* List', true ],
-				"<ul><li>List</li></ul>",
+				"<ul><li>List</li></ul>\n",
 			],
 			'List not at start' => [
 				[ "* ''Not'' list", false ],
@@ -2083,7 +1941,8 @@ class OutputPageTest extends MediaWikiTestCase {
 			],
 			'No section edit links' => [
 				[ '== Header ==' ],
-				'<h2><span class="mw-headline" id="Header">Header</span></h2>',
+				'<h2><span class="mw-headline" id="Header">Header</span></h2>' .
+					"\n",
 			]
 		];
 	}
@@ -2092,7 +1951,6 @@ class OutputPageTest extends MediaWikiTestCase {
 	 * @covers OutputPage::parse
 	 */
 	public function testParseNullTitle() {
-		$this->hideDeprecated( 'OutputPage::parse' );
 		$this->setExpectedException( MWException::class, 'Empty $mTitle in OutputPage::parseInternal' );
 		$op = $this->newInstance( [], null, 'notitle' );
 		$op->parse( '' );
@@ -2102,7 +1960,6 @@ class OutputPageTest extends MediaWikiTestCase {
 	 * @covers OutputPage::parseInline
 	 */
 	public function testParseInlineNullTitle() {
-		$this->hideDeprecated( 'OutputPage::parseInline' );
 		$this->setExpectedException( MWException::class, 'Empty $mTitle in OutputPage::parseInternal' );
 		$op = $this->newInstance( [], null, 'notitle' );
 		$op->parseInline( '' );
@@ -2668,7 +2525,7 @@ class OutputPageTest extends MediaWikiTestCase {
 		$nonce->setAccessible( true );
 		$nonce->setValue( $out, 'secret' );
 		$rl = $out->getResourceLoader();
-		$rl->setMessageBlobStore( $this->createMock( MessageBlobStore::class ) );
+		$rl->setMessageBlobStore( new NullMessageBlobStore() );
 		$rl->register( [
 			'test.foo' => new ResourceLoaderTestModule( [
 				'script' => 'mw.test.foo( { a: true } );',
@@ -2712,14 +2569,14 @@ class OutputPageTest extends MediaWikiTestCase {
 			[
 				[ 'test.foo', ResourceLoaderModule::TYPE_SCRIPTS ],
 				"<script nonce=\"secret\">(window.RLQ=window.RLQ||[]).push(function(){"
-					. 'mw.loader.load("http://127.0.0.1:8080/w/load.php?lang=en\u0026modules=test.foo\u0026only=scripts\u0026skin=fallback");'
+					. 'mw.loader.load("http://127.0.0.1:8080/w/load.php?debug=false\u0026lang=en\u0026modules=test.foo\u0026only=scripts\u0026skin=fallback");'
 					. "});</script>"
 			],
 			// Multiple only=styles load
 			[
 				[ [ 'test.baz', 'test.foo', 'test.bar' ], ResourceLoaderModule::TYPE_STYLES ],
 
-				'<link rel="stylesheet" href="http://127.0.0.1:8080/w/load.php?lang=en&amp;modules=test.bar%2Cbaz%2Cfoo&amp;only=styles&amp;skin=fallback"/>'
+				'<link rel="stylesheet" href="http://127.0.0.1:8080/w/load.php?debug=false&amp;lang=en&amp;modules=test.bar%2Cbaz%2Cfoo&amp;only=styles&amp;skin=fallback"/>'
 			],
 			// Private embed (only=scripts)
 			[
@@ -2744,14 +2601,14 @@ class OutputPageTest extends MediaWikiTestCase {
 			// noscript group
 			[
 				[ 'test.noscript', ResourceLoaderModule::TYPE_STYLES ],
-				'<noscript><link rel="stylesheet" href="http://127.0.0.1:8080/w/load.php?lang=en&amp;modules=test.noscript&amp;only=styles&amp;skin=fallback"/></noscript>'
+				'<noscript><link rel="stylesheet" href="http://127.0.0.1:8080/w/load.php?debug=false&amp;lang=en&amp;modules=test.noscript&amp;only=styles&amp;skin=fallback"/></noscript>'
 			],
 			// Load two modules in separate groups
 			[
 				[ [ 'test.group.foo', 'test.group.bar' ], ResourceLoaderModule::TYPE_COMBINED ],
 				"<script nonce=\"secret\">(window.RLQ=window.RLQ||[]).push(function(){"
-					. 'mw.loader.load("http://127.0.0.1:8080/w/load.php?lang=en\u0026modules=test.group.bar\u0026skin=fallback");'
-					. 'mw.loader.load("http://127.0.0.1:8080/w/load.php?lang=en\u0026modules=test.group.foo\u0026skin=fallback");'
+					. 'mw.loader.load("http://127.0.0.1:8080/w/load.php?debug=false\u0026lang=en\u0026modules=test.group.bar\u0026skin=fallback");'
+					. 'mw.loader.load("http://127.0.0.1:8080/w/load.php?debug=false\u0026lang=en\u0026modules=test.group.foo\u0026skin=fallback");'
 					. "});</script>"
 			],
 		];
@@ -2784,7 +2641,7 @@ class OutputPageTest extends MediaWikiTestCase {
 			->method( 'buildCssLinksArray' )
 			->willReturn( [] );
 		$rl = $op->getResourceLoader();
-		$rl->setMessageBlobStore( $this->createMock( MessageBlobStore::class ) );
+		$rl->setMessageBlobStore( new NullMessageBlobStore() );
 
 		// Register custom modules
 		$rl->register( [
@@ -2815,13 +2672,13 @@ class OutputPageTest extends MediaWikiTestCase {
 			'default logged-out' => [
 				'exemptStyleModules' => [ 'site' => [ 'site.styles' ] ],
 				'<meta name="ResourceLoaderDynamicStyles" content=""/>' . "\n" .
-				'<link rel="stylesheet" href="/w/load.php?lang=en&amp;modules=site.styles&amp;only=styles&amp;skin=fallback"/>',
+				'<link rel="stylesheet" href="/w/load.php?debug=false&amp;lang=en&amp;modules=site.styles&amp;only=styles&amp;skin=fallback"/>',
 			],
 			'default logged-in' => [
 				'exemptStyleModules' => [ 'site' => [ 'site.styles' ], 'user' => [ 'user.styles' ] ],
 				'<meta name="ResourceLoaderDynamicStyles" content=""/>' . "\n" .
-				'<link rel="stylesheet" href="/w/load.php?lang=en&amp;modules=site.styles&amp;only=styles&amp;skin=fallback"/>' . "\n" .
-				'<link rel="stylesheet" href="/w/load.php?lang=en&amp;modules=user.styles&amp;only=styles&amp;skin=fallback&amp;version=1ai9g6t"/>',
+				'<link rel="stylesheet" href="/w/load.php?debug=false&amp;lang=en&amp;modules=site.styles&amp;only=styles&amp;skin=fallback"/>' . "\n" .
+				'<link rel="stylesheet" href="/w/load.php?debug=false&amp;lang=en&amp;modules=user.styles&amp;only=styles&amp;skin=fallback&amp;version=1ai9g6t"/>',
 			],
 			'custom modules' => [
 				'exemptStyleModules' => [
@@ -2829,10 +2686,10 @@ class OutputPageTest extends MediaWikiTestCase {
 					'user' => [ 'user.styles', 'example.user' ],
 				],
 				'<meta name="ResourceLoaderDynamicStyles" content=""/>' . "\n" .
-				'<link rel="stylesheet" href="/w/load.php?lang=en&amp;modules=example.site.a%2Cb&amp;only=styles&amp;skin=fallback"/>' . "\n" .
-				'<link rel="stylesheet" href="/w/load.php?lang=en&amp;modules=site.styles&amp;only=styles&amp;skin=fallback"/>' . "\n" .
-				'<link rel="stylesheet" href="/w/load.php?lang=en&amp;modules=example.user&amp;only=styles&amp;skin=fallback&amp;version=0a56zyi"/>' . "\n" .
-				'<link rel="stylesheet" href="/w/load.php?lang=en&amp;modules=user.styles&amp;only=styles&amp;skin=fallback&amp;version=1ai9g6t"/>',
+				'<link rel="stylesheet" href="/w/load.php?debug=false&amp;lang=en&amp;modules=example.site.a%2Cb&amp;only=styles&amp;skin=fallback"/>' . "\n" .
+				'<link rel="stylesheet" href="/w/load.php?debug=false&amp;lang=en&amp;modules=site.styles&amp;only=styles&amp;skin=fallback"/>' . "\n" .
+				'<link rel="stylesheet" href="/w/load.php?debug=false&amp;lang=en&amp;modules=example.user&amp;only=styles&amp;skin=fallback&amp;version=0a56zyi"/>' . "\n" .
+				'<link rel="stylesheet" href="/w/load.php?debug=false&amp;lang=en&amp;modules=user.styles&amp;only=styles&amp;skin=fallback&amp;version=1ai9g6t"/>',
 			],
 		];
 		// phpcs:enable
@@ -3186,5 +3043,23 @@ class OutputPageTest extends MediaWikiTestCase {
 		}
 
 		return new OutputPage( $context );
+	}
+}
+
+/**
+ * MessageBlobStore that doesn't do anything
+ */
+class NullMessageBlobStore extends MessageBlobStore {
+	public function get( ResourceLoader $resourceLoader, $modules, $lang ) {
+		return [];
+	}
+
+	public function updateModule( $name, ResourceLoaderModule $module, $lang ) {
+	}
+
+	public function updateMessage( $key ) {
+	}
+
+	public function clear() {
 	}
 }

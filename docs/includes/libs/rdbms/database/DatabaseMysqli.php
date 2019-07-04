@@ -37,7 +37,7 @@ use stdClass;
 class DatabaseMysqli extends DatabaseMysqlBase {
 	/**
 	 * @param string $sql
-	 * @return mysqli_result|bool
+	 * @return mysqli_result
 	 */
 	protected function doQuery( $sql ) {
 		$conn = $this->getBindingHandle();
@@ -78,7 +78,9 @@ class DatabaseMysqli extends DatabaseMysqlBase {
 		} elseif ( substr_count( $realServer, ':' ) == 1 ) {
 			// If we have a colon and something that's not a port number
 			// inside the hostname, assume it's the socket location
-			list( $realServer, $socket ) = explode( ':', $realServer, 2 );
+			$hostAndSocket = explode( ':', $realServer, 2 );
+			$realServer = $hostAndSocket[0];
+			$socket = $hostAndSocket[1];
 		}
 
 		$mysqli = mysqli_init();
@@ -137,7 +139,11 @@ class DatabaseMysqli extends DatabaseMysqlBase {
 	protected function mysqlSetCharset( $charset ) {
 		$conn = $this->getBindingHandle();
 
-		return $conn->set_charset( $charset );
+		if ( method_exists( $conn, 'set_charset' ) ) {
+			return $conn->set_charset( $charset );
+		} else {
+			return $this->query( 'SET NAMES ' . $charset, __METHOD__ );
+		}
 	}
 
 	/**
@@ -176,6 +182,24 @@ class DatabaseMysqli extends DatabaseMysqlBase {
 		$conn = $this->getBindingHandle();
 
 		return $conn->affected_rows;
+	}
+
+	function doSelectDomain( DatabaseDomain $domain ) {
+		$conn = $this->getBindingHandle();
+
+		if ( $domain->getSchema() !== null ) {
+			throw new DBExpectedError( $this, __CLASS__ . ": domain schemas are not supported." );
+		}
+
+		$database = $domain->getDatabase();
+		if ( !$conn->select_db( $database ) ) {
+			throw new DBExpectedError( $this, "Could not select database '$database'." );
+		}
+
+		// Update that domain fields on success (no exception thrown)
+		$this->currentDomain = $domain;
+
+		return true;
 	}
 
 	/**

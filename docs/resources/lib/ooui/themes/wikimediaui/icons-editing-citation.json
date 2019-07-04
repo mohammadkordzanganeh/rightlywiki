@@ -1,29 +1,6 @@
 {
-	"selectorWithoutVariant": ".oo-ui-icon-{name}",
-	"selectorWithVariant": ".oo-ui-image-{variant}.oo-ui-icon-{name}",
+	"prefix": "oo-ui-icon",
 	"intro": "@import '../../../../src/styles/common';",
-	"variants": {
-		"invert": {
-			"color": "#fff",
-			"global": true
-		},
-		"progressive": {
-			"color": "#36c",
-			"global": true
-		},
-		"destructive": {
-			"color": "#d33"
-		},
-		"error": {
-			"color": "#d33"
-		},
-		"warning": {
-			"color": "#fc3"
-		},
-		"success": {
-			"color": "#14866d"
-		}
-	},
 	"images": {
 		"book": {
 			"file":  {
@@ -43,6 +20,9 @@
 				"rtl": "images/icons/newspaper-rtl.svg"
 			}
 		},
+		"web": {
+			"file": "images/icons/web.svg"
+		},
 		"reference": {
 			"file": "images/icons/reference.svg"
 		},
@@ -57,10 +37,6 @@
 				"ltr": "images/icons/references-ltr.svg",
 				"rtl": "images/icons/references-rtl.svg"
 			}
-		},
-		"web": {
-			"file": "images/icons/web.svg",
-			"deprecated": "Deprecated since v0.30.2, use 'browser' from 'interactions' pack instead."
 		}
 	}
 }

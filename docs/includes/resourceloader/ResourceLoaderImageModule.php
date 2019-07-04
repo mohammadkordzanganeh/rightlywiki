@@ -28,7 +28,6 @@
  */
 class ResourceLoaderImageModule extends ResourceLoaderModule {
 
-	/** @var array|null */
 	protected $definition = null;
 
 	/**
@@ -39,18 +38,10 @@ class ResourceLoaderImageModule extends ResourceLoaderModule {
 
 	protected $origin = self::ORIGIN_CORE_SITEWIDE;
 
-	/** @var ResourceLoaderImage[]|null */
-	protected $imageObjects = null;
-	/** @var array */
 	protected $images = [];
-	/** @var string|null */
 	protected $defaultColor = null;
 	protected $useDataURI = true;
-	/** @var array|null */
-	protected $globalVariants = null;
-	/** @var array */
 	protected $variants = [];
-	/** @var string|null */
 	protected $prefix = null;
 	protected $selectorWithoutVariant = '.{prefix}-{name}';
 	protected $selectorWithVariant = '.{prefix}-{name}-{variant}';
@@ -184,9 +175,9 @@ class ResourceLoaderImageModule extends ResourceLoaderModule {
 						$option = [ 'default' => $option ];
 					}
 					foreach ( $option as $skin => $data ) {
-						if ( !is_array( $data ) ) {
+						if ( !is_array( $option ) ) {
 							throw new InvalidArgumentException(
-								"Invalid list error. '$data' given, array expected."
+								"Invalid list error. '$option' given, array expected."
 							);
 						}
 					}
@@ -220,7 +211,7 @@ class ResourceLoaderImageModule extends ResourceLoaderModule {
 
 	/**
 	 * Get CSS selector templates used by this module.
-	 * @return string[]
+	 * @return string
 	 */
 	public function getSelectors() {
 		$this->loadFromDefinition();
@@ -249,7 +240,7 @@ class ResourceLoaderImageModule extends ResourceLoaderModule {
 	 */
 	public function getImages( ResourceLoaderContext $context ) {
 		$skin = $context->getSkin();
-		if ( $this->imageObjects === null ) {
+		if ( !isset( $this->imageObjects ) ) {
 			$this->loadFromDefinition();
 			$this->imageObjects = [];
 		}
@@ -297,7 +288,7 @@ class ResourceLoaderImageModule extends ResourceLoaderModule {
 	 */
 	public function getGlobalVariants( ResourceLoaderContext $context ) {
 		$skin = $context->getSkin();
-		if ( $this->globalVariants === null ) {
+		if ( !isset( $this->globalVariants ) ) {
 			$this->loadFromDefinition();
 			$this->globalVariants = [];
 		}
@@ -428,7 +419,7 @@ class ResourceLoaderImageModule extends ResourceLoaderModule {
 			'selectorWithVariant',
 		] as $member ) {
 			$options[$member] = $this->{$member};
-		}
+		};
 
 		$summary[] = [
 			'options' => $options,

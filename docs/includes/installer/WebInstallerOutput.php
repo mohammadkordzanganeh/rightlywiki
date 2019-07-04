@@ -21,8 +21,6 @@
  * @ingroup Deployment
  */
 
-use MediaWiki\MediaWikiServices;
-
 /**
  * Output class modelled on OutputPage.
  *
@@ -33,7 +31,6 @@ use MediaWiki\MediaWikiServices;
  *
  * @ingroup Deployment
  * @since 1.17
- * @private
  */
 class WebInstallerOutput {
 
@@ -149,7 +146,7 @@ class WebInstallerOutput {
 			'mediawiki.skinning.interface',
 		];
 
-		$resourceLoader = MediaWikiServices::getInstance()->getResourceLoader();
+		$resourceLoader = new ResourceLoader();
 
 		if ( file_exists( "$wgStyleDirectory/Vector/skin.json" ) ) {
 			// Force loading Vector skin if available as a fallback skin
@@ -169,7 +166,7 @@ class WebInstallerOutput {
 
 		$rlContext = new ResourceLoaderContext( $resourceLoader, new FauxRequest( [
 				'debug' => 'true',
-				'lang' => $this->getLanguage()->getCode(),
+				'lang' => $this->getLanguageCode(),
 				'only' => 'styles',
 		] ) );
 
@@ -200,7 +197,7 @@ class WebInstallerOutput {
 	 * @return string
 	 */
 	private function getCssUrl() {
-		return Html::linkedStyle( $this->parent->getUrl( [ 'css' => 1 ] ) );
+		return Html::linkedStyle( $_SERVER['PHP_SELF'] . '?css=1' );
 	}
 
 	public function useShortHeader( $use = true ) {
@@ -223,13 +220,21 @@ class WebInstallerOutput {
 	}
 
 	/**
-	 * @since 1.33
-	 * @return Language
+	 * @return string
 	 */
-	private function getLanguage() {
+	public function getDir() {
 		global $wgLang;
 
-		return is_object( $wgLang ) ? $wgLang : Language::factory( 'en' );
+		return is_object( $wgLang ) ? $wgLang->getDir() : 'ltr';
+	}
+
+	/**
+	 * @return string
+	 */
+	public function getLanguageCode() {
+		global $wgLang;
+
+		return is_object( $wgLang ) ? $wgLang->getCode() : 'en';
 	}
 
 	/**
@@ -237,8 +242,8 @@ class WebInstallerOutput {
 	 */
 	public function getHeadAttribs() {
 		return [
-			'dir' => $this->getLanguage()->getDir(),
-			'lang' => $this->getLanguage()->getHtmlCode(),
+			'dir' => $this->getDir(),
+			'lang' => LanguageCode::bcp47( $this->getLanguageCode() ),
 		];
 	}
 
@@ -282,7 +287,7 @@ class WebInstallerOutput {
 	<?php echo Html::linkedScript( 'config.js' ) . "\n"; ?>
 </head>
 
-<?php echo Html::openElement( 'body', [ 'class' => $this->getLanguage()->getDir() ] ) . "\n"; ?>
+<?php echo Html::openElement( 'body', [ 'class' => $this->getDir() ] ) . "\n"; ?>
 <div id="mw-page-base"></div>
 <div id="mw-head-base"></div>
 <div id="content" class="mw-body">

@@ -1,10 +1,11 @@
 <?php
 
 /**
+ * Unit tests for the HTMLCheckMatrix
  * @covers HTMLCheckMatrix
  */
 class HTMLCheckMatrixTest extends MediaWikiTestCase {
-	private static $defaultOptions = [
+	static private $defaultOptions = [
 		'rows' => [ 'r1', 'r2' ],
 		'columns' => [ 'c1', 'c2' ],
 		'fieldname' => 'test',

@@ -116,6 +116,7 @@ class ApiRevisionDelete extends ApiBase {
 		}
 
 		$list->reloadFromMaster();
+		// phpcs:ignore Generic.CodeAnalysis.ForLoopWithTestFunctionCall
 		for ( $item = $list->reset(); $list->current(); $item = $list->next() ) {
 			$data['items'][$item->getId()] += $item->getApiData( $this->getResult() );
 		}

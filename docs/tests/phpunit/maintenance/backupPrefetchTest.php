@@ -6,6 +6,8 @@ use BaseDump;
 use MediaWikiTestCase;
 
 /**
+ * Tests for BaseDump
+ *
  * @group Dump
  * @covers BaseDump
  */

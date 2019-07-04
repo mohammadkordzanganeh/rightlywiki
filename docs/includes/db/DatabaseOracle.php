@@ -53,6 +53,11 @@ class DatabaseOracle extends Database {
 	private $mFieldInfoCache = [];
 
 	function __construct( array $p ) {
+		global $wgDBprefix;
+
+		if ( $p['tablePrefix'] == 'get from global' ) {
+			$p['tablePrefix'] = $wgDBprefix;
+		}
 		$p['tablePrefix'] = strtoupper( $p['tablePrefix'] );
 		parent::__construct( $p );
 		Hooks::run( 'DatabaseOraclePostInit', [ $this ] );
@@ -111,7 +116,7 @@ class DatabaseOracle extends Database {
 			$this->setFlag( DBO_PERSISTENT );
 		}
 
-		$session_mode = ( $this->flags & DBO_SYSDBA ) ? OCI_SYSDBA : OCI_DEFAULT;
+		$session_mode = $this->flags & DBO_SYSDBA ? OCI_SYSDBA : OCI_DEFAULT;
 
 		Wikimedia\suppressWarnings();
 		if ( $this->flags & DBO_PERSISTENT ) {
@@ -179,10 +184,6 @@ class DatabaseOracle extends Database {
 		return $this->trxLevel ? OCI_NO_AUTO_COMMIT : OCI_COMMIT_ON_SUCCESS;
 	}
 
-	/**
-	 * @param string $sql
-	 * @return bool|mixed|ORAResult
-	 */
 	protected function doQuery( $sql ) {
 		wfDebug( "SQL: [$sql]\n" );
 		if ( !StringUtils::isUtf8( $sql ) ) {
@@ -389,12 +390,13 @@ class DatabaseOracle extends Database {
 		foreach ( $a as &$row ) {
 			$this->insertOneRow( $table, $row, $fname );
 		}
+		$retVal = true;
 
 		if ( in_array( 'IGNORE', $options ) ) {
 			$this->ignoreDupValOnIndex = false;
 		}
 
-		return true;
+		return $retVal;
 	}
 
 	private function fieldBindStatement( $table, $col, &$val, $includeCol = false ) {
@@ -560,8 +562,7 @@ class DatabaseOracle extends Database {
 		// count-alias subselect fields to avoid abigious definition errors
 		$i = 0;
 		foreach ( $varMap as &$val ) {
-			$val .= ' field' . $i;
-			$i++;
+			$val = $val . ' field' . ( $i++ );
 		}
 
 		$selectSql = $this->selectSQLText(
@@ -579,17 +580,19 @@ class DatabaseOracle extends Database {
 			$this->ignoreDupValOnIndex = true;
 		}
 
-		$this->query( $sql, $fname );
+		$retval = $this->query( $sql, $fname );
 
 		if ( in_array( 'IGNORE', $insertOptions ) ) {
 			$this->ignoreDupValOnIndex = false;
 		}
+
+		return $retval;
 	}
 
-	public function upsert( $table, array $rows, $uniqueIndexes, array $set,
+	public function upsert( $table, array $rows, array $uniqueIndexes, array $set,
 		$fname = __METHOD__
 	) {
-		if ( $rows === [] ) {
+		if ( !count( $rows ) ) {
 			return true; // nothing to do
 		}
 
@@ -693,6 +696,14 @@ class DatabaseOracle extends Database {
 
 	function encodeBlob( $b ) {
 		return new Blob( $b );
+	}
+
+	function decodeBlob( $b ) {
+		if ( $b instanceof Blob ) {
+			$b = $b->fetch();
+		}
+
+		return $b;
 	}
 
 	function unionQueries( $sqls, $all ) {
@@ -956,7 +967,7 @@ class DatabaseOracle extends Database {
 		// Defines must comply with ^define\s*([^\s=]*)\s*=\s?'\{\$([^\}]*)\}';
 		while ( !feof( $fp ) ) {
 			if ( $lineCallback ) {
-				$lineCallback();
+				call_user_func( $lineCallback );
 			}
 			$line = trim( fgets( $fp, 1024 ) );
 			$sl = strlen( $line ) - 1;
@@ -964,7 +975,7 @@ class DatabaseOracle extends Database {
 			if ( $sl < 0 ) {
 				continue;
 			}
-			if ( $line[0] == '-' && $line[1] == '-' ) {
+			if ( '-' == $line[0] && '-' == $line[1] ) {
 				continue;
 			}
 
@@ -978,7 +989,7 @@ class DatabaseOracle extends Database {
 					$dollarquote = true;
 				}
 			} elseif ( !$dollarquote ) {
-				if ( $line[$sl] == ';' && ( $sl < 2 || $line[$sl - 1] != ';' ) ) {
+				if ( ';' == $line[$sl] && ( $sl < 2 || ';' != $line[$sl - 1] ) ) {
 					$done = true;
 					$line = substr( $line, 0, $sl );
 				}
@@ -1002,14 +1013,14 @@ class DatabaseOracle extends Database {
 
 					$cmd = $this->replaceVars( $cmd );
 					if ( $inputCallback ) {
-						$inputCallback( $cmd );
+						call_user_func( $inputCallback, $cmd );
 					}
 					$res = $this->doQuery( $cmd );
 					if ( $resultCallback ) {
 						call_user_func( $resultCallback, $res, $this );
 					}
 
-					if ( $res === false ) {
+					if ( false === $res ) {
 						$err = $this->lastError();
 
 						return "Query \"{$cmd}\" failed with error code \"$err\".\n";
@@ -1335,6 +1346,10 @@ class DatabaseOracle extends Database {
 
 	function bitOr( $fieldLeft, $fieldRight ) {
 		return 'BITOR(' . $fieldLeft . ', ' . $fieldRight . ')';
+	}
+
+	function getServer() {
+		return $this->server;
 	}
 
 	public function buildGroupConcatField(

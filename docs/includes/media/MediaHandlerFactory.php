@@ -66,7 +66,11 @@ class MediaHandlerFactory {
 	}
 
 	protected function getHandlerClass( $type ) {
-		return $this->registry[$type] ?? false;
+		if ( isset( $this->registry[$type] ) ) {
+			return $this->registry[$type];
+		} else {
+			return false;
+		}
 	}
 
 	/**

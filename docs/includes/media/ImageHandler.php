@@ -74,7 +74,7 @@ abstract class ImageHandler extends MediaHandler {
 		}
 	}
 
-	protected function getScriptParams( $params ) {
+	function getScriptParams( $params ) {
 		return [ 'width' => $params['width'] ];
 	}
 
@@ -83,7 +83,7 @@ abstract class ImageHandler extends MediaHandler {
 	 * @param array &$params
 	 * @return bool
 	 */
-	public function normaliseParams( $image, &$params ) {
+	function normaliseParams( $image, &$params ) {
 		$mimeType = $image->getMimeType();
 
 		if ( !isset( $params['width'] ) ) {
@@ -238,7 +238,7 @@ abstract class ImageHandler extends MediaHandler {
 	 * @param File $file
 	 * @return string
 	 */
-	public function getLongDesc( $file ) {
+	function getLongDesc( $file ) {
 		global $wgLang;
 		$pages = $file->pageCount();
 		$size = htmlspecialchars( $wgLang->formatSize( $file->getSize() ) );

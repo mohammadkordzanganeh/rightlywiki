@@ -32,10 +32,10 @@ require_once __DIR__ . '/Maintenance.php';
 class ResetUserEmail extends Maintenance {
 	public function __construct() {
 		$this->addDescription( "Resets a user's email" );
-		$this->addArg( 'user', 'Username or user ID, if starts with #' );
+		$this->addArg( 'user', 'Username or user ID, if starts with #', true );
 		$this->addArg( 'email', 'Email to assign' );
 
-		$this->addOption( 'no-reset-password', 'Don\'t reset the user\'s password' );
+		$this->addOption( 'no-reset-password', 'Don\'t reset the user\'s password', false, false );
 
 		parent::__construct();
 	}
@@ -65,7 +65,6 @@ class ResetUserEmail extends Maintenance {
 			// Kick whomever is currently controlling the account off
 			$user->setPassword( PasswordFactory::generateRandomPasswordString( 128 ) );
 		}
-		$this->output( "Done!\n" );
 	}
 }
 

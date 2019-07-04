@@ -114,7 +114,7 @@ class WrapOldPasswords extends Maintenance {
 
 			// Clear memcached so old passwords are wiped out
 			foreach ( $updateUsers as $user ) {
-				$user->clearSharedCache( 'refresh' );
+				$user->clearSharedCache();
 			}
 		} while ( $res->numRows() );
 	}

@@ -3,13 +3,12 @@
 		"authors": [
 			"Bonevarluri",
 			"Mogoeilor",
-			"Beyronvan",
-			"Lorestani"
+			"Beyronvan"
 		]
 	},
 	"citethispage": "جاگه",
-	"citethispage-link": "جاگٱ اؽ بٱلگٱ",
-	"tooltip-citethispage": "دونسمنیا چاْ تۉر دی ی بٱلگٱ جاگر مۊئٱن",
+	"citethispage-link": "جاگٱ ای بلگٱ",
+	"tooltip-citethispage": "دۊنسمنیا چاٛ جۊر دی ای بلگٱ جاگر مۊٱن",
 	"citethispage-change-submit": "جاگه",
 	"citethispage-change-target": "بلگه"
 }

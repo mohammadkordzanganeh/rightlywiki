@@ -21,6 +21,7 @@
  */
 
 use MediaWiki\Linker\LinkTarget;
+use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Session\SessionManager;
 use Wikimedia\Rdbms\IResultWrapper;
@@ -151,6 +152,9 @@ class OutputPage extends ContextSource {
 
 	/** @var array */
 	protected $mModules = [];
+
+	/** @var array */
+	protected $mModuleScripts = [];
 
 	/** @var array */
 	protected $mModuleStyles = [];
@@ -549,12 +553,30 @@ class OutputPage extends ContextSource {
 	}
 
 	/**
-	 * @deprecated since 1.33 Use getModules() instead.
-	 * @return array
+	 * Get the list of script-only modules to load on this page.
+	 *
+	 * @param bool $filter
+	 * @param string|null $position Unused
+	 * @return array Array of module names
 	 */
-	public function getModuleScripts() {
-		wfDeprecated( __METHOD__, '1.33' );
-		return [];
+	public function getModuleScripts( $filter = false, $position = null ) {
+		return $this->getModules( $filter, null, 'mModuleScripts',
+			ResourceLoaderModule::TYPE_SCRIPTS
+		);
+	}
+
+	/**
+	 * Load the scripts of one or more ResourceLoader modules, on this page.
+	 *
+	 * This method exists purely to provide the legacy behaviour of loading
+	 * a module's scripts in the global scope, and without dependency resolution.
+	 * See <https://phabricator.wikimedia.org/T188689>.
+	 *
+	 * @deprecated since 1.31 Use addModules() instead.
+	 * @param string|array $modules Module name (string) or array of module names
+	 */
+	public function addModuleScripts( $modules ) {
+		$this->mModuleScripts = array_merge( $this->mModuleScripts, (array)$modules );
 	}
 
 	/**
@@ -932,8 +954,6 @@ class OutputPage extends ContextSource {
 	 * good tags like \<i\> will be dropped entirely.
 	 *
 	 * @param string|Message $name
-	 * @param-taint $name tainted
-	 * Phan-taint-check gets very confused by $name being either a string or a Message
 	 */
 	public function setPageTitle( $name ) {
 		if ( $name instanceof Message ) {
@@ -947,7 +967,7 @@ class OutputPage extends ContextSource {
 
 		# change "<i>foo&amp;bar</i>" to "foo&bar"
 		$this->setHTMLTitle(
-			$this->msg( 'pagetitle' )->plaintextParams( Sanitizer::stripAllTags( $nameWithTags ) )
+			$this->msg( 'pagetitle' )->rawParams( Sanitizer::stripAllTags( $nameWithTags ) )
 				->inContentLanguage()
 		);
 	}
@@ -1146,20 +1166,6 @@ class OutputPage extends ContextSource {
 	}
 
 	/**
-	 * Return effective list of advertised feed types
-	 * @see addFeedLink()
-	 *
-	 * @return array Array of feed type names ( 'rss', 'atom' )
-	 */
-	protected function getAdvertisedFeedTypes() {
-		if ( $this->getConfig()->get( 'Feed' ) ) {
-			return $this->getConfig()->get( 'AdvertisedFeedTypes' );
-		} else {
-			return [];
-		}
-	}
-
-	/**
 	 * Add default feeds to the page header
 	 * This is mainly kept for backward compatibility, see OutputPage::addFeedLink()
 	 * for the new version
@@ -1171,7 +1177,7 @@ class OutputPage extends ContextSource {
 	public function setFeedAppendQuery( $val ) {
 		$this->mFeedLinks = [];
 
-		foreach ( $this->getAdvertisedFeedTypes() as $type ) {
+		foreach ( $this->getConfig()->get( 'AdvertisedFeedTypes' ) as $type ) {
 			$query = "feed=$type";
 			if ( is_string( $val ) ) {
 				$query .= '&' . $val;
@@ -1187,7 +1193,7 @@ class OutputPage extends ContextSource {
 	 * @param string $href URL
 	 */
 	public function addFeedLink( $format, $href ) {
-		if ( in_array( $format, $this->getAdvertisedFeedTypes() ) ) {
+		if ( in_array( $format, $this->getConfig()->get( 'AdvertisedFeedTypes' ) ) ) {
 			$this->mFeedLinks[$format] = $href;
 		}
 	}
@@ -1628,7 +1634,7 @@ class OutputPage extends ContextSource {
 		}
 
 		if ( !$this->mParserOptions ) {
-			if ( !$this->getUser()->isSafeToLoad() ) {
+			if ( !$this->getContext()->getUser()->isSafeToLoad() ) {
 				// $wgUser isn't unstubbable yet, so don't try to get a
 				// ParserOptions for it. And don't cache this ParserOptions
 				// either.
@@ -1752,7 +1758,6 @@ class OutputPage extends ContextSource {
 	 *    or else addWikiTextAsContent() if $interface is false.
 	 */
 	public function addWikiText( $text, $linestart = true, $interface = true ) {
-		wfDeprecated( __METHOD__, '1.32' );
 		$title = $this->getTitle();
 		if ( !$title ) {
 			throw new MWException( 'Title is null' );
@@ -1929,10 +1934,6 @@ class OutputPage extends ContextSource {
 	private function addWikiTextTitleInternal(
 		$text, Title $title, $linestart, $tidy, $interface, $wrapperClass = null
 	) {
-		if ( !$tidy ) {
-			wfDeprecated( 'disabling tidy', '1.32' );
-		}
-
 		$parserOutput = $this->parseInternal(
 			$text, $title, $linestart, $tidy, $interface, /*language*/null
 		);
@@ -1965,6 +1966,7 @@ class OutputPage extends ContextSource {
 		$this->mNoGallery = $parserOutput->getNoGallery();
 		$this->mHeadItems = array_merge( $this->mHeadItems, $parserOutput->getHeadItems() );
 		$this->addModules( $parserOutput->getModules() );
+		$this->addModuleScripts( $parserOutput->getModuleScripts() );
 		$this->addModuleStyles( $parserOutput->getModuleStyles() );
 		$this->addJsConfigVars( $parserOutput->getJsConfigVars() );
 		$this->mPreventClickjacking = $this->mPreventClickjacking
@@ -2031,6 +2033,7 @@ class OutputPage extends ContextSource {
 		$this->addParserOutputText( $parserOutput, $poOptions );
 
 		$this->addModules( $parserOutput->getModules() );
+		$this->addModuleScripts( $parserOutput->getModuleScripts() );
 		$this->addModuleStyles( $parserOutput->getModuleStyles() );
 
 		$this->addJsConfigVars( $parserOutput->getJsConfigVars() );
@@ -2090,7 +2093,6 @@ class OutputPage extends ContextSource {
 	 *  parseAsInterface() if $interface is true.
 	 */
 	public function parse( $text, $linestart = true, $interface = false, $language = null ) {
-		wfDeprecated( __METHOD__, '1.33' );
 		return $this->parseInternal(
 			$text, $this->getTitle(), $linestart, /*tidy*/false, $interface, $language
 		)->getText( [
@@ -2173,7 +2175,6 @@ class OutputPage extends ContextSource {
 	 *   Parser::stripOuterParagraph($outputPage->parseAsContent(...)).
 	 */
 	public function parseInline( $text, $linestart = true, $interface = false ) {
-		wfDeprecated( __METHOD__, '1.33' );
 		$parsed = $this->parseInternal(
 			$text, $this->getTitle(), $linestart, /*tidy*/false, $interface, /*language*/null
 		)->getText( [
@@ -2187,7 +2188,7 @@ class OutputPage extends ContextSource {
 	 * Parse wikitext and return the HTML (internal implementation helper)
 	 *
 	 * @param string $text
-	 * @param Title $title The title to use
+	 * @param Title The title to use
 	 * @param bool $linestart Is this the start of a line?
 	 * @param bool $tidy Whether the output should be tidied
 	 * @param bool $interface Use interface language (instead of content language) while parsing
@@ -2516,18 +2517,6 @@ class OutputPage extends ContextSource {
 	}
 
 	/**
-	 * Get the Origin-Trial header values. This is used to enable Chrome Origin
-	 * Trials: https://github.com/GoogleChrome/OriginTrials
-	 *
-	 * @return array
-	 */
-	private function getOriginTrials() {
-		$config = $this->getConfig();
-
-		return $config->get( 'OriginTrials' );
-	}
-
-	/**
 	 * Send cache control HTTP headers
 	 */
 	public function sendCacheControl() {
@@ -2555,7 +2544,6 @@ class OutputPage extends ContextSource {
 				!$this->haveCacheVaryCookies()
 			) {
 				if ( $config->get( 'UseESI' ) ) {
-					wfDeprecated( '$wgUseESI = true', '1.33' );
 					# We'll purge the proxy cache explicitly, but require end user agents
 					# to revalidate against the proxy on each visit.
 					# Surrogate-Control controls our CDN, Cache-Control downstream caches
@@ -2691,11 +2679,6 @@ class OutputPage extends ContextSource {
 		$frameOptions = $this->getFrameOptions();
 		if ( $frameOptions ) {
 			$response->header( "X-Frame-Options: $frameOptions" );
-		}
-
-		$originTrials = $this->getOriginTrials();
-		foreach ( $originTrials as $originTrial ) {
-			$response->header( "Origin-Trial: $originTrial", false );
 		}
 
 		ContentSecurityPolicy::sendHeaders( $this );
@@ -2856,18 +2839,16 @@ class OutputPage extends ContextSource {
 					$query['returntoquery'] = wfArrayToCgi( $returntoquery );
 				}
 			}
-			$title = SpecialPage::getTitleFor( 'Userlogin' );
 			$linkRenderer = MediaWikiServices::getInstance()->getLinkRenderer();
-			$loginUrl = $title->getLinkURL( $query, false, PROTO_RELATIVE );
 			$loginLink = $linkRenderer->makeKnownLink(
-				$title,
+				SpecialPage::getTitleFor( 'Userlogin' ),
 				$this->msg( 'loginreqlink' )->text(),
 				[],
 				$query
 			);
 
 			$this->prepareErrorPage( $this->msg( 'loginreqtitle' ) );
-			$this->addHTML( $this->msg( $msg )->rawParams( $loginLink )->params( $loginUrl )->parse() );
+			$this->addHTML( $this->msg( $msg )->rawParams( $loginLink )->parse() );
 
 			# Don't return to a page the user can't read otherwise
 			# we'll end up in a pointless loop
@@ -2876,7 +2857,7 @@ class OutputPage extends ContextSource {
 			}
 		} else {
 			$this->prepareErrorPage( $this->msg( 'permissionserrors' ) );
-			$this->addWikiTextAsInterface( $this->formatPermissionsErrorMessage( $errors, $action ) );
+			$this->addWikiText( $this->formatPermissionsErrorMessage( $errors, $action ) );
 		}
 	}
 
@@ -2937,7 +2918,7 @@ class OutputPage extends ContextSource {
 	 * then the warning is a bit more obvious. If the lag is
 	 * lower than $wgSlaveLagWarning, then no warning is shown.
 	 *
-	 * @param int $lag Replica lag
+	 * @param int $lag Slave lag
 	 */
 	public function showLagWarning( $lag ) {
 		$config = $this->getConfig();
@@ -2984,7 +2965,7 @@ class OutputPage extends ContextSource {
 	 */
 	public function showFileRenameError( $old, $new ) {
 		wfDeprecated( __METHOD__, '1.32' );
-		$this->showFatalError( $this->msg( 'filerenameerror', $old, $new )->escaped() );
+		$this->showFatalError( $this->msg( 'filerenameerror', $old, $new )->escpaed() );
 	}
 
 	/**
@@ -3176,6 +3157,7 @@ class OutputPage extends ContextSource {
 			$rlClient->setConfig( $this->getJSVars() );
 			$rlClient->setModules( $this->getModules( /*filter*/ true ) );
 			$rlClient->setModuleStyles( $moduleStyles );
+			$rlClient->setModuleScripts( $this->getModuleScripts( /*filter*/ true ) );
 			$rlClient->setExemptStates( $exemptStates );
 			$this->rlClient = $rlClient;
 		}
@@ -3223,10 +3205,7 @@ class OutputPage extends ContextSource {
 		// Use an IE conditional comment to serve the script only to old IE
 		$pieces[] = '<!--[if lt IE 9]>' .
 			ResourceLoaderClientHtml::makeLoad(
-				new ResourceLoaderContext(
-					$this->getResourceLoader(),
-					new FauxRequest( [] )
-				),
+				ResourceLoaderContext::newDummyContext(),
 				[ 'html5shiv' ],
 				ResourceLoaderModule::TYPE_SCRIPTS,
 				[ 'sync' => true ],
@@ -3287,8 +3266,10 @@ class OutputPage extends ContextSource {
 	 */
 	public function getResourceLoader() {
 		if ( is_null( $this->mResourceLoader ) ) {
-			// Lazy-initialise as needed
-			$this->mResourceLoader = MediaWikiServices::getInstance()->getResourceLoader();
+			$this->mResourceLoader = new ResourceLoader(
+				$this->getConfig(),
+				LoggerFactory::getInstance( 'resourceloader' )
+			);
 		}
 		return $this->mResourceLoader;
 	}
@@ -3754,9 +3735,8 @@ class OutputPage extends ContextSource {
 			# or "Breaking news" one). For this, we see if $wgOverrideSiteFeed is defined.
 			# If so, use it instead.
 			$sitename = $config->get( 'Sitename' );
-			$overrideSiteFeed = $config->get( 'OverrideSiteFeed' );
-			if ( $overrideSiteFeed ) {
-				foreach ( $overrideSiteFeed as $type => $feedUrl ) {
+			if ( $config->get( 'OverrideSiteFeed' ) ) {
+				foreach ( $config->get( 'OverrideSiteFeed' ) as $type => $feedUrl ) {
 					// Note, this->feedLink escapes the url.
 					$feedLinks[] = $this->feedLink(
 						$type,
@@ -3766,7 +3746,7 @@ class OutputPage extends ContextSource {
 				}
 			} elseif ( !$this->getTitle()->isSpecial( 'Recentchanges' ) ) {
 				$rctitle = SpecialPage::getTitleFor( 'Recentchanges' );
-				foreach ( $this->getAdvertisedFeedTypes() as $format ) {
+				foreach ( $config->get( 'AdvertisedFeedTypes' ) as $format ) {
 					$feedLinks[] = $this->feedLink(
 						$format,
 						$rctitle->getLocalURL( [ 'feed' => $format ] ),
@@ -3788,24 +3768,26 @@ class OutputPage extends ContextSource {
 		if ( $config->get( 'EnableCanonicalServerLink' ) ) {
 			if ( $canonicalUrl !== false ) {
 				$canonicalUrl = wfExpandUrl( $canonicalUrl, PROTO_CANONICAL );
-			} elseif ( $this->isArticleRelated() ) {
-				// This affects all requests where "setArticleRelated" is true. This is
-				// typically all requests that show content (query title, curid, oldid, diff),
-				// and all wikipage actions (edit, delete, purge, info, history etc.).
-				// It does not apply to File pages and Special pages.
-				// 'history' and 'info' actions address page metadata rather than the page
-				// content itself, so they may not be canonicalized to the view page url.
-				// TODO: this ought to be better encapsulated in the Action class.
-				$action = Action::getActionName( $this->getContext() );
-				if ( in_array( $action, [ 'history', 'info' ] ) ) {
-					$query = "action={$action}";
-				} else {
-					$query = '';
-				}
-				$canonicalUrl = $this->getTitle()->getCanonicalURL( $query );
 			} else {
-				$reqUrl = $this->getRequest()->getRequestURL();
-				$canonicalUrl = wfExpandUrl( $reqUrl, PROTO_CANONICAL );
+				if ( $this->isArticleRelated() ) {
+					// This affects all requests where "setArticleRelated" is true. This is
+					// typically all requests that show content (query title, curid, oldid, diff),
+					// and all wikipage actions (edit, delete, purge, info, history etc.).
+					// It does not apply to File pages and Special pages.
+					// 'history' and 'info' actions address page metadata rather than the page
+					// content itself, so they may not be canonicalized to the view page url.
+					// TODO: this ought to be better encapsulated in the Action class.
+					$action = Action::getActionName( $this->getContext() );
+					if ( in_array( $action, [ 'history', 'info' ] ) ) {
+						$query = "action={$action}";
+					} else {
+						$query = '';
+					}
+					$canonicalUrl = $this->getTitle()->getCanonicalURL( $query );
+				} else {
+					$reqUrl = $this->getRequest()->getRequestURL();
+					$canonicalUrl = wfExpandUrl( $reqUrl, PROTO_CANONICAL );
+				}
 			}
 		}
 		if ( $canonicalUrl !== false ) {
@@ -3949,8 +3931,10 @@ class OutputPage extends ContextSource {
 	 * @return string HTML fragment
 	 */
 	protected function styleLink( $style, array $options ) {
-		if ( isset( $options['dir'] ) && $this->getLanguage()->getDir() != $options['dir'] ) {
-			return '';
+		if ( isset( $options['dir'] ) ) {
+			if ( $this->getLanguage()->getDir() != $options['dir'] ) {
+				return '';
+			}
 		}
 
 		if ( isset( $options['media'] ) ) {
@@ -4140,12 +4124,12 @@ class OutputPage extends ContextSource {
 	 *
 	 * For example:
 	 *
-	 *     $wgOut->wrapWikiMsg( "<div class='error'>\n$1\n</div>", 'some-error' );
+	 *    $wgOut->wrapWikiMsg( "<div class='error'>\n$1\n</div>", 'some-error' );
 	 *
 	 * Is equivalent to:
 	 *
-	 *     $wgOut->addWikiTextAsInterface( "<div class='error'>\n"
-	 *         . wfMessage( 'some-error' )->plain() . "\n</div>" );
+	 *    $wgOut->addWikiText( "<div class='error'>\n"
+	 *        . wfMessage( 'some-error' )->plain() . "\n</div>" );
 	 *
 	 * The newline after the opening div is needed in some wikitext. See T21226.
 	 *
@@ -4173,7 +4157,7 @@ class OutputPage extends ContextSource {
 			}
 			$s = str_replace( '$' . ( $n + 1 ), $this->msg( $name, $args )->plain(), $s );
 		}
-		$this->addWikiTextAsInterface( $s );
+		$this->addWikiText( $s );
 	}
 
 	/**
@@ -4209,8 +4193,8 @@ class OutputPage extends ContextSource {
 	 * Helper function to setup the PHP implementation of OOUI to use in this request.
 	 *
 	 * @since 1.26
-	 * @param string $skinName The Skin name to determine the correct OOUI theme
-	 * @param string $dir Language direction
+	 * @param String $skinName The Skin name to determine the correct OOUI theme
+	 * @param String $dir Language direction
 	 */
 	public static function setupOOUI( $skinName = 'default', $dir = 'ltr' ) {
 		$themes = ResourceLoaderOOUIModule::getSkinThemeMap();

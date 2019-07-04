@@ -1,7 +1,7 @@
 /*
  * JavaScript for WikiEditor Toolbar
  */
-$( function () {
+jQuery( function ( $ ) {
 	// The old toolbar is still in place and needs to be removed so there aren't two toolbars
 	$( '#toolbar' ).remove();
 	// Add toolbar module

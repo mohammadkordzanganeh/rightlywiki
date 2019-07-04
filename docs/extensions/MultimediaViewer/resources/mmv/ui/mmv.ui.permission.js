@@ -15,7 +15,7 @@
  * along with MediaViewer.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-( function () {
+( function ( mw, $, oo ) {
 	var P;
 
 	/**
@@ -108,7 +108,7 @@
 		 */
 		this.scroller = scroller;
 	}
-	OO.inheritClass( Permission, mw.mmv.ui.Element );
+	oo.inheritClass( Permission, mw.mmv.ui.Element );
 	P = Permission.prototype;
 
 	/**
@@ -142,8 +142,6 @@
 	P.grow = function () {
 		mw.mmv.actionLogger.log( 'terms-open' );
 
-		// FIXME: Use CSS transition
-		// eslint-disable-next-line no-jquery/no-animate
 		this.$box.addClass( 'full-size' )
 			.stop( true )
 			.animate( { backgroundColor: '#FFFFA0' }, 500 )
@@ -171,4 +169,4 @@
 	};
 
 	mw.mmv.ui.Permission = Permission;
-}() );
+}( mediaWiki, jQuery, OO ) );

@@ -69,8 +69,11 @@ class TemporaryPasswordAuthenticationRequest extends AuthenticationRequest {
 		$minLength = $config->get( 'MinimalPasswordLength' );
 		$policy = $config->get( 'PasswordPolicy' );
 		foreach ( $policy['policies'] as $p ) {
-			foreach ( [ 'MinimalPasswordLength', 'MinimumPasswordLengthToLogin' ] as $check ) {
-				$minLength = max( $minLength, $p[$check]['value'] ?? $p[$check] ?? 0 );
+			if ( isset( $p['MinimalPasswordLength'] ) ) {
+				$minLength = max( $minLength, $p['MinimalPasswordLength'] );
+			}
+			if ( isset( $p['MinimalPasswordLengthToLogin'] ) ) {
+				$minLength = max( $minLength, $p['MinimalPasswordLengthToLogin'] );
 			}
 		}
 

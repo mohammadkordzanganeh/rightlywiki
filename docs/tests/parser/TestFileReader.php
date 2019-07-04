@@ -28,6 +28,7 @@ class TestFileReader {
 	private $sectionLineNum = [];
 	private $lineNum = 0;
 	private $runDisabled;
+	private $runParsoid;
 	private $regex;
 
 	private $articles = [];
@@ -65,9 +66,11 @@ class TestFileReader {
 
 		$options = $options + [
 			'runDisabled' => false,
+			'runParsoid' => false,
 			'regex' => '//',
 		];
 		$this->runDisabled = $options['runDisabled'];
+		$this->runParsoid = $options['runParsoid'];
 		$this->regex = $options['regex'];
 	}
 
@@ -107,6 +110,13 @@ class TestFileReader {
 				throw new MWException( "Test at {$this->file}:{$this->sectionLineNum['test']} " .
 					"lacks result section" );
 			}
+		}
+
+		if ( preg_match( '/\\bparsoid\\b/i', $data['options'] ) && $nonTidySection === 'html'
+			&& !$this->runParsoid
+		) {
+			// A test which normally runs on Parsoid but can optionally be run with MW
+			return;
 		}
 
 		if ( !preg_match( $this->regex, $data['test'] ) ) {
@@ -155,7 +165,7 @@ class TestFileReader {
 	}
 
 	private function execute() {
-		while ( ( $line = fgets( $this->fh ) ) !== false ) {
+		while ( false !== ( $line = fgets( $this->fh ) ) ) {
 			$this->lineNum++;
 			$matches = [];
 

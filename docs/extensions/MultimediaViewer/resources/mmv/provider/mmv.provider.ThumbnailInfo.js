@@ -15,7 +15,7 @@
  * along with MultimediaViewer.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-( function () {
+( function ( mw, oo, $ ) {
 
 	/**
 	 * Gets thumbnail information.
@@ -33,7 +33,7 @@
 	function ThumbnailInfo( api, options ) {
 		mw.mmv.provider.Api.call( this, api, options );
 	}
-	OO.inheritClass( ThumbnailInfo, mw.mmv.provider.Api );
+	oo.inheritClass( ThumbnailInfo, mw.mmv.provider.Api );
 
 	/**
 	 * Runs an API GET request to get the thumbnail info for the specified size.
@@ -86,4 +86,4 @@
 	};
 
 	mw.mmv.provider.ThumbnailInfo = ThumbnailInfo;
-}() );
+}( mediaWiki, OO, jQuery ) );

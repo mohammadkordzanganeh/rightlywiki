@@ -25,7 +25,6 @@
  * @author Daniel Kinzler
  */
 
-use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\MediaWikiServices;
 
 /**
@@ -42,11 +41,6 @@ class WikitextContent extends TextContent {
 	 */
 	private $hadSignature = false;
 
-	/**
-	 * @var array|null Stack trace of the previous parse
-	 */
-	private $previousParseStackTrace = null;
-
 	public function __construct( $text ) {
 		parent::__construct( $text, CONTENT_MODEL_WIKITEXT );
 	}
@@ -61,7 +55,7 @@ class WikitextContent extends TextContent {
 	public function getSection( $sectionId ) {
 		global $wgParser;
 
-		$text = $this->getText();
+		$text = $this->getNativeData();
 		$sect = $wgParser->getSection( $text, $sectionId, false );
 
 		if ( $sect === false ) {
@@ -91,8 +85,8 @@ class WikitextContent extends TextContent {
 				"section uses $sectionModelId." );
 		}
 
-		$oldtext = $this->getText();
-		$text = $with->getText();
+		$oldtext = $this->getNativeData();
+		$text = $with->getNativeData();
 
 		if ( strval( $sectionId ) === '' ) {
 			return $with; # XXX: copy first?
@@ -131,7 +125,7 @@ class WikitextContent extends TextContent {
 		$text = wfMessage( 'newsectionheaderdefaultlevel' )
 			->rawParams( $header )->inContentLanguage()->text();
 		$text .= "\n\n";
-		$text .= $this->getText();
+		$text .= $this->getNativeData();
 
 		return new static( $text );
 	}
@@ -149,7 +143,7 @@ class WikitextContent extends TextContent {
 	public function preSaveTransform( Title $title, User $user, ParserOptions $popts ) {
 		global $wgParser;
 
-		$text = $this->getText();
+		$text = $this->getNativeData();
 		$pst = $wgParser->preSaveTransform( $text, $title, $user, $popts );
 
 		if ( $text === $pst ) {
@@ -178,7 +172,7 @@ class WikitextContent extends TextContent {
 	public function preloadTransform( Title $title, ParserOptions $popts, $params = [] ) {
 		global $wgParser;
 
-		$text = $this->getText();
+		$text = $this->getNativeData();
 		$plt = $wgParser->getPreloadText( $text, $title, $popts, $params );
 
 		return new static( $plt );
@@ -202,12 +196,12 @@ class WikitextContent extends TextContent {
 
 		if ( $wgMaxRedirects < 1 ) {
 			// redirects are disabled, so quit early
-			$this->redirectTargetAndText = [ null, $this->getText() ];
+			$this->redirectTargetAndText = [ null, $this->getNativeData() ];
 			return $this->redirectTargetAndText;
 		}
 
 		$redir = MediaWikiServices::getInstance()->getMagicWordFactory()->get( 'redirect' );
-		$text = ltrim( $this->getText() );
+		$text = ltrim( $this->getNativeData() );
 		if ( $redir->matchStartAndRemove( $text ) ) {
 			// Extract the first link and see if it's usable
 			// Ensure that it really does come directly after #REDIRECT
@@ -223,7 +217,7 @@ class WikitextContent extends TextContent {
 				$title = Title::newFromText( $m[1] );
 				// If the title is a redirect to bad special pages or is invalid, return null
 				if ( !$title instanceof Title || !$title->isValidRedirectTarget() ) {
-					$this->redirectTargetAndText = [ null, $this->getText() ];
+					$this->redirectTargetAndText = [ null, $this->getNativeData() ];
 					return $this->redirectTargetAndText;
 				}
 
@@ -232,7 +226,7 @@ class WikitextContent extends TextContent {
 			}
 		}
 
-		$this->redirectTargetAndText = [ null, $this->getText() ];
+		$this->redirectTargetAndText = [ null, $this->getNativeData() ];
 		return $this->redirectTargetAndText;
 	}
 
@@ -271,7 +265,7 @@ class WikitextContent extends TextContent {
 		# so the regex has to be fairly general
 		$newText = preg_replace( '/ \[ \[  [^\]]*  \] \] /x',
 			'[[' . $target->getFullText() . ']]',
-			$this->getText(), 1 );
+			$this->getNativeData(), 1 );
 
 		return new static( $newText );
 	}
@@ -343,28 +337,6 @@ class WikitextContent extends TextContent {
 	) {
 		global $wgParser;
 
-		$stackTrace = ( new RuntimeException() )->getTraceAsString();
-		if ( $this->previousParseStackTrace ) {
-			// NOTE: there may be legitimate changes to re-parse the same WikiText content,
-			// e.g. if predicted revision ID for the REVISIONID magic word mismatched.
-			// But that should be rare.
-			$logger = LoggerFactory::getInstance( 'DuplicateParse' );
-			$logger->debug(
-				__METHOD__ . ': Possibly redundant parse!',
-				[
-					'title' => $title->getPrefixedDBkey(),
-					'rev' => $revId,
-					'options-hash' => $options->optionsHash(
-						ParserOptions::allCacheVaryingOptions(),
-						$title
-					),
-					'trace' => $stackTrace,
-					'previous-trace' => $this->previousParseStackTrace,
-				]
-			);
-		}
-		$this->previousParseStackTrace = $stackTrace;
-
 		list( $redir, $text ) = $this->getRedirectTargetAndText();
 		$output = $wgParser->parse( $text, $title, $options, true, true, $revId );
 
@@ -408,7 +380,7 @@ class WikitextContent extends TextContent {
 	 * @see Content::matchMagicWord()
 	 */
 	public function matchMagicWord( MagicWord $word ) {
-		return $word->match( $this->getText() );
+		return $word->match( $this->getNativeData() );
 	}
 
 }

@@ -39,10 +39,8 @@ class SpecialNewpages extends IncludableSpecialPage {
 		parent::__construct( 'Newpages' );
 	}
 
-	/**
-	 * @param string|null $par
-	 */
 	protected function setup( $par ) {
+		// Options
 		$opts = new FormOptions();
 		$this->opts = $opts; // bind
 		$opts->add( 'hideliu', false );
@@ -65,33 +63,32 @@ class SpecialNewpages extends IncludableSpecialPage {
 			$opts->add( $key, $params['default'] );
 		}
 
+		// Set values
 		$opts->fetchValuesFromRequest( $this->getRequest() );
 		if ( $par ) {
 			$this->parseParams( $par );
 		}
 
+		// Validate
 		$opts->validateIntBounds( 'limit', 0, 5000 );
 	}
 
-	/**
-	 * @param string $par
-	 */
 	protected function parseParams( $par ) {
 		$bits = preg_split( '/\s*,\s*/', trim( $par ) );
 		foreach ( $bits as $bit ) {
-			if ( $bit === 'shownav' ) {
+			if ( 'shownav' == $bit ) {
 				$this->showNavigation = true;
 			}
-			if ( $bit === 'hideliu' ) {
+			if ( 'hideliu' === $bit ) {
 				$this->opts->setValue( 'hideliu', true );
 			}
-			if ( $bit === 'hidepatrolled' ) {
+			if ( 'hidepatrolled' == $bit ) {
 				$this->opts->setValue( 'hidepatrolled', true );
 			}
-			if ( $bit === 'hidebots' ) {
+			if ( 'hidebots' == $bit ) {
 				$this->opts->setValue( 'hidebots', true );
 			}
-			if ( $bit === 'showredirs' ) {
+			if ( 'showredirs' == $bit ) {
 				$this->opts->setValue( 'hideredirs', false );
 			}
 			if ( is_numeric( $bit ) ) {
@@ -121,7 +118,7 @@ class SpecialNewpages extends IncludableSpecialPage {
 	/**
 	 * Show a form for filtering namespace and username
 	 *
-	 * @param string|null $par
+	 * @param string $par
 	 */
 	public function execute( $par ) {
 		$out = $this->getOutput();
@@ -160,8 +157,6 @@ class SpecialNewpages extends IncludableSpecialPage {
 				$navigation = $pager->getNavigationBar();
 			}
 			$out->addHTML( $navigation . $pager->getBody() . $navigation );
-			// add styles for change tags
-			$out->addModuleStyles( 'mediawiki.interface.helpers.styles' );
 		} else {
 			$out->addWikiMsg( 'specialpage-empty' );
 		}
@@ -197,12 +192,9 @@ class SpecialNewpages extends IncludableSpecialPage {
 		// wfArrayToCgi(), called from LinkRenderer/Title, will not output null and false values
 		// to the URL, which would omit some options (T158504). Fix it by explicitly setting them
 		// to 0 or 1.
-		// Also do this only for boolean options, not eg. namespace or tagfilter
-		foreach ( $changed as $key => $value ) {
-			if ( array_key_exists( $key, $filters ) ) {
-				$changed[$key] = $changed[$key] ? '1' : '0';
-			}
-		}
+		$changed = array_map( function ( $value ) {
+			return $value ? '1' : '0';
+		}, $changed );
 
 		$self = $this->getPageTitle();
 		$linkRenderer = $this->getLinkRenderer();

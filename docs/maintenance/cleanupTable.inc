@@ -165,7 +165,7 @@ class TableCleanup extends Maintenance {
 	}
 
 	/**
-	 * @param string[] $matches
+	 * @param array $matches
 	 * @return string
 	 */
 	protected function hexChar( $matches ) {

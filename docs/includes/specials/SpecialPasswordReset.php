@@ -79,8 +79,7 @@ class SpecialPasswordReset extends FormSpecialPage {
 		$a = [];
 		if ( isset( $resetRoutes['username'] ) && $resetRoutes['username'] ) {
 			$a['Username'] = [
-				'type' => 'text',
-				'default' => $this->getRequest()->getSession()->suggestLoginUsername(),
+				'type' => 'user',
 				'label-message' => 'passwordreset-username',
 			];
 

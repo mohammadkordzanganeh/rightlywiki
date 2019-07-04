@@ -2,7 +2,6 @@
 
 /**
  * @group Parser
- * @covers MWTidy
  */
 class TidyTest extends MediaWikiTestCase {
 

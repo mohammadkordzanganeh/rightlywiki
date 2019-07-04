@@ -1702,7 +1702,10 @@ class PPCustomFrame_Hash extends PPFrame_Hash {
 	 * @return string|bool
 	 */
 	public function getArgument( $index ) {
-		return $this->args[$index] ?? false;
+		if ( !isset( $this->args[$index] ) ) {
+			return false;
+		}
+		return $this->args[$index];
 	}
 
 	public function getArguments() {

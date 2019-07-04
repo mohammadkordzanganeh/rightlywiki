@@ -7,7 +7,7 @@
  * @author Trevor Parscal <tparscal@wikimedia.org>
  */
 ( function () {
-	/* global mw */
+	/* global console, mw */
 	/* eslint-disable no-console */
 	var original = mw.log;
 

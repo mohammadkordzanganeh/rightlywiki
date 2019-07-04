@@ -202,7 +202,7 @@
 					}
 
 					isSample = false;
-					$( this ).trigger( 'focus' );
+					$( this ).focus();
 					if ( options.selectionStart !== undefined ) {
 						$( this ).textSelection( 'setSelection', { start: options.selectionStart, end: options.selectionEnd } );
 					}

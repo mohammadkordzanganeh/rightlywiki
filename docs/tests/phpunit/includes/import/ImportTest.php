@@ -33,7 +33,7 @@ class ImportTest extends MediaWikiLangTestCase {
 		$title = Title::newFromText( $title );
 		$this->assertTrue( $title->exists() );
 
-		$this->assertEquals( WikiPage::factory( $title )->getContent()->getText(), $text );
+		$this->assertEquals( WikiPage::factory( $title )->getContent()->getNativeData(), $text );
 	}
 
 	public function getUnknownTagsXML() {
@@ -222,9 +222,6 @@ EOF
 
 	/**
 	 * @dataProvider provideUnknownUserHandling
-	 * @covers WikiImporter::setUsernamePrefix
-	 * @covers ExternalUserNames::addPrefix
-	 * @covers ExternalUserNames::applyPrefix
 	 * @param bool $assign
 	 * @param bool $create
 	 */

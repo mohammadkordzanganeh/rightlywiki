@@ -160,7 +160,7 @@ class UserrightsPage extends SpecialPage {
 
 			// save settings
 			if ( !$fetchedStatus->isOK() ) {
-				$this->getOutput()->addWikiTextAsInterface( $fetchedStatus->getWikiText() );
+				$this->getOutput()->addWikiText( $fetchedStatus->getWikiText() );
 
 				return;
 			}
@@ -170,12 +170,10 @@ class UserrightsPage extends SpecialPage {
 				$targetUser->clearInstanceCache(); // T40989
 			}
 
-			$conflictCheck = $request->getVal( 'conflictcheck-originalgroups' );
-			$conflictCheck = ( $conflictCheck === '' ) ? [] : explode( ',', $conflictCheck );
-			$userGroups = $targetUser->getGroups();
-
-			if ( $userGroups !== $conflictCheck ) {
-				$out->wrapWikiMsg( '<span class="error">$1</span>', 'userrights-conflict' );
+			if ( $request->getVal( 'conflictcheck-originalgroups' )
+				!== implode( ',', $targetUser->getGroups() )
+			) {
+				$out->addWikiMsg( 'userrights-conflict' );
 			} else {
 				$status = $this->saveUserGroups(
 					$this->mTarget,
@@ -191,7 +189,7 @@ class UserrightsPage extends SpecialPage {
 					return;
 				} else {
 					// Print an error message and redisplay the form
-					$out->wrapWikiTextAsInterface( 'error', $status->getWikiText() );
+					$out->addWikiText( '<div class="error">' . $status->getWikiText() . '</div>' );
 				}
 			}
 		}
@@ -387,6 +385,9 @@ class UserrightsPage extends SpecialPage {
 		// update groups in external authentication database
 		Hooks::run( 'UserGroupsChanged', [ $user, $add, $remove, $this->getUser(),
 			$reason, $oldUGMs, $newUGMs ] );
+		MediaWiki\Auth\AuthManager::callLegacyAuthPlugin(
+			'updateExternalDBGroups', [ $user, $add, $remove ]
+		);
 
 		wfDebug( 'oldGroups: ' . print_r( $oldGroups, true ) . "\n" );
 		wfDebug( 'newGroups: ' . print_r( $newGroups, true ) . "\n" );
@@ -467,7 +468,7 @@ class UserrightsPage extends SpecialPage {
 	function editUserGroupsForm( $username ) {
 		$status = $this->fetchUser( $username, true );
 		if ( !$status->isOK() ) {
-			$this->getOutput()->addWikiTextAsInterface( $status->getWikiText() );
+			$this->getOutput()->addWikiText( $status->getWikiText() );
 
 			return;
 		} else {
@@ -496,18 +497,18 @@ class UserrightsPage extends SpecialPage {
 		$parts = explode( $this->getConfig()->get( 'UserrightsInterwikiDelimiter' ), $username );
 		if ( count( $parts ) < 2 ) {
 			$name = trim( $username );
-			$wikiId = '';
+			$database = '';
 		} else {
-			list( $name, $wikiId ) = array_map( 'trim', $parts );
+			list( $name, $database ) = array_map( 'trim', $parts );
 
-			if ( WikiMap::isCurrentWikiId( $wikiId ) ) {
-				$wikiId = '';
+			if ( $database == wfWikiID() ) {
+				$database = '';
 			} else {
 				if ( $writing && !$this->getUser()->isAllowed( 'userrights-interwiki' ) ) {
 					return Status::newFatal( 'userrights-no-interwiki' );
 				}
-				if ( !UserRightsProxy::validDatabase( $wikiId ) ) {
-					return Status::newFatal( 'userrights-nodatabase', $wikiId );
+				if ( !UserRightsProxy::validDatabase( $database ) ) {
+					return Status::newFatal( 'userrights-nodatabase', $database );
 				}
 			}
 		}
@@ -521,10 +522,10 @@ class UserrightsPage extends SpecialPage {
 			// We'll do a lookup for the name internally.
 			$id = intval( substr( $name, 1 ) );
 
-			if ( $wikiId == '' ) {
+			if ( $database == '' ) {
 				$name = User::whoIs( $id );
 			} else {
-				$name = UserRightsProxy::whoIs( $wikiId, $id );
+				$name = UserRightsProxy::whoIs( $database, $id );
 			}
 
 			if ( !$name ) {
@@ -538,10 +539,10 @@ class UserrightsPage extends SpecialPage {
 			}
 		}
 
-		if ( $wikiId == '' ) {
+		if ( $database == '' ) {
 			$user = User::newFromName( $name );
 		} else {
-			$user = UserRightsProxy::newFromName( $wikiId, $name );
+			$user = UserRightsProxy::newFromName( $database, $name );
 		}
 
 		if ( !$user || $user->isAnon() ) {
@@ -711,6 +712,8 @@ class UserrightsPage extends SpecialPage {
 				->rawParams( $userToolLinks )->parse()
 		);
 		if ( $canChangeAny ) {
+			$conf = $this->getConfig();
+			$oldCommentSchema = $conf->get( 'CommentTableSchemaMigrationStage' ) === MIGRATION_OLD;
 			$this->getOutput()->addHTML(
 				$this->msg( 'userrights-groups-help', $user->getName() )->parse() .
 				$grouplist .
@@ -725,8 +728,8 @@ class UserrightsPage extends SpecialPage {
 								'id' => 'wpReason',
 								// HTML maxlength uses "UTF-16 code units", which means that characters outside BMP
 								// (e.g. emojis) count for two each. This limit is overridden in JS to instead count
-								// Unicode codepoints.
-								'maxlength' => CommentStore::COMMENT_CHARACTER_LIMIT,
+								// Unicode codepoints (or 255 UTF-8 bytes for old schema).
+								'maxlength' => $oldCommentSchema ? 255 : CommentStore::COMMENT_CHARACTER_LIMIT,
 							] ) .
 						"</td>
 					</tr>
@@ -764,7 +767,7 @@ class UserrightsPage extends SpecialPage {
 	 * @param UserGroupMembership[] $usergroups Associative array of (group name as string =>
 	 *   UserGroupMembership object) for groups the user belongs to
 	 * @param User $user
-	 * @return array Array with 2 elements: the XHTML table element with checkxboes, and
+	 * @return Array with 2 elements: the XHTML table element with checkxboes, and
 	 * whether any groups are changeable
 	 */
 	private function groupCheckboxes( $usergroups, $user ) {

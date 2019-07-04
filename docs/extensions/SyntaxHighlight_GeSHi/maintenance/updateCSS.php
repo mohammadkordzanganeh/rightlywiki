@@ -64,5 +64,5 @@ class UpdateCSS extends Maintenance {
 	}
 }
 
-$maintClass = UpdateCSS::class;
+$maintClass = "UpdateCSS";
 require_once RUN_MAINTENANCE_IF_MAIN;

@@ -266,7 +266,7 @@ class MonoBookTemplate extends BaseTemplate {
 		$html = '';
 
 		if ( $this->config->get( 'UseTwoButtonsSearchForm' ) ) {
-			$optionButtons = "\u{00A0} " . $this->makeSearchButton(
+			$optionButtons = '&#160; ' . $this->makeSearchButton(
 				'fulltext',
 				[ 'id' => 'mw-searchButton', 'class' => 'searchButton' ]
 			);
@@ -452,7 +452,6 @@ class MonoBookTemplate extends BaseTemplate {
 			}
 			// Compatibility with extensions still using SkinTemplateToolboxEnd or similar
 			if ( is_array( $options['hooks'] ) ) {
-				// @phan-suppress-next-line PhanTypeMismatchForeach T218843
 				foreach ( $options['hooks'] as $hook => $hookOptions ) {
 					$contentText .= $this->deprecatedHookHack( $hook, $hookOptions );
 				}

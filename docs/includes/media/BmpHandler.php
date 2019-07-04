@@ -44,7 +44,7 @@ class BmpHandler extends BitmapHandler {
 	 * @param array|null $params
 	 * @return array
 	 */
-	public function getThumbType( $text, $mime, $params = null ) {
+	function getThumbType( $text, $mime, $params = null ) {
 		return [ 'png', 'image/png' ];
 	}
 

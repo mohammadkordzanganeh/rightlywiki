@@ -46,8 +46,6 @@ class LanguageMl extends Language {
 		$s = parent::normalize( $s );
 		if ( $wgFixMalayalamUnicode ) {
 			$s = $this->transformUsingPairFile( 'normalize-ml.php', $s );
-		} else {
-			wfDeprecated( '$wgFixMalayalamUnicode = false', '1.33' );
 		}
 		return $s;
 	}

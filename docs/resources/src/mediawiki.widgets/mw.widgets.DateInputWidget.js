@@ -168,7 +168,6 @@
 			focusout: this.onBlur.bind( this )
 		} );
 		this.calendar.$element.on( {
-			focusout: this.onBlur.bind( this ),
 			click: this.onCalendarClick.bind( this ),
 			keypress: this.onCalendarKeyPress.bind( this )
 		} );
@@ -201,9 +200,10 @@
 				if ( e.which === OO.ui.Keys.TAB ) {
 					if ( e.shiftKey ) {
 						// Tabbing backward from text input: normal browser behavior
+						$.noop();
 					} else {
 						// Tabbing forward from text input: just focus the calendar
-						this.calendar.$element.trigger( 'focus' );
+						this.calendar.$element.focus();
 						return false;
 					}
 				}
@@ -212,12 +212,12 @@
 				if ( e.which === OO.ui.Keys.TAB ) {
 					if ( e.shiftKey ) {
 						// Tabbing backward from calendar: just focus the text input
-						this.textInput.$input.trigger( 'focus' );
+						this.textInput.$input.focus();
 						return false;
 					} else {
 						// Tabbing forward from calendar: focus the text input, then allow normal browser
 						// behavior to move focus to next focusable after it
-						this.textInput.$input.trigger( 'focus' );
+						this.textInput.$input.focus();
 					}
 				}
 			}.bind( this ) );
@@ -406,7 +406,7 @@
 		if ( userSelected ) {
 			// Prevent focusing the handle from reopening the calendar
 			this.closing = true;
-			this.$handle.trigger( 'focus' );
+			this.$handle.focus();
 			this.closing = false;
 		}
 
@@ -425,7 +425,7 @@
 		this.textInput.toggle( true );
 		this.calendar.toggle( true );
 
-		this.textInput.$input.trigger( 'focus' );
+		this.textInput.$input.focus();
 	};
 
 	/**

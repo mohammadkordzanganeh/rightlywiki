@@ -75,13 +75,13 @@ class ResourceLoaderStartUpModule extends ResourceLoaderModule {
 		}
 
 		$illegalFileChars = $conf->get( 'IllegalFileChars' );
+		$oldCommentSchema = $conf->get( 'CommentTableSchemaMigrationStage' ) === MIGRATION_OLD;
 
 		// Build list of variables
-		$skin = $context->getSkin();
 		$vars = [
 			'wgLoadScript' => wfScript( 'load' ),
 			'debug' => $context->getDebug(),
-			'skin' => $skin,
+			'skin' => $context->getSkin(),
 			'stylepath' => $conf->get( 'StylePath' ),
 			'wgUrlProtocols' => wfUrlProtocols(),
 			'wgArticlePath' => $conf->get( 'ArticlePath' ),
@@ -107,12 +107,14 @@ class ResourceLoaderStartUpModule extends ResourceLoaderModule {
 			'wgSiteName' => $conf->get( 'Sitename' ),
 			'wgDBname' => $conf->get( 'DBname' ),
 			'wgExtraSignatureNamespaces' => $conf->get( 'ExtraSignatureNamespaces' ),
+			'wgAvailableSkins' => Skin::getSkinNames(),
 			'wgExtensionAssetsPath' => $conf->get( 'ExtensionAssetsPath' ),
 			// MediaWiki sets cookies to have this prefix by default
 			'wgCookiePrefix' => $conf->get( 'CookiePrefix' ),
 			'wgCookieDomain' => $conf->get( 'CookieDomain' ),
 			'wgCookiePath' => $conf->get( 'CookiePath' ),
 			'wgCookieExpiration' => $conf->get( 'CookieExpiration' ),
+			'wgResourceLoaderMaxQueryLength' => $conf->get( 'ResourceLoaderMaxQueryLength' ),
 			'wgCaseSensitiveNamespaces' => $caseSensitiveNamespaces,
 			'wgLegalTitleChars' => Title::convertByteClassToUnicodeClass( Title::legalChars() ),
 			'wgIllegalFileChars' => Title::convertByteClassToUnicodeClass( $illegalFileChars ),
@@ -120,11 +122,11 @@ class ResourceLoaderStartUpModule extends ResourceLoaderModule {
 			'wgResourceLoaderStorageEnabled' => $conf->get( 'ResourceLoaderStorageEnabled' ),
 			'wgForeignUploadTargets' => $conf->get( 'ForeignUploadTargets' ),
 			'wgEnableUploads' => $conf->get( 'EnableUploads' ),
-			'wgCommentByteLimit' => null,
-			'wgCommentCodePointLimit' => CommentStore::COMMENT_CHARACTER_LIMIT,
+			'wgCommentByteLimit' => $oldCommentSchema ? 255 : null,
+			'wgCommentCodePointLimit' => $oldCommentSchema ? null : CommentStore::COMMENT_CHARACTER_LIMIT,
 		];
 
-		Hooks::run( 'ResourceLoaderGetConfigVars', [ &$vars, $skin ] );
+		Hooks::run( 'ResourceLoaderGetConfigVars', [ &$vars ] );
 
 		return $vars;
 	}
@@ -385,8 +387,6 @@ class ResourceLoaderStartUpModule extends ResourceLoaderModule {
 	 */
 	public function getScript( ResourceLoaderContext $context ) {
 		global $IP;
-		$conf = $this->getConfig();
-
 		if ( $context->getOnly() !== 'scripts' ) {
 			return '/* Requires only=script */';
 		}
@@ -400,16 +400,13 @@ class ResourceLoaderStartUpModule extends ResourceLoaderModule {
 		if ( $context->getDebug() ) {
 			$mwLoaderCode .= file_get_contents( "$IP/resources/src/startup/mediawiki.log.js" );
 		}
-		if ( $conf->get( 'ResourceLoaderEnableJSProfiler' ) ) {
+		if ( $this->getConfig()->get( 'ResourceLoaderEnableJSProfiler' ) ) {
 			$mwLoaderCode .= file_get_contents( "$IP/resources/src/startup/profiler.js" );
 		}
 
 		// Perform replacements for mediawiki.js
 		$mwLoaderPairs = [
 			'$VARS.baseModules' => ResourceLoader::encodeJsonForScript( $this->getBaseModules() ),
-			'$VARS.maxQueryLength' => ResourceLoader::encodeJsonForScript(
-				$conf->get( 'ResourceLoaderMaxQueryLength' )
-			),
 		];
 		$profilerStubs = [
 			'$CODE.profileExecuteStart();' => 'mw.loader.profiler.onExecuteStart( module );',
@@ -417,7 +414,7 @@ class ResourceLoaderStartUpModule extends ResourceLoaderModule {
 			'$CODE.profileScriptStart();' => 'mw.loader.profiler.onScriptStart( module );',
 			'$CODE.profileScriptEnd();' => 'mw.loader.profiler.onScriptEnd( module );',
 		];
-		if ( $conf->get( 'ResourceLoaderEnableJSProfiler' ) ) {
+		if ( $this->getConfig()->get( 'ResourceLoaderEnableJSProfiler' ) ) {
 			// When profiling is enabled, insert the calls.
 			$mwLoaderPairs += $profilerStubs;
 		} else {
@@ -429,7 +426,7 @@ class ResourceLoaderStartUpModule extends ResourceLoaderModule {
 		// Perform string replacements for startup.js
 		$pairs = [
 			'$VARS.wgLegacyJavaScriptGlobals' => ResourceLoader::encodeJsonForScript(
-				$conf->get( 'LegacyJavaScriptGlobals' )
+				$this->getConfig()->get( 'LegacyJavaScriptGlobals' )
 			),
 			'$VARS.configuration' => ResourceLoader::encodeJsonForScript(
 				$this->getConfigSettings( $context )

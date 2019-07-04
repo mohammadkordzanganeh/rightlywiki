@@ -59,11 +59,6 @@ class ExtensionDependencyError extends Exception {
 	public $missingPhpExtensions = [];
 
 	/**
-	 * @var string[]
-	 */
-	public $missingAbilities = [];
-
-	/**
 	 * @param array $errors Each error has a 'msg' and 'type' key at minimum
 	 */
 	public function __construct( array $errors ) {
@@ -79,9 +74,6 @@ class ExtensionDependencyError extends Exception {
 					break;
 				case 'missing-phpExtension':
 					$this->missingPhpExtensions[] = $info['missing'];
-					break;
-				case 'missing-ability':
-					$this->missingAbilities[] = $info['missing'];
 					break;
 				case 'missing-skins':
 					$this->missingSkins[] = $info['missing'];

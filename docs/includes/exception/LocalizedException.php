@@ -19,6 +19,20 @@
  */
 
 /**
+ * Interface for MediaWiki-localized exceptions
+ *
+ * @since 1.29
+ * @ingroup Exception
+ */
+interface ILocalizedException {
+	/**
+	 * Return a Message object for this exception
+	 * @return Message
+	 */
+	public function getMessageObject();
+}
+
+/**
  * Basic localized exception.
  *
  * @since 1.29

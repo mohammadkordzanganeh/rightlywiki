@@ -60,7 +60,7 @@ class SpecialUploadStash extends UnlistedSpecialPage {
 	/**
 	 * Execute page -- can output a file directly or show a listing of them.
 	 *
-	 * @param string|null $subPage Subpage, e.g. in
+	 * @param string $subPage Subpage, e.g. in
 	 *   https://example.com/wiki/Special:UploadStash/foo.jpg, the "foo.jpg" part
 	 * @return bool Success
 	 */
@@ -165,6 +165,8 @@ class SpecialUploadStash extends UnlistedSpecialPage {
 	 *
 	 * @param File $file
 	 * @param array $params
+	 *
+	 * @return bool Success
 	 */
 	private function outputThumbFromStash( $file, $params ) {
 		$flags = 0;
@@ -261,30 +263,12 @@ class SpecialUploadStash extends UnlistedSpecialPage {
 		$scalerThumbUrl = $scalerBaseUrl . '/' . $file->getUrlRel() .
 			'/' . rawurlencode( $scalerThumbName );
 
-		// If a thumb proxy is set up for the repo, we favor that, as that will
-		// keep the request internal
-		$thumbProxyUrl = $file->getRepo()->getThumbProxyUrl();
-
-		if ( strlen( $thumbProxyUrl ) ) {
-			$scalerThumbUrl = $thumbProxyUrl . 'temp/' . $file->getUrlRel() .
-			'/' . rawurlencode( $scalerThumbName );
-		}
-
-		// make an http request based on wgUploadStashScalerBaseUrl to lazy-create
-		// a thumbnail
+		// make a curl call to the scaler to create a thumbnail
 		$httpOptions = [
 			'method' => 'GET',
 			'timeout' => 5 // T90599 attempt to time out cleanly
 		];
 		$req = MWHttpRequest::factory( $scalerThumbUrl, $httpOptions, __METHOD__ );
-
-		$secret = $file->getRepo()->getThumbProxySecret();
-
-		// Pass a secret key shared with the proxied service if any
-		if ( strlen( $secret ) ) {
-			$req->setHeader( 'X-Swift-Secret', $secret );
-		}
-
 		$status = $req->execute();
 		if ( !$status->isOK() ) {
 			$errors = $status->getErrorsArray();
@@ -462,4 +446,11 @@ class SpecialUploadStash extends UnlistedSpecialPage {
 
 		return true;
 	}
+}
+
+/**
+ * @ingroup SpecialPage
+ * @ingroup Upload
+ */
+class SpecialUploadStashTooLargeException extends UploadStashException {
 }

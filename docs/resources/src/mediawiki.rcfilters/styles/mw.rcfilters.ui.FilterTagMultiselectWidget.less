@@ -78,7 +78,6 @@
 				padding: 0.6em 0; // Same top padding as the handle
 				flex: 0 0 auto;
 			}
-
 			&-queryName {
 				flex: 1 1 auto;
 				padding: 0.6em 0; // Same top padding as the handle
@@ -131,18 +130,18 @@
 			width: 1em;
 
 			&-widget.oo-ui-widget {
-				display: block;
-				.box-sizing( border-box );
-				height: 2.5em;
 				border: 1px solid @colorGray10;
 				border-left-width: 0;
 				border-radius: 0 0 @borderRadius 0;
-				// For `padding-right` using the 'left' value from
+				// Using the 'left' value from
 				// .oo-ui-buttonElement-frameless.oo-ui-iconElement >
 				// .oo-ui-buttonElement-button > .oo-ui-iconElement-icon
 				padding-right: 0.35714286em;
+
+				display: block;
 				text-align: right;
-				white-space: nowrap;
+				height: 2.5em;
+				.box-sizing( border-box );
 
 				.oo-ui-buttonOptionWidget:first-child {
 					margin-left: 0;

@@ -49,7 +49,11 @@ class ParserTestParserHook {
 			&& $argv['action'] === 'flush' && $in === null
 		) {
 			// Clear the buffer, we probably don't need to
-			$tmp = $parser->static_tag_buf ?? '';
+			if ( isset( $parser->static_tag_buf ) ) {
+				$tmp = $parser->static_tag_buf;
+			} else {
+				$tmp = '';
+			}
 			$parser->static_tag_buf = null;
 			return $tmp;
 		} else { // wtf?

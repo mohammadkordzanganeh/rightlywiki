@@ -52,7 +52,11 @@ class BaseDump {
 		$this->infiles = explode( ';', $infile );
 		$this->reader = new XMLReader();
 		$infile = array_shift( $this->infiles );
-		$this->reader->open( $infile, null, LIBXML_PARSEHUGE );
+		if ( defined( 'LIBXML_PARSEHUGE' ) ) {
+			$this->reader->open( $infile, null, LIBXML_PARSEHUGE );
+		} else {
+			$this->reader->open( $infile );
+		}
 	}
 
 	/**
@@ -101,7 +105,7 @@ class BaseDump {
 	}
 
 	/**
-	 * @private
+	 * @access private
 	 */
 	function nextPage() {
 		if ( $this->skipTo( 'page', 'mediawiki' ) ) {
@@ -121,7 +125,7 @@ class BaseDump {
 	}
 
 	/**
-	 * @private
+	 * @access private
 	 */
 	function nextRev() {
 		if ( $this->skipTo( 'revision' ) ) {
@@ -134,7 +138,7 @@ class BaseDump {
 	}
 
 	/**
-	 * @private
+	 * @access private
 	 * @return string
 	 */
 	function nextText() {
@@ -144,7 +148,7 @@ class BaseDump {
 	}
 
 	/**
-	 * @private
+	 * @access private
 	 * @param string $name
 	 * @param string $parent
 	 * @return bool|null
@@ -177,7 +181,7 @@ class BaseDump {
 	 * no sub-elements or such scary things.
 	 *
 	 * @return string
-	 * @private
+	 * @access private
 	 */
 	function nodeContents() {
 		if ( $this->atEnd ) {
@@ -203,7 +207,7 @@ class BaseDump {
 	}
 
 	/**
-	 * @private
+	 * @access private
 	 * @return null
 	 */
 	function close() {

@@ -54,7 +54,7 @@
 		}
 
 		$popup = $( '<div>' ).addClass( 'postedit mw-notification' ).append( $content )
-			.on( 'click', function () {
+			.click( function () {
 				clearTimeout( timeoutId );
 				fadeOutConfirmation();
 			} );

@@ -256,9 +256,7 @@ p.mw-delete-editreasons {
 }
 
 /* The auto-generated edit comments */
-.autocomment,
-.autocomment a,
-.autocomment a:visited {
+.autocomment {
 	color: #72777d;
 }
 
@@ -326,7 +324,7 @@ a.new {
  * wikitable class for skinning normal tables
  * keep in sync with commonPrint.css
  */
-.wikitable {
+table.wikitable {
 	background-color: #f8f9fa;
 	color: #222;
 	margin: 1em 0;
@@ -334,21 +332,21 @@ a.new {
 	border-collapse: collapse;
 }
 
-.wikitable > tr > th,
-.wikitable > tr > td,
-.wikitable > * > tr > th,
-.wikitable > * > tr > td {
+table.wikitable > tr > th,
+table.wikitable > tr > td,
+table.wikitable > * > tr > th,
+table.wikitable > * > tr > td {
 	border: 1px solid #a2a9b1;
 	padding: 0.2em 0.4em;
 }
 
-.wikitable > tr > th,
-.wikitable > * > tr > th {
+table.wikitable > tr > th,
+table.wikitable > * > tr > th {
 	background-color: #eaecf0;
 	text-align: center;
 }
 
-.wikitable > caption {
+table.wikitable > caption {
 	font-weight: bold;
 }
 
@@ -447,22 +445,22 @@ a.new {
 /**
  * Data table style
  *
- * Table with suddle borders
- * and row-highlighting.
+ * Transparent table with suddle borders
+ * and blue row-highlighting.
  */
 .mw-datatable {
-	border: 1px solid #a2a9b1;
 	border-collapse: collapse;
 }
 
+.mw-datatable,
 .mw-datatable td,
 .mw-datatable th {
 	border: 1px solid #a2a9b1;
-	padding: 0.2em 0.4em;
+	padding: 0 0.15em 0 0.15em;
 }
 
 .mw-datatable th {
-	background-color: #eaeeff;
+	background-color: #ddf;
 }
 
 .mw-datatable td {

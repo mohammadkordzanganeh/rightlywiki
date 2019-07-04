@@ -78,8 +78,8 @@ class RenderedRevisionTest extends MediaWikiTestCase {
 	}
 
 	/**
-	 * @param int $articleId
-	 * @param int $revisionId
+	 * @param $articleId
+	 * @param $revisionId
 	 * @return Title
 	 */
 	private function getMockTitle( $articleId, $revisionId ) {
@@ -481,23 +481,6 @@ class RenderedRevisionTest extends MediaWikiTestCase {
 		$this->assertContains( 'rev:21!', $html );
 		$this->assertContains( 'user:Frank!', $html );
 		$this->assertContains( 'time:20180101000003!', $html );
-	}
-
-	public function testSetRevisionParserOutput() {
-		$title = $this->getMockTitle( 3, 21 );
-		$rev = $this->getMockRevision( RevisionStoreRecord::class, $title );
-
-		$options = ParserOptions::newCanonical( 'canonical' );
-		$rr = new RenderedRevision( $title, $rev, $options, $this->combinerCallback );
-
-		$output = new ParserOutput( 'Kittens' );
-		$rr->setRevisionParserOutput( $output );
-
-		$this->assertSame( $output, $rr->getRevisionParserOutput() );
-		$this->assertSame( 'Kittens', $rr->getRevisionParserOutput()->getText() );
-
-		$this->assertSame( $output, $rr->getSlotParserOutput( SlotRecord::MAIN ) );
-		$this->assertSame( 'Kittens', $rr->getSlotParserOutput( SlotRecord::MAIN )->getText() );
 	}
 
 	public function testNoHtml() {

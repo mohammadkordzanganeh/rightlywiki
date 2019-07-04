@@ -1,8 +1,8 @@
 /*!
- * jQuery Client v2.0.2
+ * jQuery Client v2.0.1
  * https://www.mediawiki.org/wiki/JQuery_Client
  *
- * Copyright 2010-2019 jquery-client maintainers and other contributors.
+ * Copyright 2010-2015 jquery-client maintainers and other contributors.
  * Released under the MIT license
  * http://jquery-client.mit-license.org
  */
@@ -13,7 +13,7 @@
  * @class jQuery.client
  * @singleton
  */
-( function () {
+( function ( $ ) {
 
 	/**
 	 * @private
@@ -51,7 +51,6 @@
 				return profileCache[ nav.userAgent + '|' + nav.platform ];
 			}
 
-			// eslint-disable-next-line vars-on-top
 			var
 				versionNumber,
 				key = nav.userAgent + '|' + nav.platform,
@@ -76,18 +75,16 @@
 					[ 'Minefield', 'Firefox' ],
 					// This helps keep different versions consistent
 					[ 'Navigator', 'Netscape' ],
-					// This prevents version extraction issues,
-					// otherwise translation would happen later
+					// This prevents version extraction issues, otherwise translation would happen later
 					[ 'PLAYSTATION 3', 'PS3' ]
 				],
-				// Strings which precede a version number in a user agent string - combined and
-				// used as match 1 in version detection
+				// Strings which precede a version number in a user agent string - combined and used as
+				// match 1 in version detection
 				versionPrefixes = [
 					'camino', 'chrome', 'firefox', 'iceweasel', 'netscape', 'netscape6', 'opera', 'version', 'konqueror',
 					'lynx', 'msie', 'safari', 'ps3', 'android'
 				],
-				// Used as matches 2, 3 and 4 in version extraction - 3 is used as actual
-				// version number
+				// Used as matches 2, 3 and 4 in version extraction - 3 is used as actual version number
 				versionSuffix = '(\\/|\\;?\\s|)([a-z0-9\\.\\+]*?)(\\;|dev|rel|\\)|\\s|$)',
 				// Names of known browsers
 				names = [
@@ -107,7 +104,10 @@
 				// Translations for conforming operating system names
 				platformTranslations = [ [ 'sunos', 'solaris' ], [ 'wow64', 'win' ] ],
 
-				// Performs multiple replacements on a string
+				/**
+				 * Performs multiple replacements on a string
+				 * @ignore
+				 */
 				translate = function ( source, translations ) {
 					var i;
 					for ( i = 0; i < translations.length; i++ ) {
@@ -126,34 +126,28 @@
 				platform = uk,
 				version = x;
 
-			if ( ( match = new RegExp( '(' + wildUserAgents.join( '|' ) + ')' ).exec( ua ) ) ) {
-				// Takes a userAgent string and translates given text into something we can more
-				// easily work with
+			if ( match = new RegExp( '(' + wildUserAgents.join( '|' ) + ')' ).exec( ua ) ) {
+				// Takes a userAgent string and translates given text into something we can more easily work with
 				ua = translate( ua, userAgentTranslations );
 			}
 			// Everything will be in lowercase from now on
 			ua = ua.toLowerCase();
 
-			// Firefox Mobile: Remove 'Android' identifier so it matches to 'Firefox' instead
-			if ( ua.match( /android/ ) && ua.match( /firefox/ ) ) {
-				ua = ua.replace( new RegExp( 'android' + versionSuffix ), '' );
-			}
-
 			// Extraction
 
-			if ( ( match = new RegExp( '(' + names.join( '|' ) + ')' ).exec( ua ) ) ) {
+			if ( match = new RegExp( '(' + names.join( '|' ) + ')' ).exec( ua ) ) {
 				name = translate( match[ 1 ], nameTranslations );
 			}
-			if ( ( match = new RegExp( '(' + layouts.join( '|' ) + ')' ).exec( ua ) ) ) {
+			if ( match = new RegExp( '(' + layouts.join( '|' ) + ')' ).exec( ua ) ) {
 				layout = translate( match[ 1 ], layoutTranslations );
 			}
-			if ( ( match = new RegExp( '(' + layoutVersions.join( '|' ) + ')\\/(\\d+)' ).exec( ua ) ) ) {
+			if ( match = new RegExp( '(' + layoutVersions.join( '|' ) + ')\\/(\\d+)' ).exec( ua ) ) {
 				layoutversion = parseInt( match[ 2 ], 10 );
 			}
-			if ( ( match = new RegExp( '(' + platforms.join( '|' ) + ')' ).exec( nav.platform.toLowerCase() ) ) ) {
+			if ( match = new RegExp( '(' + platforms.join( '|' ) + ')' ).exec( nav.platform.toLowerCase() ) ) {
 				platform = translate( match[ 1 ], platformTranslations );
 			}
-			if ( ( match = new RegExp( '(' + versionPrefixes.join( '|' ) + ')' + versionSuffix ).exec( ua ) ) ) {
+			if ( match = new RegExp( '(' + versionPrefixes.join( '|' ) + ')' + versionSuffix ).exec( ua ) ) {
 				version = match[ 3 ];
 			}
 
@@ -197,7 +191,7 @@
 				layoutversion = parseInt( match[ 1 ], 10 );
 			}
 			// And Amazon Silk's lies about being Android on mobile or Safari on desktop
-			if ( ( match = ua.match( /\bsilk\/([0-9.\-_]*)/ ) ) ) {
+			if ( match = ua.match( /\bsilk\/([0-9.\-_]*)/ ) ) {
 				if ( match[ 1 ] ) {
 					name = 'silk';
 					version = match[ 1 ];
@@ -207,7 +201,8 @@
 			versionNumber = parseFloat( version, 10 ) || 0.0;
 
 			// Caching
-			profileCache[ key ] = {
+
+			return profileCache[ key ] = {
 				name: name,
 				layout: layout,
 				layoutVersion: layoutversion,
@@ -216,8 +211,6 @@
 				versionBase: ( version !== x ? Math.floor( versionNumber ).toString() : x ),
 				versionNumber: versionNumber
 			};
-
-			return profileCache[ key ];
 		},
 
 		/**
@@ -254,20 +247,21 @@
 		 *
 		 * @param {Object} map Browser support map
 		 * @param {Object} [profile] A client-profile object
-		 * @param {boolean} [exactMatchOnly=false] Only return true if the browser is matched,
-		 *  otherwise returns true if the browser is not found.
+		 * @param {boolean} [exactMatchOnly=false] Only return true if the browser is matched, otherwise
+		 * returns true if the browser is not found.
 		 *
 		 * @return {boolean} The current browser is in the support map
 		 */
 		test: function ( map, profile, exactMatchOnly ) {
+			/* eslint-disable no-eval */
+
 			var conditions, dir, i, op, val, j, pieceVersion, pieceVal, compare;
 			profile = $.isPlainObject( profile ) ? profile : $.client.profile();
 			if ( map.ltr && map.rtl ) {
-				dir = $( document.body ).is( '.rtl' ) ? 'rtl' : 'ltr';
+				dir = $( 'body' ).is( '.rtl' ) ? 'rtl' : 'ltr';
 				map = map[ dir ];
 			}
-			// Check over each browser condition to determine if we are running in a
-			// compatible client
+			// Check over each browser condition to determine if we are running in a compatible client
 			if ( typeof map !== 'object' || map[ profile.name ] === undefined ) {
 				// Not found, return true if exactMatchOnly not set, false otherwise
 				return !exactMatchOnly;
@@ -285,8 +279,8 @@
 				op = conditions[ i ][ 0 ];
 				val = conditions[ i ][ 1 ];
 				if ( typeof val === 'string' ) {
-					// Perform a component-wise comparison of versions, similar to
-					// PHP's version_compare but simpler. '1.11' is larger than '1.2'.
+					// Perform a component-wise comparison of versions, similar to PHP's version_compare
+					// but simpler. '1.11' is larger than '1.2'.
 					pieceVersion = profile.version.toString().split( '.' );
 					pieceVal = val.split( '.' );
 					// Extend with zeroes to equal length
@@ -308,12 +302,10 @@
 						}
 					}
 					// compare will be -1, 0 or 1, depending on comparison result
-					// eslint-disable-next-line no-eval
 					if ( !( eval( String( compare + op + '0' ) ) ) ) {
 						return false;
 					}
 				} else if ( typeof val === 'number' ) {
-					// eslint-disable-next-line no-eval
 					if ( !( eval( 'profile.versionNumber' + op + val ) ) ) {
 						return false;
 					}
@@ -323,4 +315,4 @@
 			return true;
 		}
 	};
-}() );
+}( jQuery ) );

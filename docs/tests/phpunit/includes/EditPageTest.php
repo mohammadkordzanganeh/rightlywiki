@@ -368,9 +368,6 @@ class EditPageTest extends MediaWikiLangTestCase {
 		}
 	}
 
-	/**
-	 * @covers EditPage
-	 */
 	public function testUpdatePage() {
 		$checkIds = [];
 
@@ -417,9 +414,6 @@ class EditPageTest extends MediaWikiLangTestCase {
 		$this->assertGreaterThan( $checkIds[0], $checkIds[1], "Second event rev ID is higher" );
 	}
 
-	/**
-	 * @covers EditPage
-	 */
 	public function testUpdatePageTrx() {
 		$text = "one";
 		$edit = [
@@ -690,7 +684,6 @@ hello
 
 	/**
 	 * @depends testAutoMerge
-	 * @covers EditPage
 	 */
 	public function testCheckDirectEditingDisallowed_forNonTextContent() {
 		$title = Title::newFromText( 'Dummy:NonTextPageForEditPage' );

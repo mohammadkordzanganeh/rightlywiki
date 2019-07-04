@@ -60,16 +60,12 @@ class ExtensionJsonValidator {
 				'The JsonSchema library cannot be found, please install it through composer.'
 			);
 			return false;
-		}
-
-		if ( !class_exists( SpdxLicenses::class ) ) {
+		} elseif ( !class_exists( SpdxLicenses::class ) ) {
 			call_user_func( $this->missingDepCallback,
 				'The spdx-licenses library cannot be found, please install it through composer.'
 			);
 			return false;
-		}
-
-		if ( !class_exists( JsonParser::class ) ) {
+		} elseif ( !class_exists( JsonParser::class ) ) {
 			call_user_func( $this->missingDepCallback,
 				'The JSON lint library cannot be found, please install it through composer.'
 			);
@@ -108,9 +104,7 @@ class ExtensionJsonValidator {
 			throw new ExtensionJsonValidationError(
 				"$path is using a non-supported schema version"
 			);
-		}
-
-		if ( $version > ExtensionRegistry::MANIFEST_VERSION ) {
+		} elseif ( $version > ExtensionRegistry::MANIFEST_VERSION ) {
 			throw new ExtensionJsonValidationError(
 				"$path is using a non-supported schema version"
 			);
@@ -146,15 +140,15 @@ class ExtensionJsonValidator {
 		if ( $validator->isValid() && !$extraErrors ) {
 			// All good.
 			return true;
+		} else {
+			$out = "$path did not pass validation.\n";
+			foreach ( $validator->getErrors() as $error ) {
+				$out .= "[{$error['property']}] {$error['message']}\n";
+			}
+			if ( $extraErrors ) {
+				$out .= implode( "\n", $extraErrors ) . "\n";
+			}
+			throw new ExtensionJsonValidationError( $out );
 		}
-
-		$out = "$path did not pass validation.\n";
-		foreach ( $validator->getErrors() as $error ) {
-			$out .= "[{$error['property']}] {$error['message']}\n";
-		}
-		if ( $extraErrors ) {
-			$out .= implode( "\n", $extraErrors ) . "\n";
-		}
-		throw new ExtensionJsonValidationError( $out );
 	}
 }

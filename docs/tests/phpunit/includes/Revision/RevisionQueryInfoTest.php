@@ -52,6 +52,23 @@ class RevisionQueryInfoTest extends MediaWikiTestCase {
 		return $fields;
 	}
 
+	protected function getOldCommentQueryFields( $prefix ) {
+		return [
+			"{$prefix}_comment_text" => "{$prefix}_comment",
+			"{$prefix}_comment_data" => 'NULL',
+			"{$prefix}_comment_cid" => 'NULL',
+		];
+	}
+
+	protected function getCompatCommentQueryFields( $prefix ) {
+		return [
+			"{$prefix}_comment_text"
+				=> "COALESCE( comment_{$prefix}_comment.comment_text, {$prefix}_comment )",
+			"{$prefix}_comment_data" => "comment_{$prefix}_comment.comment_data",
+			"{$prefix}_comment_cid" => "comment_{$prefix}_comment.comment_id",
+		];
+	}
+
 	protected function getNewCommentQueryFields( $prefix ) {
 		return [
 			"{$prefix}_comment_text" => "comment_{$prefix}_comment.comment_text",
@@ -85,6 +102,19 @@ class RevisionQueryInfoTest extends MediaWikiTestCase {
 			"actor_{$prefix}_user" => [
 				"JOIN",
 				"actor_{$prefix}_user.actor_id = temp_{$prefix}_user.revactor_actor",
+			],
+		];
+	}
+
+	protected function getCompatCommentJoins( $prefix ) {
+		return [
+			"temp_{$prefix}_comment" => [
+				"LEFT JOIN",
+				"temp_{$prefix}_comment.revcomment_{$prefix} = {$prefix}_id",
+			],
+			"comment_{$prefix}_comment" => [
+				"LEFT JOIN",
+				"comment_{$prefix}_comment.comment_id = temp_{$prefix}_comment.revcomment_comment_id",
 			],
 		];
 	}
@@ -124,6 +154,7 @@ class RevisionQueryInfoTest extends MediaWikiTestCase {
 		yield 'MCR, comment, actor' => [
 			[
 				'wgMultiContentRevisionSchemaMigrationStage' => SCHEMA_COMPAT_NEW,
+				'wgCommentTableSchemaMigrationStage' => MIGRATION_NEW,
 				'wgActorTableSchemaMigrationStage' => SCHEMA_COMPAT_NEW,
 			],
 			[
@@ -149,6 +180,7 @@ class RevisionQueryInfoTest extends MediaWikiTestCase {
 				'wgContentHandlerUseDB' => true,
 				'wgMultiContentRevisionSchemaMigrationStage'
 					=> SCHEMA_COMPAT_WRITE_BOTH | SCHEMA_COMPAT_READ_NEW,
+				'wgCommentTableSchemaMigrationStage' => MIGRATION_WRITE_NEW,
 				'wgActorTableSchemaMigrationStage' => SCHEMA_COMPAT_NEW,
 			],
 			[
@@ -160,11 +192,11 @@ class RevisionQueryInfoTest extends MediaWikiTestCase {
 				'fields' => array_merge(
 					$this->getArchiveQueryFields( false ),
 					$this->getNewActorQueryFields( 'ar' ),
-					$this->getNewCommentQueryFields( 'ar' )
+					$this->getCompatCommentQueryFields( 'ar' )
 				),
 				'joins' => [
 					'comment_ar_comment'
-						=> [ 'JOIN', 'comment_ar_comment.comment_id = ar_comment_id' ],
+						=> [ 'LEFT JOIN', 'comment_ar_comment.comment_id = ar_comment_id' ],
 					'actor_ar_user' => [ 'JOIN', 'actor_ar_user.actor_id = ar_actor' ],
 				],
 			]
@@ -174,6 +206,7 @@ class RevisionQueryInfoTest extends MediaWikiTestCase {
 				'wgContentHandlerUseDB' => true,
 				'wgMultiContentRevisionSchemaMigrationStage'
 					=> SCHEMA_COMPAT_WRITE_BOTH | SCHEMA_COMPAT_READ_OLD,
+				'wgCommentTableSchemaMigrationStage' => MIGRATION_WRITE_BOTH,
 				'wgActorTableSchemaMigrationStage' => SCHEMA_COMPAT_WRITE_BOTH | SCHEMA_COMPAT_READ_OLD,
 			],
 			[
@@ -185,11 +218,11 @@ class RevisionQueryInfoTest extends MediaWikiTestCase {
 					$this->getArchiveQueryFields( true ),
 					$this->getContentHandlerQueryFields( 'ar' ),
 					$this->getOldActorQueryFields( 'ar' ),
-					$this->getNewCommentQueryFields( 'ar' )
+					$this->getCompatCommentQueryFields( 'ar' )
 				),
 				'joins' => [
 					'comment_ar_comment'
-						=> [ 'JOIN', 'comment_ar_comment.comment_id = ar_comment_id' ],
+						=> [ 'LEFT JOIN', 'comment_ar_comment.comment_id = ar_comment_id' ],
 				],
 			]
 		];
@@ -197,22 +230,19 @@ class RevisionQueryInfoTest extends MediaWikiTestCase {
 			[
 				'wgContentHandlerUseDB' => false,
 				'wgMultiContentRevisionSchemaMigrationStage' => SCHEMA_COMPAT_OLD,
+				'wgCommentTableSchemaMigrationStage' => MIGRATION_OLD,
 				'wgActorTableSchemaMigrationStage' => SCHEMA_COMPAT_OLD,
 			],
 			[
 				'tables' => [
 					'archive',
-					'comment_ar_comment' => 'comment',
 				],
 				'fields' => array_merge(
 					$this->getArchiveQueryFields( true ),
 					$this->getOldActorQueryFields( 'ar' ),
-					$this->getNewCommentQueryFields( 'ar' )
+					$this->getOldCommentQueryFields( 'ar' )
 				),
-				'joins' => [
-					'comment_ar_comment'
-						=> [ 'JOIN', 'comment_ar_comment.comment_id = ar_comment_id' ],
-				],
+				'joins' => [],
 			]
 		];
 	}
@@ -223,6 +253,7 @@ class RevisionQueryInfoTest extends MediaWikiTestCase {
 			[
 				'wgContentHandlerUseDB' => true,
 				'wgMultiContentRevisionSchemaMigrationStage' => SCHEMA_COMPAT_NEW,
+				'wgCommentTableSchemaMigrationStage' => MIGRATION_NEW,
 				'wgActorTableSchemaMigrationStage' => SCHEMA_COMPAT_NEW,
 			],
 			[ 'page', 'user' ],
@@ -244,7 +275,7 @@ class RevisionQueryInfoTest extends MediaWikiTestCase {
 					$this->getNewCommentQueryFields( 'rev' )
 				),
 				'joins' => [
-					'page' => [ 'JOIN', [ 'page_id = rev_page' ] ],
+					'page' => [ 'INNER JOIN', [ 'page_id = rev_page' ] ],
 					'user' => [
 						'LEFT JOIN',
 						[ 'actor_rev_user.actor_user != 0', 'user_id = actor_rev_user.actor_user' ],
@@ -267,6 +298,7 @@ class RevisionQueryInfoTest extends MediaWikiTestCase {
 				'wgContentHandlerUseDB' => true,
 				'wgMultiContentRevisionSchemaMigrationStage'
 					=> SCHEMA_COMPAT_WRITE_BOTH | SCHEMA_COMPAT_READ_NEW,
+				'wgCommentTableSchemaMigrationStage' => MIGRATION_WRITE_NEW,
 				'wgActorTableSchemaMigrationStage' => SCHEMA_COMPAT_WRITE_BOTH | SCHEMA_COMPAT_READ_NEW,
 			],
 			[ 'page', 'user' ],
@@ -285,11 +317,11 @@ class RevisionQueryInfoTest extends MediaWikiTestCase {
 					$this->getPageQueryFields(),
 					$this->getUserQueryFields(),
 					$this->getNewActorQueryFields( 'rev', 'temp_rev_user.revactor_actor' ),
-					$this->getNewCommentQueryFields( 'rev' )
+					$this->getCompatCommentQueryFields( 'rev' )
 				),
 				'joins' => array_merge(
 					[
-						'page' => [ 'JOIN', [ 'page_id = rev_page' ] ],
+						'page' => [ 'INNER JOIN', [ 'page_id = rev_page' ] ],
 						'user' => [
 							'LEFT JOIN',
 							[
@@ -297,11 +329,9 @@ class RevisionQueryInfoTest extends MediaWikiTestCase {
 								'user_id = actor_rev_user.actor_user',
 							]
 						],
-						'temp_rev_comment' => [ 'JOIN', 'temp_rev_comment.revcomment_rev = rev_id' ],
-						'comment_rev_comment'
-							=> [ 'JOIN', 'comment_rev_comment.comment_id = temp_rev_comment.revcomment_comment_id' ],
 					],
-					$this->getNewActorJoins( 'rev' )
+					$this->getNewActorJoins( 'rev' ),
+					$this->getCompatCommentJoins( 'rev' )
 				),
 			]
 		];
@@ -310,6 +340,7 @@ class RevisionQueryInfoTest extends MediaWikiTestCase {
 				'wgContentHandlerUseDB' => true,
 				'wgMultiContentRevisionSchemaMigrationStage'
 					=> SCHEMA_COMPAT_WRITE_BOTH | SCHEMA_COMPAT_READ_NEW,
+				'wgCommentTableSchemaMigrationStage' => MIGRATION_WRITE_NEW,
 				'wgActorTableSchemaMigrationStage' => SCHEMA_COMPAT_WRITE_BOTH | SCHEMA_COMPAT_READ_NEW,
 			],
 			[ 'page', 'user' ],
@@ -328,11 +359,11 @@ class RevisionQueryInfoTest extends MediaWikiTestCase {
 					$this->getPageQueryFields(),
 					$this->getUserQueryFields(),
 					$this->getNewActorQueryFields( 'rev', 'temp_rev_user.revactor_actor' ),
-					$this->getNewCommentQueryFields( 'rev' )
+					$this->getCompatCommentQueryFields( 'rev' )
 				),
 				'joins' => array_merge(
 					[
-						'page' => [ 'JOIN', [ 'page_id = rev_page' ] ],
+						'page' => [ 'INNER JOIN', [ 'page_id = rev_page' ] ],
 						'user' => [
 							'LEFT JOIN',
 							[
@@ -340,11 +371,9 @@ class RevisionQueryInfoTest extends MediaWikiTestCase {
 								'user_id = actor_rev_user.actor_user'
 							]
 						],
-						'temp_rev_comment' => [ 'JOIN', 'temp_rev_comment.revcomment_rev = rev_id' ],
-						'comment_rev_comment'
-							=> [ 'JOIN', 'comment_rev_comment.comment_id = temp_rev_comment.revcomment_comment_id' ],
 					],
-					$this->getNewActorJoins( 'rev' )
+					$this->getNewActorJoins( 'rev' ),
+					$this->getCompatCommentJoins( 'rev' )
 				),
 			]
 		];
@@ -353,6 +382,7 @@ class RevisionQueryInfoTest extends MediaWikiTestCase {
 				'wgContentHandlerUseDB' => true,
 				'wgMultiContentRevisionSchemaMigrationStage'
 					=> SCHEMA_COMPAT_WRITE_BOTH | SCHEMA_COMPAT_READ_OLD,
+				'wgCommentTableSchemaMigrationStage' => MIGRATION_WRITE_BOTH,
 				'wgActorTableSchemaMigrationStage' => SCHEMA_COMPAT_WRITE_BOTH | SCHEMA_COMPAT_READ_OLD,
 			],
 			[],
@@ -366,13 +396,11 @@ class RevisionQueryInfoTest extends MediaWikiTestCase {
 					$this->getRevisionQueryFields( true ),
 					$this->getContentHandlerQueryFields( 'rev' ),
 					$this->getOldActorQueryFields( 'rev', 'temp_rev_user.revactor_actor' ),
-					$this->getNewCommentQueryFields( 'rev' )
+					$this->getCompatCommentQueryFields( 'rev' )
 				),
-				'joins' => [
-					'temp_rev_comment' => [ 'JOIN', 'temp_rev_comment.revcomment_rev = rev_id' ],
-					'comment_rev_comment'
-						=> [ 'JOIN', 'comment_rev_comment.comment_id = temp_rev_comment.revcomment_comment_id' ],
-				],
+			'joins' => array_merge(
+				$this->getCompatCommentJoins( 'rev' )
+			),
 			]
 		];
 		yield 'MCR write-both/read-old, page, user' => [
@@ -380,6 +408,7 @@ class RevisionQueryInfoTest extends MediaWikiTestCase {
 				'wgContentHandlerUseDB' => true,
 				'wgMultiContentRevisionSchemaMigrationStage'
 					=> SCHEMA_COMPAT_WRITE_BOTH | SCHEMA_COMPAT_READ_OLD,
+				'wgCommentTableSchemaMigrationStage' => MIGRATION_WRITE_BOTH,
 				'wgActorTableSchemaMigrationStage' => SCHEMA_COMPAT_WRITE_BOTH | SCHEMA_COMPAT_READ_OLD,
 			],
 			[ 'page', 'user' ],
@@ -397,11 +426,11 @@ class RevisionQueryInfoTest extends MediaWikiTestCase {
 					$this->getUserQueryFields(),
 					$this->getPageQueryFields(),
 					$this->getOldActorQueryFields( 'rev', 'temp_rev_user.revactor_actor' ),
-					$this->getNewCommentQueryFields( 'rev' )
+					$this->getCompatCommentQueryFields( 'rev' )
 				),
 				'joins' => array_merge(
 					[
-						'page' => [ 'JOIN', [ 'page_id = rev_page' ] ],
+						'page' => [ 'INNER JOIN', [ 'page_id = rev_page' ] ],
 						'user' => [
 							'LEFT JOIN',
 							[
@@ -409,10 +438,8 @@ class RevisionQueryInfoTest extends MediaWikiTestCase {
 								'user_id = rev_user'
 							]
 						],
-						'temp_rev_comment' => [ 'JOIN', 'temp_rev_comment.revcomment_rev = rev_id' ],
-						'comment_rev_comment'
-							=> [ 'JOIN', 'comment_rev_comment.comment_id = temp_rev_comment.revcomment_comment_id' ],
-					]
+					],
+					$this->getCompatCommentJoins( 'rev' )
 				),
 			]
 		];
@@ -420,55 +447,42 @@ class RevisionQueryInfoTest extends MediaWikiTestCase {
 			[
 				'wgContentHandlerUseDB' => true,
 				'wgMultiContentRevisionSchemaMigrationStage' => SCHEMA_COMPAT_OLD,
+				'wgCommentTableSchemaMigrationStage' => MIGRATION_OLD,
 				'wgActorTableSchemaMigrationStage' => SCHEMA_COMPAT_OLD,
 			],
 			[],
 			[
-				'tables' => [
-					'revision',
-					'temp_rev_comment' => 'revision_comment_temp',
-					'comment_rev_comment' => 'comment',
-				],
+				'tables' => [ 'revision' ],
 				'fields' => array_merge(
 					$this->getRevisionQueryFields( true ),
 					$this->getContentHandlerQueryFields( 'rev' ),
 					$this->getOldActorQueryFields( 'rev' ),
-					$this->getNewCommentQueryFields( 'rev' )
+					$this->getOldCommentQueryFields( 'rev' )
 				),
-				'joins' => [
-					'temp_rev_comment' => [ 'JOIN', 'temp_rev_comment.revcomment_rev = rev_id' ],
-					'comment_rev_comment'
-						=> [ 'JOIN', 'comment_rev_comment.comment_id = temp_rev_comment.revcomment_comment_id' ],
-				],
+				'joins' => [],
 			]
 		];
 		yield 'pre-MCR, page, user' => [
 			[
 				'wgContentHandlerUseDB' => true,
 				'wgMultiContentRevisionSchemaMigrationStage' => SCHEMA_COMPAT_OLD,
+				'wgCommentTableSchemaMigrationStage' => MIGRATION_OLD,
 				'wgActorTableSchemaMigrationStage' => SCHEMA_COMPAT_OLD,
 			],
 			[ 'page', 'user' ],
 			[
-				'tables' => [
-					'revision', 'page', 'user',
-					'temp_rev_comment' => 'revision_comment_temp',
-					'comment_rev_comment' => 'comment',
-				],
+				'tables' => [ 'revision', 'page', 'user' ],
 				'fields' => array_merge(
 					$this->getRevisionQueryFields( true ),
 					$this->getContentHandlerQueryFields( 'rev' ),
 					$this->getPageQueryFields(),
 					$this->getUserQueryFields(),
 					$this->getOldActorQueryFields( 'rev' ),
-					$this->getNewCommentQueryFields( 'rev' )
+					$this->getOldCommentQueryFields( 'rev' )
 				),
 				'joins' => [
-					'page' => [ 'JOIN', [ 'page_id = rev_page' ] ],
+					'page' => [ 'INNER JOIN', [ 'page_id = rev_page' ] ],
 					'user' => [ 'LEFT JOIN', [ 'rev_user != 0', 'user_id = rev_user' ] ],
-					'temp_rev_comment' => [ 'JOIN', 'temp_rev_comment.revcomment_rev = rev_id' ],
-					'comment_rev_comment'
-						=> [ 'JOIN', 'comment_rev_comment.comment_id = temp_rev_comment.revcomment_comment_id' ],
 				],
 			]
 		];
@@ -476,51 +490,38 @@ class RevisionQueryInfoTest extends MediaWikiTestCase {
 			[
 				'wgContentHandlerUseDB' => false,
 				'wgMultiContentRevisionSchemaMigrationStage' => SCHEMA_COMPAT_OLD,
+				'wgCommentTableSchemaMigrationStage' => MIGRATION_OLD,
 				'wgActorTableSchemaMigrationStage' => SCHEMA_COMPAT_OLD,
 			],
 			[],
 			[
-				'tables' => [
-					'revision',
-					'temp_rev_comment' => 'revision_comment_temp',
-					'comment_rev_comment' => 'comment',
-				],
+				'tables' => [ 'revision' ],
 				'fields' => array_merge(
 					$this->getRevisionQueryFields( true ),
 					$this->getOldActorQueryFields( 'rev' ),
-					$this->getNewCommentQueryFields( 'rev' )
+					$this->getOldCommentQueryFields( 'rev' )
 				),
-				'joins' => [
-					'temp_rev_comment' => [ 'JOIN', 'temp_rev_comment.revcomment_rev = rev_id' ],
-					'comment_rev_comment'
-						=> [ 'JOIN', 'comment_rev_comment.comment_id = temp_rev_comment.revcomment_comment_id' ],
-				],
+				'joins' => [],
 			],
 		];
 		yield 'pre-MCR, no model, page' => [
 			[
 				'wgContentHandlerUseDB' => false,
 				'wgMultiContentRevisionSchemaMigrationStage' => SCHEMA_COMPAT_OLD,
+				'wgCommentTableSchemaMigrationStage' => MIGRATION_OLD,
 				'wgActorTableSchemaMigrationStage' => SCHEMA_COMPAT_OLD,
 			],
 			[ 'page' ],
 			[
-				'tables' => [
-					'revision', 'page',
-					'temp_rev_comment' => 'revision_comment_temp',
-					'comment_rev_comment' => 'comment',
-				],
+				'tables' => [ 'revision', 'page' ],
 				'fields' => array_merge(
 					$this->getRevisionQueryFields( true ),
 					$this->getPageQueryFields(),
 					$this->getOldActorQueryFields( 'rev' ),
-					$this->getNewCommentQueryFields( 'rev' )
+					$this->getOldCommentQueryFields( 'rev' )
 				),
 				'joins' => [
-					'page' => [ 'JOIN', [ 'page_id = rev_page' ], ],
-					'temp_rev_comment' => [ 'JOIN', 'temp_rev_comment.revcomment_rev = rev_id' ],
-					'comment_rev_comment'
-						=> [ 'JOIN', 'comment_rev_comment.comment_id = temp_rev_comment.revcomment_comment_id' ],
+					'page' => [ 'INNER JOIN', [ 'page_id = rev_page' ], ],
 				],
 			],
 		];
@@ -528,26 +529,20 @@ class RevisionQueryInfoTest extends MediaWikiTestCase {
 			[
 				'wgContentHandlerUseDB' => false,
 				'wgMultiContentRevisionSchemaMigrationStage' => SCHEMA_COMPAT_OLD,
+				'wgCommentTableSchemaMigrationStage' => MIGRATION_OLD,
 				'wgActorTableSchemaMigrationStage' => SCHEMA_COMPAT_OLD,
 			],
 			[ 'user' ],
 			[
-				'tables' => [
-					'revision', 'user',
-					'temp_rev_comment' => 'revision_comment_temp',
-					'comment_rev_comment' => 'comment',
-				],
+				'tables' => [ 'revision', 'user' ],
 				'fields' => array_merge(
 					$this->getRevisionQueryFields( true ),
 					$this->getUserQueryFields(),
 					$this->getOldActorQueryFields( 'rev' ),
-					$this->getNewCommentQueryFields( 'rev' )
+					$this->getOldCommentQueryFields( 'rev' )
 				),
 				'joins' => [
 					'user' => [ 'LEFT JOIN', [ 'rev_user != 0', 'user_id = rev_user' ] ],
-					'temp_rev_comment' => [ 'JOIN', 'temp_rev_comment.revcomment_rev = rev_id' ],
-					'comment_rev_comment'
-						=> [ 'JOIN', 'comment_rev_comment.comment_id = temp_rev_comment.revcomment_comment_id' ],
 				],
 			],
 		];
@@ -555,26 +550,20 @@ class RevisionQueryInfoTest extends MediaWikiTestCase {
 			[
 				'wgContentHandlerUseDB' => false,
 				'wgMultiContentRevisionSchemaMigrationStage' => SCHEMA_COMPAT_OLD,
+				'wgCommentTableSchemaMigrationStage' => MIGRATION_OLD,
 				'wgActorTableSchemaMigrationStage' => SCHEMA_COMPAT_OLD,
 			],
 			[ 'text' ],
 			[
-				'tables' => [
-					'revision', 'text',
-					'temp_rev_comment' => 'revision_comment_temp',
-					'comment_rev_comment' => 'comment',
-				],
+				'tables' => [ 'revision', 'text' ],
 				'fields' => array_merge(
 					$this->getRevisionQueryFields( true ),
 					$this->getTextQueryFields(),
 					$this->getOldActorQueryFields( 'rev' ),
-					$this->getNewCommentQueryFields( 'rev' )
+					$this->getOldCommentQueryFields( 'rev' )
 				),
 				'joins' => [
-					'text' => [ 'JOIN', [ 'rev_text_id=old_id' ] ],
-					'temp_rev_comment' => [ 'JOIN', 'temp_rev_comment.revcomment_rev = rev_id' ],
-					'comment_rev_comment'
-						=> [ 'JOIN', 'comment_rev_comment.comment_id = temp_rev_comment.revcomment_comment_id' ],
+					'text' => [ 'INNER JOIN', [ 'rev_text_id=old_id' ] ],
 				],
 			],
 		];
@@ -582,14 +571,13 @@ class RevisionQueryInfoTest extends MediaWikiTestCase {
 			[
 				'wgContentHandlerUseDB' => false,
 				'wgMultiContentRevisionSchemaMigrationStage' => SCHEMA_COMPAT_OLD,
+				'wgCommentTableSchemaMigrationStage' => MIGRATION_OLD,
 				'wgActorTableSchemaMigrationStage' => SCHEMA_COMPAT_OLD,
 			],
 			[ 'text', 'page', 'user' ],
 			[
 				'tables' => [
-					'revision', 'page', 'user', 'text',
-					'temp_rev_comment' => 'revision_comment_temp',
-					'comment_rev_comment' => 'comment',
+					'revision', 'page', 'user', 'text'
 				],
 				'fields' => array_merge(
 					$this->getRevisionQueryFields( true ),
@@ -597,11 +585,11 @@ class RevisionQueryInfoTest extends MediaWikiTestCase {
 					$this->getUserQueryFields(),
 					$this->getTextQueryFields(),
 					$this->getOldActorQueryFields( 'rev' ),
-					$this->getNewCommentQueryFields( 'rev' )
+					$this->getOldCommentQueryFields( 'rev' )
 				),
 				'joins' => [
 					'page' => [
-						'JOIN',
+						'INNER JOIN',
 						[ 'page_id = rev_page' ],
 					],
 					'user' => [
@@ -612,12 +600,9 @@ class RevisionQueryInfoTest extends MediaWikiTestCase {
 						],
 					],
 					'text' => [
-						'JOIN',
+						'INNER JOIN',
 						[ 'rev_text_id=old_id' ],
 					],
-					'temp_rev_comment' => [ 'JOIN', 'temp_rev_comment.revcomment_rev = rev_id' ],
-					'comment_rev_comment'
-						=> [ 'JOIN', 'comment_rev_comment.comment_id = temp_rev_comment.revcomment_comment_id' ],
 				],
 			],
 		];
@@ -686,7 +671,7 @@ class RevisionQueryInfoTest extends MediaWikiTestCase {
 					'content_model',
 				],
 				'joins' => [
-					'content' => [ 'JOIN', [ 'slot_content_id = content_id' ] ],
+					'content' => [ 'INNER JOIN', [ 'slot_content_id = content_id' ] ],
 				],
 			]
 		];
@@ -714,7 +699,7 @@ class RevisionQueryInfoTest extends MediaWikiTestCase {
 					'model_name',
 				],
 				'joins' => [
-					'content' => [ 'JOIN', [ 'slot_content_id = content_id' ] ],
+					'content' => [ 'INNER JOIN', [ 'slot_content_id = content_id' ] ],
 					'content_models' => [ 'LEFT JOIN', [ 'content_model = model_id' ] ],
 				],
 			]
@@ -848,6 +833,7 @@ class RevisionQueryInfoTest extends MediaWikiTestCase {
 		yield 'with model, comment, and actor' => [
 			[
 				'wgContentHandlerUseDB' => true,
+				'wgCommentTableSchemaMigrationStage' => MIGRATION_WRITE_BOTH,
 				'wgActorTableSchemaMigrationStage' => SCHEMA_COMPAT_WRITE_BOTH | SCHEMA_COMPAT_READ_OLD,
 			],
 			'fields' => array_merge(
@@ -867,6 +853,7 @@ class RevisionQueryInfoTest extends MediaWikiTestCase {
 				],
 				$this->getContentHandlerQueryFields( 'rev' ),
 				[
+					'rev_comment_old' => 'rev_comment',
 					'rev_comment_pk' => 'rev_id',
 				]
 			),
@@ -874,6 +861,7 @@ class RevisionQueryInfoTest extends MediaWikiTestCase {
 		yield 'no mode, no comment, no actor' => [
 			[
 				'wgContentHandlerUseDB' => false,
+				'wgCommentTableSchemaMigrationStage' => MIGRATION_OLD,
 				'wgActorTableSchemaMigrationStage' => SCHEMA_COMPAT_OLD,
 			],
 			'fields' => array_merge(
@@ -890,8 +878,8 @@ class RevisionQueryInfoTest extends MediaWikiTestCase {
 					'rev_len',
 					'rev_parent_id',
 					'rev_sha1',
-					'rev_comment_pk' => 'rev_id',
-				]
+				],
+				$this->getOldCommentQueryFields( 'rev' )
 			),
 		];
 	}
@@ -900,6 +888,7 @@ class RevisionQueryInfoTest extends MediaWikiTestCase {
 		yield 'with model, comment, and actor' => [
 			[
 				'wgContentHandlerUseDB' => true,
+				'wgCommentTableSchemaMigrationStage' => MIGRATION_WRITE_BOTH,
 				'wgActorTableSchemaMigrationStage' => SCHEMA_COMPAT_WRITE_BOTH | SCHEMA_COMPAT_READ_OLD,
 			],
 			'fields' => array_merge(
@@ -920,6 +909,7 @@ class RevisionQueryInfoTest extends MediaWikiTestCase {
 				],
 				$this->getContentHandlerQueryFields( 'ar' ),
 				[
+					'ar_comment_old' => 'ar_comment',
 					'ar_comment_id' => 'ar_comment_id',
 				]
 			),
@@ -927,6 +917,7 @@ class RevisionQueryInfoTest extends MediaWikiTestCase {
 		yield 'no mode, no comment, no actor' => [
 			[
 				'wgContentHandlerUseDB' => false,
+				'wgCommentTableSchemaMigrationStage' => MIGRATION_OLD,
 				'wgActorTableSchemaMigrationStage' => SCHEMA_COMPAT_OLD,
 			],
 			'fields' => array_merge(
@@ -944,8 +935,8 @@ class RevisionQueryInfoTest extends MediaWikiTestCase {
 					'ar_len',
 					'ar_parent_id',
 					'ar_sha1',
-					'ar_comment_id' => 'ar_comment_id',
-				]
+				],
+				$this->getOldCommentQueryFields( 'ar' )
 			),
 		];
 	}
@@ -993,7 +984,7 @@ class RevisionQueryInfoTest extends MediaWikiTestCase {
 	public function testRevisionPageJoinCond() {
 		$this->hideDeprecated( 'Revision::pageJoinCond' );
 		$this->assertEquals(
-			[ 'JOIN', [ 'page_id = rev_page' ] ],
+			[ 'INNER JOIN', [ 'page_id = rev_page' ] ],
 			Revision::pageJoinCond()
 		);
 	}

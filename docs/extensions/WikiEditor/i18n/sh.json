@@ -2,8 +2,7 @@
 	"@metadata": {
 		"authors": [
 			"Conquistador",
-			"Srdjan m",
-			"BadDog"
+			"Srdjan m"
 		]
 	},
 	"wikieditor-toolbar-tool-bold": "Podebljano",
@@ -19,7 +18,7 @@
 	"wikieditor-toolbar-tool-heading-3": "Razina/ниво 3",
 	"wikieditor-toolbar-tool-heading-4": "Razina/ниво 4",
 	"wikieditor-toolbar-tool-heading-5": "Razina/ниво 5",
-	"wikieditor-toolbar-group-format": "Format / Формат",
+	"wikieditor-toolbar-group-format": "Format/облик",
 	"wikieditor-toolbar-tool-ulist": "Spisak/popis s oznakama",
 	"wikieditor-toolbar-tool-olist": "Numerirani/numerisani spisak/popis",
 	"wikieditor-toolbar-tool-nowiki": "Bez wikiformatiranja/wikioblikovanja",

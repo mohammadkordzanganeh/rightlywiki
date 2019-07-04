@@ -207,7 +207,7 @@ class ApiImportReporter extends ImportReporter {
 			$r['invalid'] = true;
 		} else {
 			ApiQueryBase::addTitleInfo( $r, $title );
-			$r['revisions'] = (int)$successCount;
+			$r['revisions'] = intval( $successCount );
 		}
 
 		$this->mResultArr[] = $r;

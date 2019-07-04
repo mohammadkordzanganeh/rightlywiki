@@ -121,7 +121,7 @@ class HTMLMultiSelectField extends HTMLFormField implements HTMLNestedFilterable
 
 	/**
 	 * Get options and make them into arrays suitable for OOUI.
-	 * @throws MWException
+	 * @return array Options for inclusion in a select or whatever.
 	 */
 	public function getOptionsOOUI() {
 		// Sections make this difficult. See getInputOOUI().
@@ -228,7 +228,11 @@ class HTMLMultiSelectField extends HTMLFormField implements HTMLNestedFilterable
 	}
 
 	public function getDefault() {
-		return $this->mDefault ?? [];
+		if ( isset( $this->mDefault ) ) {
+			return $this->mDefault;
+		} else {
+			return [];
+		}
 	}
 
 	public function filterDataForSubmit( $data ) {

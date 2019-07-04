@@ -26,7 +26,6 @@ use MediaWiki\Linker\LinkTarget;
 use Wikimedia\Assert\Assert;
 use Wikimedia\Rdbms\Database;
 use Wikimedia\Rdbms\IDatabase;
-use MediaWiki\MediaWikiServices;
 
 /**
  * Abstraction for ResourceLoader modules which pull from wiki pages
@@ -433,7 +432,7 @@ class ResourceLoaderWikiModule extends ResourceLoaderModule {
 				// Avoid including ids or timestamps of revision/page tables so
 				// that versions are not wasted
 				$title = new TitleValue( (int)$row->page_namespace, $row->page_title );
-				$titleInfo[self::makeTitleKey( $title )] = [
+				$titleInfo[ self::makeTitleKey( $title ) ] = [
 					'page_len' => $row->page_len,
 					'page_latest' => $row->page_latest,
 					'page_touched' => $row->page_touched,
@@ -483,7 +482,7 @@ class ResourceLoaderWikiModule extends ResourceLoaderModule {
 		$func = [ static::class, 'fetchTitleInfo' ];
 		$fname = __METHOD__;
 
-		$cache = MediaWikiServices::getInstance()->getMainWANObjectCache();
+		$cache = ObjectCache::getMainWANInstance();
 		$allInfo = $cache->getWithSetCallback(
 			$cache->makeGlobalKey( 'resourceloader', 'titleinfo', $db->getDomainID(), $hash ),
 			$cache::TTL_HOUR,
@@ -529,15 +528,15 @@ class ResourceLoaderWikiModule extends ResourceLoaderModule {
 	 * @param Title $title
 	 * @param Revision|null $old Prior page revision
 	 * @param Revision|null $new New page revision
-	 * @param string $domain Database domain ID
+	 * @param string $wikiId
 	 * @since 1.28
 	 */
 	public static function invalidateModuleCache(
-		Title $title, Revision $old = null, Revision $new = null, $domain
+		Title $title, Revision $old = null, Revision $new = null, $wikiId
 	) {
 		static $formats = [ CONTENT_FORMAT_CSS, CONTENT_FORMAT_JAVASCRIPT ];
 
-		Assert::parameterType( 'string', $domain, '$domain' );
+		Assert::parameterType( 'string', $wikiId, '$wikiId' );
 
 		// TODO: MCR: differentiate between page functionality and content model!
 		//       Not all pages containing CSS or JS have to be modules! [PageType]
@@ -550,8 +549,8 @@ class ResourceLoaderWikiModule extends ResourceLoaderModule {
 		}
 
 		if ( $purge ) {
-			$cache = MediaWikiServices::getInstance()->getMainWANObjectCache();
-			$key = $cache->makeGlobalKey( 'resourceloader', 'titleinfo', $domain );
+			$cache = ObjectCache::getMainWANInstance();
+			$key = $cache->makeGlobalKey( 'resourceloader', 'titleinfo', $wikiId );
 			$cache->touchCheckKey( $key );
 		}
 	}

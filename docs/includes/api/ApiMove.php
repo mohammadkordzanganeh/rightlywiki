@@ -86,7 +86,6 @@ class ApiMove extends ApiBase {
 		$status = $this->movePage( $fromTitle, $toTitle, $params['reason'], !$params['noredirect'],
 			$params['tags'] ?: [] );
 		if ( !$status->isOK() ) {
-			$user->spreadAnyEditBlock();
 			$this->dieStatus( $status );
 		}
 

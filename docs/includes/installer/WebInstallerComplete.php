@@ -59,7 +59,6 @@ class WebInstallerComplete extends WebInstallerPage {
 
 		$this->parent->restoreLinkPopups();
 		$this->endForm( false, false );
-		return '';
 	}
 
 }

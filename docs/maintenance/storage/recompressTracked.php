@@ -24,7 +24,6 @@
 
 use MediaWiki\Logger\LegacyLogger;
 use MediaWiki\MediaWikiServices;
-use MediaWiki\Shell\Shell;
 use Wikimedia\Rdbms\IDatabase;
 
 $optionsWithArgs = RecompressTracked::getOptionsWithArgs();
@@ -216,19 +215,19 @@ class RecompressTracked {
 	 * writing are all slow.
 	 */
 	function startReplicaProcs() {
-		$cmd = 'php ' . Shell::escape( __FILE__ );
+		$cmd = 'php ' . wfEscapeShellArg( __FILE__ );
 		foreach ( self::$cmdLineOptionMap as $cmdOption => $classOption ) {
 			if ( $cmdOption == 'replica-id' ) {
 				continue;
 			} elseif ( in_array( $cmdOption, self::$optionsWithArgs ) && isset( $this->$classOption ) ) {
-				$cmd .= " --$cmdOption " . Shell::escape( $this->$classOption );
+				$cmd .= " --$cmdOption " . wfEscapeShellArg( $this->$classOption );
 			} elseif ( $this->$classOption ) {
 				$cmd .= " --$cmdOption";
 			}
 		}
 		$cmd .= ' --child' .
-			' --wiki ' . Shell::escape( wfWikiID() ) .
-			' ' . Shell::escape( ...$this->destClusters );
+			' --wiki ' . wfEscapeShellArg( wfWikiID() ) .
+			' ' . wfEscapeShellArg( ...$this->destClusters );
 
 		$this->replicaPipes = $this->replicaProcs = [];
 		for ( $i = 0; $i < $this->numProcs; $i++ ) {
@@ -275,9 +274,7 @@ class RecompressTracked {
 	function dispatch( /*...*/ ) {
 		$args = func_get_args();
 		$pipes = $this->replicaPipes;
-		$x = [];
-		$y = [];
-		$numPipes = stream_select( $x, $pipes, $y, 3600 );
+		$numPipes = stream_select( $x = [], $pipes, $y = [], 3600 );
 		if ( !$numPipes ) {
 			$this->critical( "Error waiting to write to replica DBs. Aborting" );
 			exit( 1 );

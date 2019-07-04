@@ -38,7 +38,7 @@
  * so that a lack of error-handling will be explicit.
  */
 class Status extends StatusValue {
-	/** @var callable|false */
+	/** @var callable */
 	public $cleanCallback = false;
 
 	/**
@@ -78,8 +78,7 @@ class Status extends StatusValue {
 	function __get( $name ) {
 		if ( $name === 'ok' ) {
 			return $this->isOK();
-		}
-		if ( $name === 'errors' ) {
+		} elseif ( $name === 'errors' ) {
 			return $this->getErrors();
 		}
 
@@ -110,7 +109,7 @@ class Status extends StatusValue {
 	 * the error messages, and one that contains the warnings, only. The returned array is
 	 * defined as:
 	 * [
-	 *     0 => object(Status) # The Status with error messages, only
+	 *     0 => object(Status) # the Status with error messages, only
 	 *     1 => object(Status) # The Status with warning messages, only
 	 * ]
 	 *
@@ -149,18 +148,21 @@ class Status extends StatusValue {
 	}
 
 	/**
-	 * @param string|Language|null|StubUserLang $lang Language to use for processing
+	 * @param string|Language|null $lang Language to use for processing
 	 *  messages, or null to default to the user language.
-	 * @return Language|StubUserLang
+	 * @return Language
 	 */
 	protected function languageFromParam( $lang ) {
+		global $wgLang;
+
 		if ( $lang === null ) {
-			return RequestContext::getMain()->getLanguage();
-		}
-		if ( $lang instanceof Language || $lang instanceof StubUserLang ) {
+			// @todo: Use RequestContext::getMain()->getLanguage() instead
+			return $wgLang;
+		} elseif ( $lang instanceof Language || $lang instanceof StubUserLang ) {
 			return $lang;
+		} else {
+			return Language::factory( $lang );
 		}
-		return Language::factory( $lang );
 	}
 
 	/**
@@ -169,14 +171,14 @@ class Status extends StatusValue {
 	 * @param string|bool $shortContext A short enclosing context message name, to
 	 *        be used when there is a single error
 	 * @param string|bool $longContext A long enclosing context message name, for a list
-	 * @param string|Language|null|StubUserLang $lang Language to use for processing messages
+	 * @param string|Language|null $lang Language to use for processing messages
 	 * @return string
 	 */
 	public function getWikiText( $shortContext = false, $longContext = false, $lang = null ) {
 		$lang = $this->languageFromParam( $lang );
 
 		$rawErrors = $this->getErrors();
-		if ( count( $rawErrors ) === 0 ) {
+		if ( count( $rawErrors ) == 0 ) {
 			if ( $this->isOK() ) {
 				$this->fatal( 'internalerror_info',
 					__METHOD__ . " called for a good result, this is incorrect\n" );
@@ -186,7 +188,7 @@ class Status extends StatusValue {
 			}
 			$rawErrors = $this->getErrors(); // just added a fatal
 		}
-		if ( count( $rawErrors ) === 1 ) {
+		if ( count( $rawErrors ) == 1 ) {
 			$s = $this->getErrorMessage( $rawErrors[0], $lang )->plain();
 			if ( $shortContext ) {
 				$s = wfMessage( $shortContext, $s )->inLanguage( $lang )->plain();
@@ -232,7 +234,7 @@ class Status extends StatusValue {
 		$lang = $this->languageFromParam( $lang );
 
 		$rawErrors = $this->getErrors();
-		if ( count( $rawErrors ) === 0 ) {
+		if ( count( $rawErrors ) == 0 ) {
 			if ( $this->isOK() ) {
 				$this->fatal( 'internalerror_info',
 					__METHOD__ . " called for a good result, this is incorrect\n" );
@@ -242,7 +244,7 @@ class Status extends StatusValue {
 			}
 			$rawErrors = $this->getErrors(); // just added a fatal
 		}
-		if ( count( $rawErrors ) === 1 ) {
+		if ( count( $rawErrors ) == 1 ) {
 			$s = $this->getErrorMessage( $rawErrors[0], $lang );
 			if ( $shortContext ) {
 				$s = wfMessage( $shortContext, $s )->inLanguage( $lang );
@@ -295,7 +297,7 @@ class Status extends StatusValue {
 		} elseif ( is_string( $error ) ) {
 			$msg = wfMessage( $error );
 		} else {
-			throw new UnexpectedValueException( 'Got ' . get_class( $error ) . ' for key.' );
+			throw new UnexpectedValueException( "Got " . get_class( $error ) . " for key." );
 		}
 
 		$msg->inLanguage( $this->languageFromParam( $lang ) );
@@ -386,7 +388,6 @@ class Status extends StatusValue {
 	/**
 	 * Don't save the callback when serializing, because Closures can't be
 	 * serialized and we're going to clear it in __wakeup anyway.
-	 * @return array
 	 */
 	function __sleep() {
 		$keys = array_keys( get_object_vars( $this ) );

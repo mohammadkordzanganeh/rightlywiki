@@ -62,7 +62,7 @@ abstract class RevisionRecord {
 	protected $mWiki = false;
 	/** @var int|null */
 	protected $mId;
-	/** @var int */
+	/** @var int|null */
 	protected $mPageId;
 	/** @var UserIdentity|null */
 	protected $mUser;

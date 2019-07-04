@@ -38,9 +38,7 @@ class SpecialLog extends SpecialPage {
 
 		$this->setHeaders();
 		$this->outputHeader();
-		$out = $this->getOutput();
-		$out->addModules( 'mediawiki.userSuggest' );
-		$out->addModuleStyles( 'mediawiki.interface.helpers.styles' );
+		$this->getOutput()->addModules( 'mediawiki.userSuggest' );
 		$this->addHelpLink( 'Help:Log' );
 
 		$opts = new FormOptions;
@@ -181,7 +179,8 @@ class SpecialLog extends SpecialPage {
 	 * - Otherwise, assume the whole subpage is a username.
 	 *
 	 * @param FormOptions $opts
-	 * @param string $par
+	 * @param $par
+	 * @throws ConfigException
 	 */
 	private function parseParams( FormOptions $opts, $par ) {
 		# Get parameters

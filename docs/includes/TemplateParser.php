@@ -220,6 +220,6 @@ class TemplateParser {
 	 */
 	public function processTemplate( $templateName, $args, array $scopes = [] ) {
 		$template = $this->getTemplate( $templateName );
-		return $template( $args, $scopes );
+		return call_user_func( $template, $args, $scopes );
 	}
 }

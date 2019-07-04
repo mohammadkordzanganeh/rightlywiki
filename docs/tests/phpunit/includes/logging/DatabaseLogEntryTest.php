@@ -29,15 +29,18 @@ class DatabaseLogEntryTest extends MediaWikiTestCase {
 	 * @param array $selectFields
 	 * @param string[]|null $row
 	 * @param string[]|null $expectedFields
+	 * @param int $commentMigration
 	 * @param int $actorMigration
 	 */
 	public function testNewFromId( $id,
 		array $selectFields,
 		array $row = null,
 		array $expectedFields = null,
+		$commentMigration,
 		$actorMigration
 	) {
 		$this->setMwGlobals( [
+			'wgCommentTableSchemaMigrationStage' => $commentMigration,
 			'wgActorTableSchemaMigrationStage' => $actorMigration,
 		] );
 
@@ -68,10 +71,7 @@ class DatabaseLogEntryTest extends MediaWikiTestCase {
 
 	public function provideNewFromId() {
 		$oldTables = [
-			'tables' => [
-				'logging', 'user',
-				'comment_log_comment' => 'comment',
-			],
+			'tables' => [ 'logging', 'user' ],
 			'fields' => [
 				'log_id',
 				'log_type',
@@ -84,18 +84,15 @@ class DatabaseLogEntryTest extends MediaWikiTestCase {
 				'user_id',
 				'user_name',
 				'user_editcount',
-				'log_comment_text' => 'comment_log_comment.comment_text',
-				'log_comment_data' => 'comment_log_comment.comment_data',
-				'log_comment_cid' => 'comment_log_comment.comment_id',
+				'log_comment_text' => 'log_comment',
+				'log_comment_data' => 'NULL',
+				'log_comment_cid' => 'NULL',
 				'log_user' => 'log_user',
 				'log_user_text' => 'log_user_text',
 				'log_actor' => 'NULL',
 			],
 			'options' => [],
-			'join_conds' => [
-				'user' => [ 'LEFT JOIN', 'user_id=log_user' ],
-				'comment_log_comment' => [ 'JOIN', 'comment_log_comment.comment_id = log_comment_id' ],
-			],
+			'join_conds' => [ 'user' => [ 'LEFT JOIN', 'user_id=log_user' ] ],
 		];
 		$newTables = [
 			'tables' => [
@@ -136,6 +133,7 @@ class DatabaseLogEntryTest extends MediaWikiTestCase {
 				$oldTables + [ 'conds' => [ 'log_id' => 0 ] ],
 				null,
 				null,
+				MIGRATION_OLD,
 				SCHEMA_COMPAT_OLD,
 			],
 			[
@@ -148,6 +146,7 @@ class DatabaseLogEntryTest extends MediaWikiTestCase {
 					'log_comment_data' => null,
 				],
 				[ 'type' => 'foobarize', 'comment' => 'test!' ],
+				MIGRATION_OLD,
 				SCHEMA_COMPAT_OLD,
 			],
 			[
@@ -160,6 +159,7 @@ class DatabaseLogEntryTest extends MediaWikiTestCase {
 					'log_comment_data' => null,
 				],
 				[ 'type' => 'foobarize', 'comment' => 'test!' ],
+				MIGRATION_NEW,
 				SCHEMA_COMPAT_NEW,
 			],
 		];

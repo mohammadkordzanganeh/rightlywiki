@@ -218,8 +218,7 @@
 
 			// Default toggle link. Only build it when needed to avoid jQuery memory leaks (event data).
 			buildDefaultToggleLink = function () {
-				return $( '<a>' )
-					.addClass( 'mw-collapsible-text' )
+				return $( '<a class="mw-collapsible-text"></a>' )
 					.text( collapseText )
 					.wrap( '<span class="mw-collapsible-toggle mw-collapsible-toggle-default"></span>' )
 					.parent()

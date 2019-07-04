@@ -129,11 +129,6 @@ class CommandLineInstaller extends Maintenance {
 			$installer->execute();
 			$installer->writeConfigurationFile( $this->getOption( 'confpath', $IP ) );
 		}
-		$installer->showMessage(
-			'config-install-success',
-			$installer->getVar( 'wgServer' ),
-			$installer->getVar( 'wgScriptPath' )
-		);
 	}
 
 	private function setDbPassOption() {

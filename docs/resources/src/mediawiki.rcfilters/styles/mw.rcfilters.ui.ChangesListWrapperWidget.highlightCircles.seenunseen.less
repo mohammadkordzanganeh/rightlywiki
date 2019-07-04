@@ -9,6 +9,10 @@
 			list-style: none;
 		}
 	}
+
+	& > div {
+		margin-right: @margin-circle-result;
+	}
 }
 
 // Make more specific for the overrides
@@ -41,6 +45,7 @@ div.mw-rcfilters-ui-highlights {
 					.mw-rcfilters-circle-color( @highlight-bluedot, true, @highlight-bluedot );
 				}
 			}
+
 		}
 
 		// Watchlist unseen highlighted fixes

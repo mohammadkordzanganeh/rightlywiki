@@ -121,6 +121,11 @@ class ParserOutput extends CacheTime {
 	public $mModules = [];
 
 	/**
+	 * @var array $mModuleScripts Modules of which only the JS will be loaded by ResourceLoader.
+	 */
+	public $mModuleScripts = [];
+
+	/**
 	 * @var array $mModuleStyles Modules of which only the CSSS will be loaded by ResourceLoader.
 	 */
 	public $mModuleStyles = [];
@@ -519,8 +524,7 @@ class ParserOutput extends CacheTime {
 	}
 
 	public function getModuleScripts() {
-		wfDeprecated( __METHOD__, '1.33' );
-		return [];
+		return $this->mModuleScripts;
 	}
 
 	public function getModuleStyles() {
@@ -814,6 +818,14 @@ class ParserOutput extends CacheTime {
 	}
 
 	/**
+	 * @deprecated since 1.31 Use addModules() instead.
+	 * @see OutputPage::addModuleScripts
+	 */
+	public function addModuleScripts( $modules ) {
+		$this->mModuleScripts = array_merge( $this->mModuleScripts, (array)$modules );
+	}
+
+	/**
 	 * @see OutputPage::addModuleStyles
 	 */
 	public function addModuleStyles( $modules ) {
@@ -845,6 +857,7 @@ class ParserOutput extends CacheTime {
 	 */
 	public function addOutputPageMetadata( OutputPage $out ) {
 		$this->addModules( $out->getModules() );
+		$this->addModuleScripts( $out->getModuleScripts() );
 		$this->addModuleStyles( $out->getModuleStyles() );
 		$this->addJsConfigVars( $out->getJsConfigVars() );
 
@@ -1114,7 +1127,11 @@ class ParserOutput extends CacheTime {
 	 *         or null if no value was set for this key.
 	 */
 	public function getExtensionData( $key ) {
-		return $this->mExtensionData[$key] ?? null;
+		if ( isset( $this->mExtensionData[$key] ) ) {
+			return $this->mExtensionData[$key];
+		}
+
+		return null;
 	}
 
 	private static function getTimes( $clock = null ) {
@@ -1325,6 +1342,7 @@ class ParserOutput extends CacheTime {
 		// HTML and HTTP
 		$this->mHeadItems = self::mergeMixedList( $this->mHeadItems, $source->getHeadItems() );
 		$this->mModules = self::mergeList( $this->mModules, $source->getModules() );
+		$this->mModuleScripts = self::mergeList( $this->mModuleScripts, $source->getModuleScripts() );
 		$this->mModuleStyles = self::mergeList( $this->mModuleStyles, $source->getModuleStyles() );
 		$this->mJsConfigVars = self::mergeMap( $this->mJsConfigVars, $source->getJsConfigVars() );
 		$this->mMaxAdaptiveExpiry = min( $this->mMaxAdaptiveExpiry, $source->mMaxAdaptiveExpiry );
@@ -1345,7 +1363,7 @@ class ParserOutput extends CacheTime {
 
 		// TODO: we'll have to be smarter about this!
 		$this->mSections = array_merge( $this->mSections, $source->getSections() );
-		$this->mTOCHTML .= $source->mTOCHTML;
+		$this->mTOCHTML = $this->mTOCHTML . $source->mTOCHTML;
 
 		// XXX: we don't want to concatenate title text, so first write wins.
 		// We should use the first *modified* title text, but we don't have the original to check.

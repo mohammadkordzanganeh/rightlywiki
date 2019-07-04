@@ -22,23 +22,15 @@
 
 use Cdb\Reader as CdbReader;
 use MediaWiki\MediaWikiServices;
-use Wikimedia\PasswordBlacklist;
 
 /**
- * Functions to check passwords against a policy requirement.
- *
- * $policyVal is the value configured in $wgPasswordPolicy. If the return status is fatal,
- * the user won't be allowed to login. If the status is not good but not fatal, the user
- * will not be allowed to set the given password (on registration or password change),
- * but can still log in after bypassing a warning.
- *
+ * Functions to check passwords against a policy requirement
  * @since 1.26
- * @see $wgPasswordPolicy
  */
 class PasswordPolicyChecks {
 
 	/**
-	 * Check password is longer than minimum, not fatal.
+	 * Check password is longer than minimum, not fatal
 	 * @param int $policyVal minimal length
 	 * @param User $user
 	 * @param string $password
@@ -53,7 +45,7 @@ class PasswordPolicyChecks {
 	}
 
 	/**
-	 * Check password is longer than minimum, fatal.
+	 * Check password is longer than minimum, fatal
 	 * @param int $policyVal minimal length
 	 * @param User $user
 	 * @param string $password
@@ -68,8 +60,7 @@ class PasswordPolicyChecks {
 	}
 
 	/**
-	 * Check password is shorter than maximum, fatal.
-	 * Intended for preventing DoS attacks when using a more expensive password hash like PBKDF2.
+	 * Check password is shorter than maximum, fatal
 	 * @param int $policyVal maximum length
 	 * @param User $user
 	 * @param string $password
@@ -84,7 +75,7 @@ class PasswordPolicyChecks {
 	}
 
 	/**
-	 * Check if username and password are a (case-insensitive) match.
+	 * Check if username and password match
 	 * @param bool $policyVal true to force compliance.
 	 * @param User $user
 	 * @param string $password
@@ -95,7 +86,7 @@ class PasswordPolicyChecks {
 		$username = $user->getName();
 		$contLang = MediaWikiServices::getInstance()->getContentLanguage();
 		if (
-			$policyVal && hash_equals( $contLang->lc( $username ), $contLang->lc( $password ) )
+			$policyVal && $contLang->lc( $password ) === $contLang->lc( $username )
 		) {
 			$status->error( 'password-name-match' );
 		}
@@ -103,7 +94,7 @@ class PasswordPolicyChecks {
 	}
 
 	/**
-	 * Check if username and password are on a blacklist of past MediaWiki default passwords.
+	 * Check if username and password are on a blacklist
 	 * @param bool $policyVal true to force compliance.
 	 * @param User $user
 	 * @param string $password
@@ -118,15 +109,12 @@ class PasswordPolicyChecks {
 		$status = Status::newGood();
 		$username = $user->getName();
 		if ( $policyVal ) {
-			if (
-				isset( $blockedLogins[$username] ) &&
-				hash_equals( $blockedLogins[$username], $password )
-			) {
+			if ( isset( $blockedLogins[$username] ) && $password == $blockedLogins[$username] ) {
 				$status->error( 'password-login-forbidden' );
 			}
 
 			// Example from ApiChangeAuthenticationRequest
-			if ( hash_equals( 'ExamplePassword', $password ) ) {
+			if ( $password === 'ExamplePassword' ) {
 				$status->error( 'password-login-forbidden' );
 			}
 		}
@@ -134,8 +122,7 @@ class PasswordPolicyChecks {
 	}
 
 	/**
-	 * Ensure that password isn't in top X most popular passwords, as defined by
-	 * $wgPopularPasswordFile.
+	 * Ensure that password isn't in top X most popular passwords
 	 *
 	 * @param int $policyVal Cut off to use. Will automatically shrink to the max
 	 *   supported for error messages if set to more than max number of passwords on file,
@@ -143,16 +130,12 @@ class PasswordPolicyChecks {
 	 * @param User $user
 	 * @param string $password
 	 * @since 1.27
-	 * @deprecated since 1.33
 	 * @return Status
-	 * @see $wgPopularPasswordFile
 	 */
 	public static function checkPopularPasswordBlacklist( $policyVal, User $user, $password ) {
 		global $wgPopularPasswordFile, $wgSitename;
 		$status = Status::newGood();
 		if ( $policyVal > 0 ) {
-			wfDeprecated( __METHOD__, '1.33' );
-
 			$langEn = Language::factory( 'en' );
 			$passwordKey = $langEn->lc( trim( $password ) );
 
@@ -181,29 +164,6 @@ class PasswordPolicyChecks {
 				$status->error( 'passwordtoopopular' );
 			}
 		}
-		return $status;
-	}
-
-	/**
-	 * Ensure the password isn't in the list of passwords blacklisted by the
-	 * wikimedia/password-blacklist library, which contains (as of 0.1.4) the
-	 * 100.000 top passwords from SecLists (as a Bloom filter, with an
-	 * 0.000001 false positive ratio).
-	 *
-	 * @param bool $policyVal Whether to apply this policy
-	 * @param User $user
-	 * @param string $password
-	 *
-	 * @since 1.33
-	 *
-	 * @return Status
-	 */
-	public static function checkPasswordNotInLargeBlacklist( $policyVal, User $user, $password ) {
-		$status = Status::newGood();
-		if ( $policyVal && PasswordBlacklist\PasswordBlacklist::isBlacklisted( $password ) ) {
-			$status->error( 'passwordinlargeblacklist' );
-		}
-
 		return $status;
 	}
 

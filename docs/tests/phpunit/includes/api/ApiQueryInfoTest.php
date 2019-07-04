@@ -107,7 +107,7 @@ class ApiQueryInfoTest extends ApiTestCase {
 			'user' => $badActor->getId(),
 			'by' => $sysop->getId(),
 			'expiry' => 'infinity',
-			'sitewide' => 1,
+			'sitewide' => 0,
 			'enableAutoblock' => true,
 		] );
 

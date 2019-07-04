@@ -27,7 +27,7 @@ trait IndicatorElement {
 
 	/**
 	 * @param array $config Configuration options
-	 *      - string $config['indicator'] Symbolic indicator name
+	 * @param string $config['indicator'] Symbolic indicator name
 	 */
 	public function initializeIndicatorElement( array $config = [] ) {
 		// Properties

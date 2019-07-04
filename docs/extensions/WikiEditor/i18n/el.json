@@ -11,8 +11,7 @@
 			"Απεργός",
 			"Περίεργος",
 			"Macofe",
-			"Protnet",
-			"Nikosgranturismogt"
+			"Protnet"
 		]
 	},
 	"wikieditor": "Προχωρημένη διεπαφή επεξεργασίας κειμένου wiki",
@@ -21,7 +20,7 @@
 	"wikieditor-loading": "Φόρτωση",
 	"wikieditor-toolbar": "Επεξεργασία εργαλειοθήκης",
 	"wikieditor-toolbar-desc": "Μπάρα εργαλείων επεξεργασίας σελίδων με περισσότερες δυνατότητες χρήσης",
-	"wikieditor-toolbar-preference": "Ενεργοποιήστε την μπάρα επεξεργασίας",
+	"wikieditor-toolbar-preference": "Ενεργοποιήστε την μπάρα εργαλείων με τις περισσότερες δυνατότητες επεξεργασίας",
 	"wikieditor-toolbar-loading": "Φόρτωση...",
 	"wikieditor-toolbar-tool-bold": "Έντονα",
 	"wikieditor-toolbar-tool-bold-example": "Έντονο κείμενο",

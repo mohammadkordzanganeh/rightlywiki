@@ -47,12 +47,6 @@ class ImageMap {
 		$lines = explode( "\n", $input );
 
 		$first = true;
-		$scale = 1;
-		$imageNode = null;
-		$domDoc = null;
-		$thumbWidth = 0;
-		$thumbHeight = 0;
-		$imageTitle = null;
 		$lineNum = 0;
 		$mapHTML = '';
 		$links = [];
@@ -99,9 +93,9 @@ class ImageMap {
 				$imageHTML = Sanitizer::normalizeCharReferences( $imageHTML );
 
 				$domDoc = new DOMDocument();
-				Wikimedia\suppressWarnings();
+				wfSuppressWarnings();
 				$ok = $domDoc->loadXML( $imageHTML );
-				Wikimedia\restoreWarnings();
+				wfRestoreWarnings();
 				if ( !$ok ) {
 					return self::error( 'imagemap_invalid_image' );
 				}
@@ -207,9 +201,6 @@ class ImageMap {
 					$coords = [];
 					$coord = strtok( " \t" );
 					while ( $coord !== false ) {
-						if ( !is_numeric( $coord ) || $coord > 1e9 || $coord < 0 ) {
-							return self::error( 'imagemap_invalid_coord', $lineNum );
-						}
 						$coords[] = $coord;
 						$coord = strtok( " \t" );
 					}
@@ -226,7 +217,7 @@ class ImageMap {
 
 			// Scale the coords using the size of the source image
 			foreach ( $coords as $i => $c ) {
-				$coords[$i] = (int)round( $c * $scale );
+				$coords[$i] = intval( round( $c * $scale ) );
 			}
 
 			// Construct the area tag
@@ -268,7 +259,7 @@ class ImageMap {
 			}
 		}
 
-		if ( $first || !$imageNode ) {
+		if ( $first ) {
 			return self::error( 'imagemap_no_image' );
 		}
 
@@ -351,7 +342,7 @@ class ImageMap {
 				'alt',
 				wfMessage( 'imagemap_description' )->inContentLanguage()->text()
 			);
-			$url = $config->get( 'ExtensionAssetsPath' ) . '/ImageMap/resources/desc-20.png';
+			$url = $config->get( 'ExtensionAssetsPath' ) . '/ImageMap/desc-20.png';
 			$descImg->setAttribute(
 				'src',
 				OutputPage::transformResourcePath( $config, $url )
@@ -389,7 +380,7 @@ class ImageMap {
 	 * @param int|string $lineNum
 	 * @return array|string String with error (HTML), or array of coordinates
 	 */
-	private static function tokenizeCoords( $count, $lineNum ) {
+	static function tokenizeCoords( $count, $lineNum ) {
 		$coords = [];
 		for ( $i = 0; $i < $count; $i++ ) {
 			$coord = strtok( " \t" );
@@ -409,7 +400,7 @@ class ImageMap {
 	 * @param string|int|bool $line
 	 * @return string HTML
 	 */
-	private static function error( $name, $line = false ) {
+	static function error( $name, $line = false ) {
 		return '<p class="error">' . wfMessage( $name, $line )->parse() . '</p>';
 	}
 }

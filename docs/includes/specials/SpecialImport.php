@@ -179,9 +179,8 @@ class SpecialImport extends SpecialPage {
 
 		$out = $this->getOutput();
 		if ( !$source->isGood() ) {
-			$out->wrapWikiTextAsInterface( 'error',
-				$this->msg( 'importfailed', $source->getWikiText() )->plain()
-			);
+			$out->addWikiText( "<div class=\"error\">\n" .
+				$this->msg( 'importfailed', $source->getWikiText() )->parse() . "\n</div>" );
 		} else {
 			$importer = new WikiImporter( $source->value, $this->getConfig() );
 			if ( !is_null( $this->namespace ) ) {
@@ -280,7 +279,6 @@ class SpecialImport extends SpecialPage {
 							'selected' => ( $isSameSourceAsBefore ?
 								$this->namespace :
 								( $defaultNamespace || '' ) ),
-							'in-user-lang' => true,
 						], [
 							'name' => "namespace",
 							// mw-import-namespace-interwiki, mw-import-namespace-upload
@@ -391,8 +389,10 @@ class SpecialImport extends SpecialPage {
 					Xml::closeElement( 'form' ) .
 					Xml::closeElement( 'fieldset' )
 			);
-		} elseif ( empty( $this->importSources ) ) {
-			$out->addWikiMsg( 'importnosources' );
+		} else {
+			if ( empty( $this->importSources ) ) {
+				$out->addWikiMsg( 'importnosources' );
+			}
 		}
 
 		if ( $user->isAllowed( 'import' ) && !empty( $this->importSources ) ) {

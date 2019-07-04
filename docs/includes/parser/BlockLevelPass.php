@@ -25,7 +25,7 @@
 class BlockLevelPass {
 	private $DTopen = false;
 	private $inPre = false;
-	private $lastParagraph = '';
+	private $lastSection = '';
 	private $lineStart;
 	private $text;
 
@@ -53,8 +53,7 @@ class BlockLevelPass {
 	}
 
 	/**
-	 * @param string $text
-	 * @param bool $lineStart
+	 * Private constructor
 	 */
 	private function __construct( $text, $lineStart ) {
 		$this->text = $text;
@@ -62,28 +61,17 @@ class BlockLevelPass {
 	}
 
 	/**
-	 * @return bool
-	 */
-	private function hasOpenParagraph() {
-		return $this->lastParagraph !== '';
-	}
-
-	/**
 	 * If a pre or p is open, return the corresponding close tag and update
 	 * the state. If no tag is open, return an empty string.
-	 * @param bool $atTheEnd Omit trailing newline if we've reached the end.
 	 * @return string
 	 */
-	private function closeParagraph( $atTheEnd = false ) {
+	private function closeParagraph() {
 		$result = '';
-		if ( $this->hasOpenParagraph() ) {
-			$result = '</' . $this->lastParagraph . '>';
-			if ( !$atTheEnd ) {
-				$result .= "\n";
-			}
+		if ( $this->lastSection !== '' ) {
+			$result = '</' . $this->lastSection . ">\n";
 		}
 		$this->inPre = false;
-		$this->lastParagraph = '';
+		$this->lastSection = '';
 		return $result;
 	}
 
@@ -117,13 +105,13 @@ class BlockLevelPass {
 	private function openList( $char ) {
 		$result = $this->closeParagraph();
 
-		if ( $char === '*' ) {
+		if ( '*' === $char ) {
 			$result .= "<ul><li>";
-		} elseif ( $char === '#' ) {
+		} elseif ( '#' === $char ) {
 			$result .= "<ol><li>";
-		} elseif ( $char === ':' ) {
+		} elseif ( ':' === $char ) {
 			$result .= "<dl><dd>";
-		} elseif ( $char === ';' ) {
+		} elseif ( ';' === $char ) {
 			$result .= "<dl><dt>";
 			$this->DTopen = true;
 		} else {
@@ -140,14 +128,14 @@ class BlockLevelPass {
 	 * @return string
 	 */
 	private function nextItem( $char ) {
-		if ( $char === '*' || $char === '#' ) {
+		if ( '*' === $char || '#' === $char ) {
 			return "</li>\n<li>";
-		} elseif ( $char === ':' || $char === ';' ) {
+		} elseif ( ':' === $char || ';' === $char ) {
 			$close = "</dd>\n";
 			if ( $this->DTopen ) {
 				$close = "</dt>\n";
 			}
-			if ( $char === ';' ) {
+			if ( ';' === $char ) {
 				$this->DTopen = true;
 				return $close . '<dt>';
 			} else {
@@ -165,11 +153,11 @@ class BlockLevelPass {
 	 * @return string
 	 */
 	private function closeList( $char ) {
-		if ( $char === '*' ) {
+		if ( '*' === $char ) {
 			$text = "</li></ul>";
-		} elseif ( $char === '#' ) {
+		} elseif ( '#' === $char ) {
 			$text = "</li></ol>";
-		} elseif ( $char === ':' ) {
+		} elseif ( ':' === $char ) {
 			if ( $this->DTopen ) {
 				$this->DTopen = false;
 				$text = "</dt></dl>";
@@ -199,11 +187,7 @@ class BlockLevelPass {
 		$pendingPTag = false;
 		$inBlockquote = false;
 
-		for ( $textLines->rewind(); $textLines->valid(); ) {
-			$inputLine = $textLines->current();
-			$textLines->next();
-			$notLastLine = $textLines->valid();
-
+		foreach ( $textLines as $inputLine ) {
 			# Fix up $lineStart
 			if ( !$this->lineStart ) {
 				$output .= $inputLine;
@@ -287,7 +271,7 @@ class BlockLevelPass {
 					$char = $prefix[$commonPrefixLength];
 					$output .= $this->openList( $char );
 
-					if ( $char === ';' ) {
+					if ( ';' === $char ) {
 						# @todo FIXME: This is dupe of code above
 						if ( $this->findColonNoLinks( $t, $term, $t2 ) !== false ) {
 							$t = $t2;
@@ -304,7 +288,7 @@ class BlockLevelPass {
 			}
 
 			# If we have no prefixes, go to paragraph mode.
-			if ( $prefixLength == 0 ) {
+			if ( 0 == $prefixLength ) {
 				# No prefix (not in list)--go to paragraph mode
 				# @todo consider using a stack for nestable elements like span, table and div
 
@@ -355,15 +339,15 @@ class BlockLevelPass {
 					}
 					$inBlockElem = !$closeMatch;
 				} elseif ( !$inBlockElem && !$this->inPre ) {
-					if ( substr( $t, 0, 1 ) == ' '
-						&& ( $this->lastParagraph === 'pre' || trim( $t ) != '' )
+					if ( ' ' == substr( $t, 0, 1 )
+						&& ( $this->lastSection === 'pre' || trim( $t ) != '' )
 						&& !$inBlockquote
 					) {
 						# pre
-						if ( $this->lastParagraph !== 'pre' ) {
+						if ( $this->lastSection !== 'pre' ) {
 							$pendingPTag = false;
 							$output .= $this->closeParagraph() . '<pre>';
-							$this->lastParagraph = 'pre';
+							$this->lastSection = 'pre';
 						}
 						$t = substr( $t, 1 );
 					} elseif ( preg_match( '/^(?:<style\\b[^>]*>.*?<\\/style>\s*|<link\\b[^>]*>\s*)+$/iS', $t ) ) {
@@ -372,6 +356,7 @@ class BlockLevelPass {
 						if ( $pendingPTag ) {
 							$output .= $this->closeParagraph();
 							$pendingPTag = false;
+							$this->lastSection = '';
 						}
 					} else {
 						# paragraph
@@ -379,20 +364,25 @@ class BlockLevelPass {
 							if ( $pendingPTag ) {
 								$output .= $pendingPTag . '<br />';
 								$pendingPTag = false;
-								$this->lastParagraph = 'p';
-							} elseif ( $this->lastParagraph !== 'p' ) {
-								$output .= $this->closeParagraph();
-								$pendingPTag = '<p>';
+								$this->lastSection = 'p';
 							} else {
-								$pendingPTag = '</p><p>';
+								if ( $this->lastSection !== 'p' ) {
+									$output .= $this->closeParagraph();
+									$this->lastSection = '';
+									$pendingPTag = '<p>';
+								} else {
+									$pendingPTag = '</p><p>';
+								}
 							}
-						} elseif ( $pendingPTag ) {
-							$output .= $pendingPTag;
-							$pendingPTag = false;
-							$this->lastParagraph = 'p';
-						} elseif ( $this->lastParagraph !== 'p' ) {
-							$output .= $this->closeParagraph() . '<p>';
-							$this->lastParagraph = 'p';
+						} else {
+							if ( $pendingPTag ) {
+								$output .= $pendingPTag;
+								$pendingPTag = false;
+								$this->lastSection = 'p';
+							} elseif ( $this->lastSection !== 'p' ) {
+								$output .= $this->closeParagraph() . '<p>';
+								$this->lastSection = 'p';
+							}
 						}
 					}
 				}
@@ -404,11 +394,7 @@ class BlockLevelPass {
 			if ( $pendingPTag === false ) {
 				if ( $prefixLength === 0 ) {
 					$output .= $t;
-					// Add a newline if there's an open paragraph
-					// or we've yet to reach the last line.
-					if ( $notLastLine || $this->hasOpenParagraph() ) {
-						$output .= "\n";
-					}
+					$output .= "\n";
 				} else {
 					// Trim whitespace in list items
 					$output .= trim( $t );
@@ -418,13 +404,15 @@ class BlockLevelPass {
 		while ( $prefixLength ) {
 			$output .= $this->closeList( $prefix2[$prefixLength - 1] );
 			--$prefixLength;
-			// Note that a paragraph is only ever opened when `prefixLength`
-			// is zero, but we'll choose to be overly cautious.
-			if ( !$prefixLength && $this->hasOpenParagraph() ) {
+			if ( !$prefixLength ) {
 				$output .= "\n";
 			}
 		}
-		$output .= $this->closeParagraph( true );
+		if ( $this->lastSection !== '' ) {
+			$output .= '</' . $this->lastSection . '>';
+			$this->lastSection = '';
+		}
+
 		return $output;
 	}
 

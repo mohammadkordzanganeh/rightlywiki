@@ -15,7 +15,7 @@
  * along with MultimediaViewer.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-( function () {
+( function ( mw, $, oo ) {
 	var L;
 
 	/**
@@ -27,7 +27,7 @@
 	 */
 	function ActionLogger() {}
 
-	OO.inheritClass( ActionLogger, mw.mmv.logging.Logger );
+	oo.inheritClass( ActionLogger, mw.mmv.logging.Logger );
 
 	L = ActionLogger.prototype;
 
@@ -189,4 +189,4 @@
 
 	mw.mmv.logging.ActionLogger = ActionLogger;
 	mw.mmv.actionLogger = new ActionLogger();
-}() );
+}( mediaWiki, jQuery, OO ) );

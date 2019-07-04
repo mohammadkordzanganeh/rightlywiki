@@ -230,6 +230,9 @@
 			padded: true
 		} );
 
+		this.$spinner = $( '<div>' )
+			.addClass( 'feedback-spinner' );
+
 		// Feedback form
 		this.feedbackMessageLabel = new OO.ui.LabelWidget( {
 			classes: [ 'mw-feedbackDialog-welcome-message' ]
@@ -325,7 +328,7 @@
 				}
 			}, this )
 			.next( function () {
-				var $link,
+				var plainMsg, parsedMsg,
 					settings = data.settings;
 				data.contents = data.contents || {};
 
@@ -347,12 +350,23 @@
 				this.useragentMandatory = settings.useragentCheckbox.mandatory;
 				this.useragentFieldLayout.toggle( settings.useragentCheckbox.show );
 
-				$link = $( '<a>' )
-					.attr( 'href', this.feedbackPageUrl )
-					.attr( 'target', '_blank' )
-					.text( this.feedbackPageName );
+				// HACK: Setting a link in the messages doesn't work. There is already a report
+				// about this, and the bug report offers a somewhat hacky work around that
+				// includes setting a separate message to be parsed.
+				// We want to make sure the user can configure both the title of the page and
+				// a separate url, so this must be allowed to parse correctly.
+				// See https://phabricator.wikimedia.org/T49395#490610
+				mw.messages.set( {
+					'feedback-dialog-temporary-message':
+						'<a href="' + this.feedbackPageUrl + '" target="_blank">' + this.feedbackPageName + '</a>'
+				} );
+				plainMsg = mw.message( 'feedback-dialog-temporary-message' ).plain();
+				mw.messages.set( { 'feedback-dialog-temporary-message-parsed': plainMsg } );
+				parsedMsg = mw.message( 'feedback-dialog-temporary-message-parsed' );
 				this.feedbackMessageLabel.setLabel(
-					mw.message( 'feedback-dialog-intro', $link ).parseDom()
+					// Double-parse
+					$( '<span>' )
+						.append( mw.message( 'feedback-dialog-intro', parsedMsg ).parse() )
 				);
 
 				this.validateFeedbackForm();

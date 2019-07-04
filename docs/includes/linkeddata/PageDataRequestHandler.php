@@ -40,22 +40,32 @@ class PageDataRequestHandler {
 	 * @param WebRequest $request
 	 *
 	 * @return bool
+	 * @throws HttpError
 	 */
 	public function canHandleRequest( $subPage, WebRequest $request ) {
 		if ( $subPage === '' || $subPage === null ) {
-			return $request->getText( 'target' ) !== '';
+			if ( $request->getText( 'target', '' ) === '' ) {
+				return false;
+			} else {
+				return true;
+			}
 		}
 
 		$parts = explode( '/', $subPage, 2 );
-		$slot = $parts[0];
-		$title = $parts[1] ?? '';
-		return ( $slot === 'main' || $slot === '' ) && $title !== '';
+		if ( $parts !== 2 ) {
+			$slot = $parts[0];
+			if ( $slot === 'main' || $slot === '' ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**
 	 * Main method for handling requests.
 	 *
-	 * @param string|null $subPage
+	 * @param string $subPage
 	 * @param WebRequest $request The request parameters. Known parameters are:
 	 *        - title: the page title
 	 *        - format: the format
@@ -77,11 +87,11 @@ class PageDataRequestHandler {
 
 		$revision = 0;
 
+		$parts = explode( '/', $subPage, 2 );
 		if ( $subPage !== '' ) {
-			$parts = explode( '/', $subPage, 2 );
-			$title = $parts[1] ?? '';
+			$title = $parts[1];
 		} else {
-			$title = $request->getText( 'target' );
+			$title = $request->getText( 'target', '' );
 		}
 
 		$revision = $request->getInt( 'oldid', $revision );
@@ -136,7 +146,7 @@ class PageDataRequestHandler {
 		}
 
 		$negotiator = new HttpAcceptNegotiator( $mimeTypes );
-		$format = $negotiator->getBestSupportedKey( $accept );
+		$format = $negotiator->getBestSupportedKey( $accept, null );
 
 		if ( $format === null ) {
 			$format = isset( $accept['text/html'] ) ? 'text/html' : null;

@@ -102,7 +102,7 @@ class SpecialSearch extends SpecialPage {
 	/**
 	 * Entry point
 	 *
-	 * @param string|null $par
+	 * @param string $par
 	 */
 	public function execute( $par ) {
 		$request = $this->getRequest();
@@ -115,7 +115,7 @@ class SpecialSearch extends SpecialPage {
 		// parameter, but also as part of the primary url. This can have PII implications
 		// in releasing page view data. As such issue a 301 redirect to the correct
 		// URL.
-		if ( $par !== null && $par !== '' && $term === '' ) {
+		if ( strlen( $par ) && !strlen( $term ) ) {
 			$query = $request->getValues();
 			unset( $query['title'] );
 			// Strip underscores from title parameter; most of the time we'll want
@@ -129,7 +129,7 @@ class SpecialSearch extends SpecialPage {
 		$this->load();
 		// TODO: This performs database actions on GET request, which is going to
 		// be a problem for our multi-datacenter work.
-		if ( $request->getCheck( 'nsRemember' ) ) {
+		if ( !is_null( $request->getVal( 'nsRemember' ) ) ) {
 			$this->saveNamespaces();
 			// Remove the token from the URL to prevent the user from inadvertently
 			// exposing it (e.g. by pasting it into a public wiki page) or undoing
@@ -141,7 +141,10 @@ class SpecialSearch extends SpecialPage {
 		}
 
 		$this->searchEngineType = $request->getVal( 'srbackend' );
-		if ( !$request->getVal( 'fulltext' ) && !$request->getCheck( 'offset' ) ) {
+		if (
+			!$request->getVal( 'fulltext' ) &&
+			$request->getVal( 'offset' ) === null
+		) {
 			$url = $this->goResult( $term );
 			if ( $url !== null ) {
 				// successful 'go'
@@ -164,38 +167,27 @@ class SpecialSearch extends SpecialPage {
 				$url = str_replace( '$1', urlencode( $term ), $searchForwardUrl );
 				$out->redirect( $url );
 			} else {
-				$this->showGoogleSearch( $term );
+				$out->addHTML(
+					"<fieldset>" .
+						"<legend>" .
+							$this->msg( 'search-external' )->escaped() .
+						"</legend>" .
+						"<p class='mw-searchdisabled'>" .
+							$this->msg( 'searchdisabled' )->escaped() .
+						"</p>" .
+						$this->msg( 'googlesearch' )->rawParams(
+							htmlspecialchars( $term ),
+							'UTF-8',
+							$this->msg( 'searchbutton' )->escaped()
+						)->text() .
+					"</fieldset>"
+				);
 			}
 
 			return;
 		}
 
 		$this->showResults( $term );
-	}
-
-	/**
-	 * Output a google search form if search is disabled
-	 *
-	 * @param string $term Search term
-	 * @todo FIXME Maybe we should get rid of this raw html message at some future time
-	 * @suppress SecurityCheck-XSS
-	 */
-	private function showGoogleSearch( $term ) {
-		$this->getOutput()->addHTML(
-			"<fieldset>" .
-				"<legend>" .
-					$this->msg( 'search-external' )->escaped() .
-				"</legend>" .
-				"<p class='mw-searchdisabled'>" .
-					$this->msg( 'searchdisabled' )->escaped() .
-				"</p>" .
-				$this->msg( 'googlesearch' )->rawParams(
-					htmlspecialchars( $term ),
-					'UTF-8',
-					$this->msg( 'searchbutton' )->escaped()
-				)->text() .
-			"</fieldset>"
-		);
 	}
 
 	/**
@@ -220,13 +212,13 @@ class SpecialSearch extends SpecialPage {
 
 		# Extract manually requested namespaces
 		$nslist = $this->powerSearch( $request );
-		if ( $nslist === [] ) {
+		if ( !count( $nslist ) ) {
 			# Fallback to user preference
 			$nslist = $this->searchConfig->userNamespaces( $user );
 		}
 
 		$profile = null;
-		if ( $nslist === [] ) {
+		if ( !count( $nslist ) ) {
 			$profile = 'default';
 		}
 
@@ -243,12 +235,14 @@ class SpecialSearch extends SpecialPage {
 			$this->namespaces = $nslist;
 		} elseif ( $profile === 'advanced' ) {
 			$this->namespaces = $nslist;
-		} elseif ( isset( $profiles[$profile]['namespaces'] ) ) {
-			$this->namespaces = $profiles[$profile]['namespaces'];
 		} else {
-			// Unknown profile requested
-			$profile = 'default';
-			$this->namespaces = $profiles['default']['namespaces'];
+			if ( isset( $profiles[$profile]['namespaces'] ) ) {
+				$this->namespaces = $profiles[$profile]['namespaces'];
+			} else {
+				// Unknown profile requested
+				$profile = 'default';
+				$this->namespaces = $profiles['default']['namespaces'];
+			}
 		}
 
 		$this->fulltext = $request->getVal( 'fulltext' );
@@ -469,7 +463,8 @@ class SpecialSearch extends SpecialPage {
 				$offset = $this->offset;
 			}
 
-			$prevnext = $this->buildPrevNextNavigation(
+			$prevnext = $this->getLanguage()->viewPrevNext(
+				$this->getPageTitle(),
 				$offset,
 				$this->limit,
 				$this->powerSearchOptions() + [ 'search' => $term ],

@@ -95,7 +95,7 @@ class CleanupUsersWithNoId extends LoggedUpdateMaintenance {
 	 * @param IDatabase $dbw
 	 * @param string[] $indexFields Fields in the index being ordered by
 	 * @param object $row Database row
-	 * @return string[] [ string $next, string $display ]
+	 * @return array [ string $next, string $display ]
 	 */
 	private function makeNextCond( $dbw, $indexFields, $row ) {
 		$next = '';

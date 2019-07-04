@@ -30,7 +30,7 @@ use Wikimedia\Rdbms\IDatabase;
  */
 abstract class SearchDatabase extends SearchEngine {
 	/**
-	 * @var IDatabase Replica database from which to read results
+	 * @var IDatabase Slave database for reading from for results
 	 */
 	protected $db;
 

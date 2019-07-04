@@ -181,7 +181,11 @@ class SearchMySQL extends SearchDatabase {
 	protected function searchInternal( $term, $fulltext ) {
 		// This seems out of place, why is this called with empty term?
 		if ( trim( $term ) === '' ) {
-			return null;
+		return null;
+		}else{
+			$term2 = $term . '*';
+			$term2 = str_replace(' ', '* *', $term2);
+			$term .= ' '.$term2;
 		}
 
 		$filteredTerm = $this->filter( $term );

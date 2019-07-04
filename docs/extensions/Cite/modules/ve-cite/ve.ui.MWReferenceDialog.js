@@ -36,7 +36,7 @@ ve.ui.MWReferenceDialog.static.title =
 
 ve.ui.MWReferenceDialog.static.actions = [
 	{
-		action: 'done',
+		action: 'apply',
 		label: OO.ui.deferMsg( 'visualeditor-dialog-action-apply' ),
 		flags: [ 'progressive', 'primary' ],
 		modes: 'edit'
@@ -50,7 +50,18 @@ ve.ui.MWReferenceDialog.static.actions = [
 	{
 		label: OO.ui.deferMsg( 'visualeditor-dialog-action-cancel' ),
 		flags: [ 'safe', 'back' ],
-		modes: [ 'readonly', 'insert', 'edit', 'insert-select' ]
+		modes: [ 'insert', 'edit', 'insert-select' ]
+	},
+	{
+		action: 'select',
+		label: OO.ui.deferMsg( 'cite-ve-dialog-reference-useexisting-label' ),
+		modes: [ 'insert', 'edit' ]
+	},
+	{
+		action: 'back',
+		label: OO.ui.deferMsg( 'visualeditor-dialog-action-goback' ),
+		flags: 'safe',
+		modes: 'select'
 	}
 ];
 
@@ -97,39 +108,25 @@ ve.ui.MWReferenceDialog.static.excludeCommands = [
  * @return {Object} Import rules
  */
 ve.ui.MWReferenceDialog.static.getImportRules = function () {
-	var rules = ve.copy( ve.init.target.constructor.static.importRules );
 	return ve.extendObject(
-		rules,
+		ve.copy( ve.init.target.constructor.static.importRules ),
 		{
 			all: {
-				blacklist: ve.extendObject(
-					{
+				blacklist: OO.simpleArrayUnion(
+					ve.getProp( ve.init.target.constructor.static.importRules, 'all', 'blacklist' ) || [],
+					[
 						// Nested references are impossible
-						mwReference: true,
-						mwReferencesList: true,
+						'mwReference', 'mwReferencesList',
 						// Lists and tables are actually possible in wikitext with a leading
 						// line break but we prevent creating these with the UI
-						list: true,
-						listItem: true,
-						definitionList: true,
-						definitionListItem: true,
-						table: true,
-						tableCaption: true,
-						tableSection: true,
-						tableRow: true,
-						tableCell: true,
-						mwTable: true,
-						mwTransclusionTableCell: true
-					},
-					ve.getProp( rules, 'all', 'blacklist' )
+						'list', 'listItem', 'definitionList', 'definitionListItem',
+						'table', 'tableCaption', 'tableSection', 'tableRow', 'tableCell'
+					]
 				),
 				// Headings are not possible in wikitext without HTML
-				conversions: ve.extendObject(
-					{
-						mwHeading: 'paragraph'
-					},
-					ve.getProp( rules, 'all', 'conversions' )
-				)
+				conversions: {
+					mwHeading: 'paragraph'
+				}
 			}
 		}
 	);
@@ -150,9 +147,9 @@ ve.ui.MWReferenceDialog.prototype.documentHasContent = function () {
 /*
  * Determine whether any changes have been made (and haven't been undone).
  *
- * @return {boolean} Changes have been made
+ * @return {boolean} Dialog can be applied
  */
-ve.ui.MWReferenceDialog.prototype.isModified = function () {
+ve.ui.MWReferenceDialog.prototype.canApply = function () {
 	return this.documentHasContent() &&
 		( this.referenceTarget.hasBeenModified() ||
 		this.referenceGroupInput.getValue() !== this.originalGroup );
@@ -165,8 +162,9 @@ ve.ui.MWReferenceDialog.prototype.onTargetChange = function () {
 	var hasContent = this.documentHasContent();
 
 	this.actions.setAbilities( {
-		done: this.isModified(),
-		insert: hasContent
+		apply: this.canApply(),
+		insert: hasContent,
+		select: !hasContent && !this.search.isIndexEmpty()
 	} );
 };
 
@@ -175,7 +173,7 @@ ve.ui.MWReferenceDialog.prototype.onTargetChange = function () {
  */
 ve.ui.MWReferenceDialog.prototype.onReferenceGroupInputChange = function () {
 	this.actions.setAbilities( {
-		done: this.isModified()
+		apply: this.canApply()
 	} );
 };
 
@@ -257,7 +255,7 @@ ve.ui.MWReferenceDialog.prototype.useReference = function ( ref ) {
 	if ( ve.getProp( group, 'keyedNodes', this.referenceModel.getListKey(), 'length' ) > 1 ) {
 		this.$reuseWarning.removeClass( 'oo-ui-element-hidden' );
 		this.$reuseWarningText.text( mw.msg(
-			'cite-ve-dialog-reference-editing-reused-long',
+			'cite-ve-dialog-reference-editing-reused',
 			group.keyedNodes[ this.referenceModel.getListKey() ].length
 		) );
 	} else {
@@ -287,9 +285,7 @@ ve.ui.MWReferenceDialog.prototype.initialize = function () {
 
 	this.reuseWarningIcon = new OO.ui.IconWidget( { icon: 'alert' } );
 	this.$reuseWarningText = $( '<span>' );
-	this.$reuseWarning = $( '<div>' )
-		.addClass( 've-ui-mwReferenceDialog-reuseWarning' )
-		.append( this.reuseWarningIcon.$element, this.$reuseWarningText );
+	this.$reuseWarning = $( '<span>' ).append( this.reuseWarningIcon.$element, this.$reuseWarningText );
 
 	this.referenceTarget = ve.init.target.createTargetWidget(
 		{
@@ -334,9 +330,14 @@ ve.ui.MWReferenceDialog.prototype.initialize = function () {
 
 /**
  * Switches dialog to use existing reference mode.
+ *
+ * @param {string} [action='select'] Symbolic name of action, either 'select' or 'insert-select'
  */
-ve.ui.MWReferenceDialog.prototype.useExistingReference = function () {
-	this.actions.setMode( 'insert-select' );
+ve.ui.MWReferenceDialog.prototype.useExistingReference = function ( action ) {
+	action = action || 'select';
+	if ( action === 'insert-select' || action === 'select' ) {
+		this.actions.setMode( action );
+	}
 	this.search.buildIndex();
 	this.panels.setItem( this.searchPanel );
 	this.search.getQuery().focus().select();
@@ -346,7 +347,7 @@ ve.ui.MWReferenceDialog.prototype.useExistingReference = function () {
  * @inheritdoc
  */
 ve.ui.MWReferenceDialog.prototype.getActionProcess = function ( action ) {
-	if ( action === 'insert' || action === 'done' ) {
+	if ( action === 'insert' || action === 'apply' ) {
 		return new OO.ui.Process( function () {
 			var surfaceModel = this.getFragment().getSurface();
 
@@ -367,6 +368,12 @@ ve.ui.MWReferenceDialog.prototype.getActionProcess = function ( action ) {
 
 			this.close( { action: action } );
 		}, this );
+	} else if ( action === 'back' ) {
+		this.actions.setMode( this.selectedNode ? 'edit' : 'insert' );
+		this.panels.setItem( this.editPanel );
+		this.editPanel.$element.find( '.ve-ce-documentNode' )[ 0 ].focus();
+	} else if ( action === 'select' || action === 'insert-select' ) {
+		this.useExistingReference( action );
 	}
 	return ve.ui.MWReferenceDialog.super.prototype.getActionProcess.call( this, action );
 };
@@ -380,7 +387,6 @@ ve.ui.MWReferenceDialog.prototype.getSetupProcess = function ( data ) {
 	data = data || {};
 	return ve.ui.MWReferenceDialog.super.prototype.getSetupProcess.call( this, data )
 		.next( function () {
-			var isReadOnly = this.isReadOnly();
 			this.panels.setItem( this.editPanel );
 			if ( this.selectedNode instanceof ve.dm.MWReferenceNode ) {
 				this.useReference(
@@ -388,20 +394,22 @@ ve.ui.MWReferenceDialog.prototype.getSetupProcess = function ( data ) {
 				);
 			} else {
 				this.useReference( null );
-				this.actions.setAbilities( { done: false, insert: false } );
+				this.actions.setAbilities( { apply: false, insert: false } );
 			}
 
+			this.actions.setMode( this.selectedNode ? 'edit' : 'insert' );
 			this.search.setInternalList( this.getFragment().getDocument().getInternalList() );
 
-			this.referenceTarget.setReadOnly( isReadOnly );
-			this.referenceGroupInput.setReadOnly( isReadOnly );
-
 			if ( data.useExisting ) {
-				this.useExistingReference();
+				this.useExistingReference( 'insert-select' );
 			}
 			this.useExisting = !!data.useExisting;
+			// If we're using an existing reference, start off disabled
+			// If not, set disabled based on whether or not there are any existing ones.
 			this.actions.setAbilities( {
-				done: false
+				select: !( this.selectedNode instanceof ve.dm.MWReferenceNode ) &&
+					!this.search.isIndexEmpty(),
+				apply: false
 			} );
 
 			this.referenceGroupInput.populateMenu( this.getFragment().getDocument().getInternalList() );

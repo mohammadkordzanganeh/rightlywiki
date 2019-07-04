@@ -21,7 +21,7 @@ class SearchResultSetTest extends MediaWikiTestCase {
 		$this->hideDeprecated( 'SearchResultSet::next' );
 		$resultSet->rewind();
 		$count = 0;
-		while ( ( $iterResult = $resultSet->next() ) !== false ) {
+		while ( false !== ( $iterResult = $resultSet->next() ) ) {
 			$this->assertEquals( $result, $iterResult );
 			$count++;
 		}

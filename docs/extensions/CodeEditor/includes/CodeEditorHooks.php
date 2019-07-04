@@ -31,20 +31,22 @@ class CodeEditorHooks {
 	/**
 	 * @param User $user
 	 * @param array &$defaultPreferences
+	 * @return bool
 	 */
-	public static function getPreferences( User $user, &$defaultPreferences ) {
+	public static function getPreferences( $user, &$defaultPreferences ) {
 		$defaultPreferences['usecodeeditor'] = [
 			'type' => 'api',
 			'default' => '1',
 		];
+		return true;
 	}
 
 	/**
 	 * @param EditPage $editpage
 	 * @param OutputPage $output
-	 * @throws ErrorPageError
+	 * @return bool
 	 */
-	public static function editPageShowEditFormInitial( EditPage $editpage, OutputPage $output ) {
+	public static function editPageShowEditFormInitial( $editpage, $output ) {
 		$title = $editpage->getContextTitle();
 		$model = $editpage->contentModel;
 		$format = $editpage->contentFormat;
@@ -56,5 +58,6 @@ class CodeEditorHooks {
 		} elseif ( !ExtensionRegistry::getInstance()->isLoaded( "WikiEditor" ) ) {
 			throw new ErrorPageError( "codeeditor-error-title", "codeeditor-error-message" );
 		}
+		return true;
 	}
 }

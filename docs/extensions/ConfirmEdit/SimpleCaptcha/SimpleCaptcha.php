@@ -122,30 +122,21 @@ class SimpleCaptcha {
 		$index = $this->storeCaptcha( $captcha );
 
 		return [
-			'html' =>
-				new OOUI\FieldLayout(
-					new OOUI\NumberInputWidget( [
-						'name' => 'wpCaptchaWord',
-						'classes' => [ 'simplecaptcha-answer' ],
-						'id' => 'wpCaptchaWord',
-						'autocomplete' => 'off',
-						// tab in before the edit textarea
-						'tabIndex' => $tabIndex
-					] ),
-					[
-						'align' => 'left',
-						'label' => $captcha['question'] . ' = ',
-						'classes' => [ 'simplecaptcha-field' ],
-					]
-				) .
-				new OOUI\HiddenInputWidget( [
-					'name' => 'wpCaptchaId',
-					'id' => 'wpCaptchaId',
-					'value' => $index
-				] ),
-			'modulestyles' => [
-				'ext.confirmEdit.simpleCaptcha'
-			]
+			'html' => "<p><label for=\"wpCaptchaWord\">{$captcha['question']} = </label>" .
+				Xml::element( 'input', [
+					'name' => 'wpCaptchaWord',
+					'class' => 'mw-ui-input',
+					'id'   => 'wpCaptchaWord',
+					'size'  => 5,
+					'autocomplete' => 'off',
+					// tab in before the edit textarea
+					'tabindex' => $tabIndex ] ) .
+				"</p>\n" .
+				Xml::element( 'input', [
+					'type'  => 'hidden',
+					'name'  => 'wpCaptchaId',
+					'id'    => 'wpCaptchaId',
+					'value' => $index ] )
 		];
 	}
 
@@ -266,7 +257,7 @@ class SimpleCaptcha {
 			$this->addFormInformationToOutput( $out, $formMetainfo );
 			$form->addFooterText(
 				"<div class='captcha'>" .
-				$this->getMessage( 'sendemail' )->parseAsBlock() .
+				$out->parse( $this->getMessage( 'sendemail' )->plain() ) .
 				$formInformation['html'] .
 				"</div>\n" );
 		}
@@ -320,7 +311,7 @@ class SimpleCaptcha {
 	 * Check if a bad login has already been registered for this
 	 * IP address. If so, require a captcha.
 	 * @return bool
-	 * @private
+	 * @access private
 	 */
 	public function isBadLoginTriggered() {
 		global $wgCaptchaBadLoginAttempts;
@@ -593,9 +584,7 @@ class SimpleCaptcha {
 				}
 			} else {
 				// Get link changes in the slowest way known to man
-				if ( $oldtext === null ) {
-					$oldtext = $this->loadText( $title, $section );
-				}
+				$oldtext = isset( $oldtext ) ? $oldtext : $this->loadText( $title, $section );
 				$oldLinks = $this->findLinks( $title, $oldtext );
 				$newLinks = $this->findLinks( $title, $newtext );
 			}
@@ -623,9 +612,7 @@ class SimpleCaptcha {
 				);
 			}
 			// Custom regex checks. Reuse $oldtext if set above.
-			if ( $oldtext === null ) {
-				$oldtext = $this->loadText( $title, $section );
-			}
+			$oldtext = isset( $oldtext ) ? $oldtext : $this->loadText( $title, $section );
 
 			foreach ( $wgCaptchaRegexes as $regex ) {
 				$newMatches = [];
@@ -687,7 +674,7 @@ class SimpleCaptcha {
 	 * Build regex from whitelist
 	 * @param string $lines string from [[MediaWiki:Captcha-addurl-whitelist]]
 	 * @return array Regexes
-	 * @private
+	 * @access private
 	 */
 	private function buildRegexes( $lines ) {
 		# Code duplicated from the SpamBlacklist extension (r19197)
@@ -1085,7 +1072,7 @@ class SimpleCaptcha {
 	 * @param string $section
 	 * @param int $flags Flags for Revision loading methods
 	 * @return string
-	 * @private
+	 * @access private
 	 */
 	private function loadText( $title, $section, $flags = Revision::READ_LATEST ) {
 		global $wgParser;

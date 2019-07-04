@@ -21,8 +21,6 @@
  * @ingroup Media
  */
 
-use MediaWiki\Shell\Shell;
-
 /**
  * JPEG specific handler.
  * Inherits most stuff from BitmapHandler, just here to do the metadata handler differently.
@@ -36,7 +34,7 @@ class JpegHandler extends ExifBitmapHandler {
 	const SRGB_EXIF_COLOR_SPACE = 'sRGB';
 	const SRGB_ICC_PROFILE_DESCRIPTION = 'sRGB IEC61966-2.1';
 
-	public function normaliseParams( $image, &$params ) {
+	function normaliseParams( $image, &$params ) {
 		if ( !parent::normaliseParams( $image, $params ) ) {
 			return false;
 		}
@@ -92,7 +90,7 @@ class JpegHandler extends ExifBitmapHandler {
 		return $res;
 	}
 
-	protected function getScriptParams( $params ) {
+	function getScriptParams( $params ) {
 		$res = parent::getScriptParams( $params );
 		if ( isset( $params['quality'] ) ) {
 			$res['quality'] = $params['quality'];
@@ -100,7 +98,7 @@ class JpegHandler extends ExifBitmapHandler {
 		return $res;
 	}
 
-	public function getMetadata( $image, $filename ) {
+	function getMetadata( $image, $filename ) {
 		try {
 			$meta = BitmapMetadataHandler::Jpeg( $filename );
 			if ( !is_array( $meta ) ) {
@@ -142,23 +140,17 @@ class JpegHandler extends ExifBitmapHandler {
 		$rotation = ( $params['rotation'] + $this->getRotation( $file ) ) % 360;
 
 		if ( $wgJpegTran && is_executable( $wgJpegTran ) ) {
-			$command = Shell::command( $wgJpegTran,
-				'-rotate',
-				$rotation,
-				'-outfile',
-				$params['dstPath'],
-				$params['srcPath']
-			);
-			$result = $command
-				->includeStderr()
-				->execute();
-			if ( $result->getExitCode() !== 0 ) {
-				$this->logErrorForExternalProcess( $result->getExitCode(),
-					$result->getStdout(),
-					$command
-				);
+			$cmd = wfEscapeShellArg( $wgJpegTran ) .
+				" -rotate " . wfEscapeShellArg( $rotation ) .
+				" -outfile " . wfEscapeShellArg( $params['dstPath'] ) .
+				" " . wfEscapeShellArg( $params['srcPath'] );
+			wfDebug( __METHOD__ . ": running jpgtran: $cmd\n" );
+			$retval = 0;
+			$err = wfShellExecWithStderr( $cmd, $retval );
+			if ( $retval !== 0 ) {
+				$this->logErrorForExternalProcess( $retval, $err, $cmd );
 
-				return new MediaTransformError( 'thumbnail_error', 0, 0, $result->getStdout() );
+				return new MediaTransformError( 'thumbnail_error', 0, 0, $err );
 			}
 
 			return false;
@@ -240,7 +232,7 @@ class JpegHandler extends ExifBitmapHandler {
 	 * @return bool
 	 */
 	public function swapICCProfile( $filepath, array $colorSpaces,
-		array $oldProfileStrings, $profileFilepath
+									array $oldProfileStrings, $profileFilepath
 	) {
 		global $wgExiftool;
 
@@ -248,21 +240,20 @@ class JpegHandler extends ExifBitmapHandler {
 			return false;
 		}
 
-		$result = Shell::command(
-			$wgExiftool,
+		$cmd = wfEscapeShellArg( $wgExiftool,
 			'-EXIF:ColorSpace',
 			'-ICC_Profile:ProfileDescription',
 			'-S',
 			'-T',
 			$filepath
-		)
-			->includeStderr()
-			->execute();
+		);
+
+		$output = wfShellExecWithStderr( $cmd, $retval );
 
 		// Explode EXIF data into an array with [0 => Color Space, 1 => Device Model Desc]
-		$data = explode( "\t", trim( $result->getStdout() ) );
+		$data = explode( "\t", trim( $output ) );
 
-		if ( $result->getExitCode() !== 0 ) {
+		if ( $retval !== 0 ) {
 			return false;
 		}
 
@@ -280,20 +271,16 @@ class JpegHandler extends ExifBitmapHandler {
 			return false;
 		}
 
-		$command = Shell::command( $wgExiftool,
+		$cmd = wfEscapeShellArg( $wgExiftool,
 			'-overwrite_original',
 			'-icc_profile<=' . $profileFilepath,
 			$filepath
 		);
-		$result = $command
-			->includeStderr()
-			->execute();
 
-		if ( $result->getExitCode() !== 0 ) {
-			$this->logErrorForExternalProcess( $result->getExitCode(),
-				$result->getStdout(),
-				$command
-			);
+		$output = wfShellExecWithStderr( $cmd, $retval );
+
+		if ( $retval !== 0 ) {
+			$this->logErrorForExternalProcess( $retval, $output, $cmd );
 
 			return false;
 		}

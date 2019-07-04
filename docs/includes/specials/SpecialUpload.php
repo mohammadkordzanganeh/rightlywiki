@@ -146,7 +146,8 @@ class SpecialUpload extends SpecialPage {
 	}
 
 	/**
-	 * @param string|null $par
+	 * Special page entry point
+	 * @param string $par
 	 * @throws ErrorPageError
 	 * @throws Exception
 	 * @throws FatalError
@@ -176,7 +177,7 @@ class SpecialUpload extends SpecialPage {
 		}
 
 		# Check blocks
-		if ( $user->isBlockedFromUpload() ) {
+		if ( $user->isBlocked() ) {
 			throw new UserBlockedError( $user->getBlock() );
 		}
 
@@ -191,9 +192,11 @@ class SpecialUpload extends SpecialPage {
 		$this->loadRequest();
 
 		# Unsave the temporary file in case this was a cancelled upload
-		if ( $this->mCancelUpload && !$this->unsaveUploadedFile() ) {
-			# Something went wrong, so unsaveUploadedFile showed a warning
-			return;
+		if ( $this->mCancelUpload ) {
+			if ( !$this->unsaveUploadedFile() ) {
+				# Something went wrong, so unsaveUploadedFile showed a warning
+				return;
+			}
 		}
 
 		# Process upload or show a form
@@ -321,13 +324,7 @@ class SpecialUpload extends SpecialPage {
 				);
 				$link = $this->msg( $user->isAllowed( 'delete' ) ? 'thisisdeleted' : 'viewdeleted' )
 					->rawParams( $restorelink )->parseAsBlock();
-				$this->getOutput()->addHTML(
-					Html::rawElement(
-						'div',
-						[ 'id' => 'contentSub2' ],
-						$link
-					)
-				);
+				$this->getOutput()->addHTML( "<div id=\"contentSub2\">{$link}</div>" );
 			}
 		}
 	}
@@ -486,7 +483,7 @@ class SpecialUpload extends SpecialPage {
 		// Fetch the file if required
 		$status = $this->mUpload->fetchFile();
 		if ( !$status->isOK() ) {
-			$this->showUploadError( $this->getOutput()->parseAsInterface( $status->getWikiText() ) );
+			$this->showUploadError( $this->getOutput()->parse( $status->getWikiText() ) );
 
 			return;
 		}
@@ -556,9 +553,7 @@ class SpecialUpload extends SpecialPage {
 			$changeTagsStatus = ChangeTags::canAddTagsAccompanyingChange(
 				$changeTags, $this->getUser() );
 			if ( !$changeTagsStatus->isOK() ) {
-				$this->showUploadError( $this->getOutput()->parseAsInterface(
-					$changeTagsStatus->getWikiText()
-				) );
+				$this->showUploadError( $this->getOutput()->parse( $changeTagsStatus->getWikiText() ) );
 
 				return;
 			}
@@ -573,9 +568,7 @@ class SpecialUpload extends SpecialPage {
 		);
 
 		if ( !$status->isGood() ) {
-			$this->showRecoverableUploadError(
-				$this->getOutput()->parseAsInterface( $status->getWikiText() )
-			);
+			$this->showRecoverableUploadError( $this->getOutput()->parse( $status->getWikiText() ) );
 
 			return;
 		}

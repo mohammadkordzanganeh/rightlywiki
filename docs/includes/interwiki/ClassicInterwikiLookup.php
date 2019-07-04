@@ -27,7 +27,6 @@ use Cdb\Reader as CdbReader;
 use Hooks;
 use Interwiki;
 use Language;
-use WikiMap;
 use MapCacheLRU;
 use WANObjectCache;
 use Wikimedia\Rdbms\Database;
@@ -213,20 +212,17 @@ class ClassicInterwikiLookup implements InterwikiLookup {
 	 */
 	private function getInterwikiCacheEntry( $prefix ) {
 		wfDebug( __METHOD__ . "( $prefix )\n" );
-
-		$wikiId = WikiMap::getWikiIdFromDbDomain( WikiMap::getCurrentWikiDbDomain() );
-
 		$value = false;
 		try {
 			// Resolve site name
 			if ( $this->interwikiScopes >= 3 && !$this->thisSite ) {
-				$this->thisSite = $this->getCacheValue( '__sites:' . $wikiId );
+				$this->thisSite = $this->getCacheValue( '__sites:' . wfWikiID() );
 				if ( $this->thisSite == '' ) {
 					$this->thisSite = $this->fallbackSite;
 				}
 			}
 
-			$value = $this->getCacheValue( $wikiId . ':' . $prefix );
+			$value = $this->getCacheValue( wfWikiID() . ':' . $prefix );
 			// Site level
 			if ( $value == '' && $this->interwikiScopes >= 3 ) {
 				$value = $this->getCacheValue( "_{$this->thisSite}:{$prefix}" );
@@ -338,14 +334,11 @@ class ClassicInterwikiLookup implements InterwikiLookup {
 	 */
 	private function getAllPrefixesCached( $local ) {
 		wfDebug( __METHOD__ . "()\n" );
-
-		$wikiId = WikiMap::getWikiIdFromDbDomain( WikiMap::getCurrentWikiDbDomain() );
-
 		$data = [];
 		try {
 			/* Resolve site name */
 			if ( $this->interwikiScopes >= 3 && !$this->thisSite ) {
-				$site = $this->getCacheValue( '__sites:' . $wikiId );
+				$site = $this->getCacheValue( '__sites:' . wfWikiID() );
 
 				if ( $site == '' ) {
 					$this->thisSite = $this->fallbackSite;
@@ -364,7 +357,7 @@ class ClassicInterwikiLookup implements InterwikiLookup {
 			if ( $this->interwikiScopes >= 3 ) {
 				$sources[] = '_' . $this->thisSite;
 			}
-			$sources[] = $wikiId;
+			$sources[] = wfWikiID();
 
 			foreach ( $sources as $source ) {
 				$list = $this->getCacheValue( '__list:' . $source );

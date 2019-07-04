@@ -54,7 +54,7 @@ class FileBackendDBRepoWrapper extends FileBackend {
 		/** @var FileBackend $backend */
 		$backend = $config['backend'];
 		$config['name'] = $backend->getName();
-		$config['domainId'] = $backend->getDomainId();
+		$config['wikiId'] = $backend->getWikiId();
 		parent::__construct( $config );
 		$this->backend = $config['backend'];
 		$this->repoName = $config['repoName'];

@@ -18,6 +18,7 @@
 		"PFEnableStringFunctions": false,
 		"PFStringLengthLimit": 1000
 	},
+	"callback": "ParserFunctionsHooks::onRegistration",
 	"ExtensionMessagesFiles": {
 		"ParserFunctionsMagic": "ParserFunctions.i18n.magic.php"
 	},
@@ -27,18 +28,19 @@
 		]
 	},
 	"Hooks": {
-		"ParserTestGlobals": [
-			"MediaWiki\\Extensions\\ParserFunctions\\Hooks::onParserTestGlobals"
-		],
 		"ParserFirstCallInit": [
-			"MediaWiki\\Extensions\\ParserFunctions\\Hooks::onParserFirstCallInit"
+			"ParserFunctionsHooks::onParserFirstCallInit"
 		],
 		"ScribuntoExternalLibraries": [
-			"MediaWiki\\Extensions\\ParserFunctions\\Hooks::onScribuntoExternalLibraries"
+			"ParserFunctionsHooks::onScribuntoExternalLibraries"
 		]
 	},
-	"AutoloadNamespaces": {
-		"MediaWiki\\Extensions\\ParserFunctions\\": "includes/"
+	"AutoloadClasses": {
+		"ExtParserFunctions": "includes/ExtParserFunctions.php",
+		"ExprParser": "includes/ExprParser.php",
+		"ExprError": "includes/ExprError.php",
+		"Scribunto_LuaParserFunctionsLibrary": "includes/Scribunto_LuaParserFunctionsLibrary.php",
+		"ParserFunctionsHooks": "includes/ParserFunctionsHooks.php"
 	},
 	"manifest_version": 1
 }

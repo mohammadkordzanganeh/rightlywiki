@@ -46,7 +46,8 @@ class SpecialProtectedpages extends SpecialPage {
 		$size = $request->getIntOrNull( 'size' );
 		$ns = $request->getIntOrNull( 'namespace' );
 
-		$filters = $request->getArray( 'wpfilters', [] );
+		$filters = $request->getArray( 'wpfilters' );
+		$filters = is_null( $filters ) ? [] : $filters;
 		$indefOnly = in_array( 'indefonly', $filters );
 		$cascadeOnly = in_array( 'cascadeonly', $filters );
 		$noRedirect = in_array( 'noredirect', $filters );
@@ -109,10 +110,10 @@ class SpecialProtectedpages extends SpecialPage {
 				'class' => 'HTMLMultiSelectField',
 				'label' => $this->msg( 'protectedpages-filters' )->text(),
 				'flatlist' => true,
-				'options-messages' => [
-					'protectedpages-indef' => 'indefonly',
-					'protectedpages-cascade' => 'cascadeonly',
-					'protectedpages-noredirect' => 'noredirect',
+				'options' => [
+					$this->msg( 'protectedpages-indef' )->text() => 'indefonly',
+					$this->msg( 'protectedpages-cascade' )->text() => 'cascadeonly',
+					$this->msg( 'protectedpages-noredirect' )->text() => 'noredirect',
 				],
 				'default' => $filters,
 			],

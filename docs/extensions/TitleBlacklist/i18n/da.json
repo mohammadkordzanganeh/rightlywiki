@@ -3,8 +3,7 @@
 		"authors": [
 			"HenrikKbh",
 			"Hylle",
-			"Sarrus",
-			"Saederup92"
+			"Sarrus"
 		]
 	},
 	"titleblacklist-desc": "Tillader administartorer at forhindre oprettelse af og brugerkonti gennem [[MediaWiki:Titleblacklist|blacklist]] og en [[MediaWiki:Titlewhitelist|whitelist]]",
@@ -17,6 +16,5 @@
 	"titleblacklist-invalid": "Følgende {{PLURAL:$1|linje|linjer}} i titelsortelisten er {{PLURAL:$1|ugyldig|ugyldige}}; korriger venligst {{PLURAL:$1|den|dem}} før du gemmer:",
 	"titleblacklist-override": "Ignorer sortlisten",
 	"right-tboverride": "Tilsidesæt titel- eller brugernavnsortlisten",
-	"right-tboverride-account": "Tilsidesæt brugernavn sortliste",
-	"visualeditor-saveerror-titleblacklist": "Kunne ikke gemme siden: Denne sides titel er sortlistet"
+	"right-tboverride-account": "Tilsidesæt brugernavn sortliste"
 }

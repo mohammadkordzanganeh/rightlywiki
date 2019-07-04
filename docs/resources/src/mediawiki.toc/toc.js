@@ -14,14 +14,11 @@
 			// Hide/show the table of contents element
 			function toggleToc() {
 				if ( $tocList.is( ':hidden' ) ) {
-					// FIXME: Use CSS transitions
-					// eslint-disable-next-line no-jquery/no-slide
 					$tocList.slideDown( 'fast' );
 					$tocToggleLink.text( mw.msg( 'hidetoc' ) );
 					$this.removeClass( 'tochidden' );
 					mw.cookie.set( 'hidetoc', null );
 				} else {
-					// eslint-disable-next-line no-jquery/no-slide
 					$tocList.slideUp( 'fast' );
 					$tocToggleLink.text( mw.msg( 'showtoc' ) );
 					$this.addClass( 'tochidden' );
@@ -34,12 +31,7 @@
 			if ( !$tocToggleCheckbox.length && $tocTitle.length && $tocList.length && !$tocToggleLink.length ) {
 				hideToc = mw.cookie.get( 'hidetoc' ) === '1';
 
-				$tocToggleLink = $( '<a>' )
-					.attr( {
-						role: 'button',
-						tabindex: 0
-					} )
-					.addClass( 'togglelink' )
+				$tocToggleLink = $( '<a role="button" tabindex="0" class="togglelink"></a>' )
 					.text( mw.msg( hideToc ? 'showtoc' : 'hidetoc' ) )
 					.on( 'click keypress', function ( e ) {
 						if (

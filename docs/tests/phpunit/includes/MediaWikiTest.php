@@ -187,7 +187,6 @@ class MediaWikiTest extends MediaWikiTestCase {
 
 	/**
 	 * Test a post-send job can not set cookies (T191537).
-	 * @coversNothing
 	 */
 	public function testPostSendJobDoesNotSetCookie() {
 		// Prevent updates from running

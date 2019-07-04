@@ -93,9 +93,9 @@ TEXT
 
 		$throttle = intval( $throttle );
 		if ( $begin !== '' ) {
-			$where = [ 'cl_to > ' . $dbw->addQuotes( $begin ) ];
+			$where = 'cl_to > ' . $dbw->addQuotes( $begin );
 		} else {
-			$where = [ '1 = 1' ];
+			$where = null;
 		}
 		$i = 0;
 
@@ -133,14 +133,20 @@ TEXT
 			usleep( $throttle * 1000 );
 		}
 
-		$dbw->insert(
+		if ( $dbw->insert(
 			'updatelog',
 			[ 'ul_key' => 'populate category' ],
 			__METHOD__,
 			'IGNORE'
-		);
+		) ) {
+			$this->output( "Category population complete.\n" );
 
-		return true;
+			return true;
+		} else {
+			$this->output( "Could not insert category population row.\n" );
+
+			return false;
+		}
 	}
 }
 

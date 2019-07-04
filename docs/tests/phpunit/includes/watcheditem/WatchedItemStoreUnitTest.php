@@ -1,7 +1,7 @@
 <?php
 use MediaWiki\Linker\LinkTarget;
-use Wikimedia\Rdbms\LBFactory;
 use Wikimedia\Rdbms\LoadBalancer;
+use Wikimedia\Rdbms\LBFactory;
 use Wikimedia\ScopedCallback;
 use Wikimedia\TestingAccessWrapper;
 
@@ -60,26 +60,6 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 	}
 
 	/**
-	 * @return PHPUnit_Framework_MockObject_MockObject|JobQueueGroup
-	 */
-	private function getMockJobQueueGroup() {
-		$mock = $this->getMockBuilder( JobQueueGroup::class )
-			->disableOriginalConstructor()
-			->getMock();
-		$mock->expects( $this->any() )
-			->method( 'push' )
-			->will( $this->returnCallback( function ( Job $job ) {
-				$job->run();
-			} ) );
-		$mock->expects( $this->any() )
-			->method( 'lazyPush' )
-			->will( $this->returnCallback( function ( Job $job ) {
-				$job->run();
-			} ) );
-		return $mock;
-	}
-
-	/**
 	 * @return PHPUnit_Framework_MockObject_MockObject|HashBagOStuff
 	 */
 	private function getMockCache() {
@@ -120,9 +100,6 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 		$mock->expects( $this->any() )
 			->method( 'getId' )
 			->will( $this->returnValue( $id ) );
-		$mock->expects( $this->any() )
-			->method( 'getUserPage' )
-			->will( $this->returnValue( Title::makeTitle( NS_USER, 'MockUser' ) ) );
 		return $mock;
 	}
 
@@ -141,16 +118,11 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 		return $fakeRow;
 	}
 
-	private function newWatchedItemStore(
-		LBFactory $lbFactory,
-		JobQueueGroup $queueGroup,
-		HashBagOStuff $cache,
+	private function newWatchedItemStore( LBFactory $lbFactory, HashBagOStuff $cache,
 		ReadOnlyMode $readOnlyMode
 	) {
 		return new WatchedItemStore(
 			$lbFactory,
-			$queueGroup,
-			new HashBagOStuff(),
 			$cache,
 			$readOnlyMode,
 			1000
@@ -189,7 +161,6 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 
 		$store = $this->newWatchedItemStore(
 			$this->getMockLBFactory( $mockDb ),
-			$this->getMockJobQueueGroup(),
 			$mockCache,
 			$this->getMockReadOnlyMode()
 		);
@@ -222,7 +193,6 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 
 		$store = $this->newWatchedItemStore(
 			$this->getMockLBFactory( $mockDb ),
-			$this->getMockJobQueueGroup(),
 			$mockCache,
 			$this->getMockReadOnlyMode()
 		);
@@ -253,7 +223,6 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 
 		$store = $this->newWatchedItemStore(
 			$this->getMockLBFactory( $mockDb ),
-			$this->getMockJobQueueGroup(),
 			$mockCache,
 			$this->getMockReadOnlyMode()
 		);
@@ -285,7 +254,6 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 
 		$store = $this->newWatchedItemStore(
 			$this->getMockLBFactory( $mockDb ),
-			$this->getMockJobQueueGroup(),
 			$mockCache,
 			$this->getMockReadOnlyMode()
 		);
@@ -338,7 +306,6 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 
 		$store = $this->newWatchedItemStore(
 			$this->getMockLBFactory( $mockDb ),
-			$this->getMockJobQueueGroup(),
 			$mockCache,
 			$this->getMockReadOnlyMode()
 		);
@@ -406,7 +373,6 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 
 		$store = $this->newWatchedItemStore(
 			$this->getMockLBFactory( $mockDb ),
-			$this->getMockJobQueueGroup(),
 			$mockCache,
 			$this->getMockReadOnlyMode()
 		);
@@ -456,7 +422,6 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 
 		$store = $this->newWatchedItemStore(
 			$this->getMockLBFactory( $mockDb ),
-			$this->getMockJobQueueGroup(),
 			$mockCache,
 			$this->getMockReadOnlyMode()
 		);
@@ -539,7 +504,6 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 
 		$store = $this->newWatchedItemStore(
 			$this->getMockLBFactory( $mockDb ),
-			$this->getMockJobQueueGroup(),
 			$mockCache,
 			$this->getMockReadOnlyMode()
 		);
@@ -645,7 +609,6 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 
 		$store = $this->newWatchedItemStore(
 			$this->getMockLBFactory( $mockDb ),
-			$this->getMockJobQueueGroup(),
 			$mockCache,
 			$this->getMockReadOnlyMode()
 		);
@@ -700,7 +663,6 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 
 		$store = $this->newWatchedItemStore(
 			$this->getMockLBFactory( $mockDb ),
-			$this->getMockJobQueueGroup(),
 			$mockCache,
 			$this->getMockReadOnlyMode()
 		);
@@ -739,7 +701,6 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 
 		$store = $this->newWatchedItemStore(
 			$this->getMockLBFactory( $mockDb ),
-			$this->getMockJobQueueGroup(),
 			$mockCache,
 			$this->getMockReadOnlyMode()
 		);
@@ -775,7 +736,6 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 
 		$store = $this->newWatchedItemStore(
 			$this->getMockLBFactory( $mockDb ),
-			$this->getMockJobQueueGroup(),
 			$mockCache,
 			$this->getMockReadOnlyMode()
 		);
@@ -814,7 +774,6 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 
 		$store = $this->newWatchedItemStore(
 			$this->getMockLBFactory( $mockDb ),
-			$this->getMockJobQueueGroup(),
 			$mockCache,
 			$this->getMockReadOnlyMode()
 		);
@@ -846,7 +805,6 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 
 		$store = $this->newWatchedItemStore(
 			$this->getMockLBFactory( $mockDb ),
-			$this->getMockJobQueueGroup(),
 			$this->getMockCache(),
 			$this->getMockReadOnlyMode()
 		);
@@ -906,7 +864,6 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 
 		$store = $this->newWatchedItemStore(
 			$this->getMockLBFactory( $mockDb ),
-			$this->getMockJobQueueGroup(),
 			$mockCache,
 			$this->getMockReadOnlyMode()
 		);
@@ -954,7 +911,6 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 
 		$store = $this->newWatchedItemStore(
 			$this->getMockLBFactory( $mockDb ),
-			$this->getMockJobQueueGroup(),
 			$mockCache,
 			$this->getMockReadOnlyMode()
 		);
@@ -1049,7 +1005,6 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 
 		$store = $this->newWatchedItemStore(
 			$this->getMockLBFactory( $mockDb ),
-			$this->getMockJobQueueGroup(),
 			$mockCache,
 			$this->getMockReadOnlyMode()
 		);
@@ -1083,7 +1038,6 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 
 		$store = $this->newWatchedItemStore(
 			$this->getMockLBFactory( $mockDb ),
-			$this->getMockJobQueueGroup(),
 			$mockCache,
 			$this->getMockReadOnlyMode()
 		);
@@ -1105,7 +1059,6 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 
 		$store = $this->newWatchedItemStore(
 			$this->getMockLBFactory( $mockDb ),
-			$this->getMockJobQueueGroup(),
 			$mockCache,
 			$this->getMockReadOnlyMode()
 		);
@@ -1119,7 +1072,6 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 	public function testAddWatchBatchForUser_readOnlyDBReturnsFalse() {
 		$store = $this->newWatchedItemStore(
 			$this->getMockLBFactory( $this->getMockDb() ),
-			$this->getMockJobQueueGroup(),
 			$this->getMockCache(),
 			$this->getMockReadOnlyMode( true )
 		);
@@ -1154,10 +1106,6 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 				]
 			);
 
-		$mockDb->expects( $this->once() )
-			->method( 'affectedRows' )
-			->willReturn( 2 );
-
 		$mockCache = $this->getMockCache();
 		$mockCache->expects( $this->exactly( 2 ) )
 			->method( 'delete' );
@@ -1170,7 +1118,6 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 
 		$store = $this->newWatchedItemStore(
 			$this->getMockLBFactory( $mockDb ),
-			$this->getMockJobQueueGroup(),
 			$mockCache,
 			$this->getMockReadOnlyMode()
 		);
@@ -1196,7 +1143,6 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 
 		$store = $this->newWatchedItemStore(
 			$this->getMockLBFactory( $mockDb ),
-			$this->getMockJobQueueGroup(),
 			$mockCache,
 			$this->getMockReadOnlyMode()
 		);
@@ -1221,7 +1167,6 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 
 		$store = $this->newWatchedItemStore(
 			$this->getMockLBFactory( $mockDb ),
-			$this->getMockJobQueueGroup(),
 			$mockCache,
 			$this->getMockReadOnlyMode()
 		);
@@ -1257,7 +1202,6 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 
 		$store = $this->newWatchedItemStore(
 			$this->getMockLBFactory( $mockDb ),
-			$this->getMockJobQueueGroup(),
 			$mockCache,
 			$this->getMockReadOnlyMode()
 		);
@@ -1293,7 +1237,6 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 
 		$store = $this->newWatchedItemStore(
 			$this->getMockLBFactory( $mockDb ),
-			$this->getMockJobQueueGroup(),
 			$mockCache,
 			$this->getMockReadOnlyMode()
 		);
@@ -1317,7 +1260,6 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 
 		$store = $this->newWatchedItemStore(
 			$this->getMockLBFactory( $mockDb ),
-			$this->getMockJobQueueGroup(),
 			$mockCache,
 			$this->getMockReadOnlyMode()
 		);
@@ -1334,49 +1276,34 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 		$mockDb = $this->getMockDb();
 		$mockDb->expects( $this->once() )
 			->method( 'delete' )
-			->withConsecutive(
+			->with(
+				'watchlist',
 				[
-					'watchlist',
-					[
-						'wl_user' => 1,
-						'wl_namespace' => 0,
-						'wl_title' => [ 'SomeDbKey' ],
-					],
-				],
-				[
-					'watchlist',
-					[
-						'wl_user' => 1,
-						'wl_namespace' => 1,
-						'wl_title' => [ 'SomeDbKey' ],
-					]
+					'wl_user' => 1,
+					'wl_namespace' => 0,
+					'wl_title' => 'SomeDbKey',
 				]
 			);
-		$mockDb->expects( $this->exactly( 1 ) )
+		$mockDb->expects( $this->once() )
 			->method( 'affectedRows' )
-			->willReturn( 2 );
+			->will( $this->returnValue( 1 ) );
 
 		$mockCache = $this->getMockCache();
 		$mockCache->expects( $this->never() )->method( 'get' );
 		$mockCache->expects( $this->once() )
 			->method( 'delete' )
-			->withConsecutive(
-				[ '0:SomeDbKey:1' ],
-				[ '1:SomeDbKey:1' ]
-			);
+			->with( '0:SomeDbKey:1' );
 
 		$store = $this->newWatchedItemStore(
 			$this->getMockLBFactory( $mockDb ),
-			$this->getMockJobQueueGroup(),
 			$mockCache,
 			$this->getMockReadOnlyMode()
 		);
 
-		$titleValue = new TitleValue( 0, 'SomeDbKey' );
 		$this->assertTrue(
 			$store->removeWatch(
 				$this->getMockNonAnonUserWithId( 1 ),
-				Title::newFromTitleValue( $titleValue )
+				new TitleValue( 0, 'SomeDbKey' )
 			)
 		);
 	}
@@ -1385,50 +1312,34 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 		$mockDb = $this->getMockDb();
 		$mockDb->expects( $this->once() )
 			->method( 'delete' )
-			->withConsecutive(
+			->with(
+				'watchlist',
 				[
-					'watchlist',
-					[
-						'wl_user' => 1,
-						'wl_namespace' => 0,
-						'wl_title' => [ 'SomeDbKey' ],
-					]
-				],
-				[
-					'watchlist',
-					[
-						'wl_user' => 1,
-						'wl_namespace' => 1,
-						'wl_title' => [ 'SomeDbKey' ],
-					]
+					'wl_user' => 1,
+					'wl_namespace' => 0,
+					'wl_title' => 'SomeDbKey',
 				]
 			);
-
 		$mockDb->expects( $this->once() )
 			->method( 'affectedRows' )
-			->willReturn( 0 );
+			->will( $this->returnValue( 0 ) );
 
 		$mockCache = $this->getMockCache();
 		$mockCache->expects( $this->never() )->method( 'get' );
 		$mockCache->expects( $this->once() )
 			->method( 'delete' )
-			->withConsecutive(
-				[ '0:SomeDbKey:1' ],
-				[ '1:SomeDbKey:1' ]
-			);
+			->with( '0:SomeDbKey:1' );
 
 		$store = $this->newWatchedItemStore(
 			$this->getMockLBFactory( $mockDb ),
-			$this->getMockJobQueueGroup(),
 			$mockCache,
 			$this->getMockReadOnlyMode()
 		);
 
-		$titleValue = new TitleValue( 0, 'SomeDbKey' );
 		$this->assertFalse(
 			$store->removeWatch(
 				$this->getMockNonAnonUserWithId( 1 ),
-				Title::newFromTitleValue( $titleValue )
+				new TitleValue( 0, 'SomeDbKey' )
 			)
 		);
 	}
@@ -1445,7 +1356,6 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 
 		$store = $this->newWatchedItemStore(
 			$this->getMockLBFactory( $mockDb ),
-			$this->getMockJobQueueGroup(),
 			$mockCache,
 			$this->getMockReadOnlyMode()
 		);
@@ -1491,7 +1401,6 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 
 		$store = $this->newWatchedItemStore(
 			$this->getMockLBFactory( $mockDb ),
-			$this->getMockJobQueueGroup(),
 			$mockCache,
 			$this->getMockReadOnlyMode()
 		);
@@ -1527,7 +1436,6 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 
 		$store = $this->newWatchedItemStore(
 			$this->getMockLBFactory( $mockDb ),
-			$this->getMockJobQueueGroup(),
 			$mockCache,
 			$this->getMockReadOnlyMode()
 		);
@@ -1566,7 +1474,6 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 
 		$store = $this->newWatchedItemStore(
 			$this->getMockLBFactory( $mockDb ),
-			$this->getMockJobQueueGroup(),
 			$mockCache,
 			$this->getMockReadOnlyMode()
 		);
@@ -1591,7 +1498,6 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 
 		$store = $this->newWatchedItemStore(
 			$this->getMockLBFactory( $mockDb ),
-			$this->getMockJobQueueGroup(),
 			$mockCache,
 			$this->getMockReadOnlyMode()
 		);
@@ -1633,7 +1539,6 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 
 		$store = $this->newWatchedItemStore(
 			$this->getMockLBFactory( $mockDb ),
-			$this->getMockJobQueueGroup(),
 			$mockCache,
 			$this->getMockReadOnlyMode()
 		);
@@ -1685,7 +1590,6 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 
 		$store = $this->newWatchedItemStore(
 			$mockLoadBalancer,
-			$this->getMockJobQueueGroup(),
 			$mockCache,
 			$this->getMockReadOnlyMode()
 		);
@@ -1700,7 +1604,6 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 	public function testGetWatchedItemsForUser_badSortOptionThrowsException() {
 		$store = $this->newWatchedItemStore(
 			$this->getMockLBFactory( $this->getMockDb() ),
-			$this->getMockJobQueueGroup(),
 			$this->getMockCache(),
 			$this->getMockReadOnlyMode()
 		);
@@ -1743,7 +1646,6 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 
 		$store = $this->newWatchedItemStore(
 			$this->getMockLBFactory( $mockDb ),
-			$this->getMockJobQueueGroup(),
 			$mockCache,
 			$this->getMockReadOnlyMode()
 		);
@@ -1781,7 +1683,6 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 
 		$store = $this->newWatchedItemStore(
 			$this->getMockLBFactory( $mockDb ),
-			$this->getMockJobQueueGroup(),
 			$mockCache,
 			$this->getMockReadOnlyMode()
 		);
@@ -1806,7 +1707,6 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 
 		$store = $this->newWatchedItemStore(
 			$this->getMockLBFactory( $mockDb ),
-			$this->getMockJobQueueGroup(),
 			$mockCache,
 			$this->getMockReadOnlyMode()
 		);
@@ -1875,7 +1775,6 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 
 		$store = $this->newWatchedItemStore(
 			$this->getMockLBFactory( $mockDb ),
-			$this->getMockJobQueueGroup(),
 			$mockCache,
 			$this->getMockReadOnlyMode()
 		);
@@ -1927,7 +1826,6 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 
 		$store = $this->newWatchedItemStore(
 			$this->getMockLBFactory( $mockDb ),
-			$this->getMockJobQueueGroup(),
 			$mockCache,
 			$this->getMockReadOnlyMode()
 		);
@@ -1990,7 +1888,6 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 
 		$store = $this->newWatchedItemStore(
 			$this->getMockLBFactory( $mockDb ),
-			$this->getMockJobQueueGroup(),
 			$mockCache,
 			$this->getMockReadOnlyMode()
 		);
@@ -2032,7 +1929,6 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 
 		$store = $this->newWatchedItemStore(
 			$this->getMockLBFactory( $mockDb ),
-			$this->getMockJobQueueGroup(),
 			$mockCache,
 			$this->getMockReadOnlyMode()
 		);
@@ -2060,7 +1956,6 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 
 		$store = $this->newWatchedItemStore(
 			$this->getMockLBFactory( $mockDb ),
-			$this->getMockJobQueueGroup(),
 			$mockCache,
 			$this->getMockReadOnlyMode()
 		);
@@ -2086,7 +1981,6 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 
 		$store = $this->newWatchedItemStore(
 			$this->getMockLBFactory( $mockDb ),
-			$this->getMockJobQueueGroup(),
 			$mockCache,
 			$this->getMockReadOnlyMode()
 		);
@@ -2121,7 +2015,6 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 
 		$store = $this->newWatchedItemStore(
 			$this->getMockLBFactory( $mockDb ),
-			$this->getMockJobQueueGroup(),
 			$mockCache,
 			$this->getMockReadOnlyMode()
 		);
@@ -2166,19 +2059,19 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 			->method( 'delete' )
 			->with( '0:SomeDbKey:1' );
 
-		$mockQueueGroup = $this->getMockJobQueueGroup();
-		$mockQueueGroup->expects( $this->once() )
-			->method( 'lazyPush' )
-			->willReturnCallback( function ( ActivityUpdateJob $job ) {
-				// don't run
-			} );
-
 		$store = $this->newWatchedItemStore(
 			$this->getMockLBFactory( $mockDb ),
-			$mockQueueGroup,
 			$mockCache,
 			$this->getMockReadOnlyMode()
 		);
+
+		// Note: This does not actually assert the job is correct
+		$callableCallCounter = 0;
+		$mockCallback = function ( $callable ) use ( &$callableCallCounter ) {
+			$callableCallCounter++;
+			$this->assertInternalType( 'callable', $callable );
+		};
+		$scopedOverride = $store->overrideDeferredUpdatesAddCallableUpdateCallback( $mockCallback );
 
 		$this->assertTrue(
 			$store->resetNotificationTimestamp(
@@ -2186,6 +2079,9 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 				$title
 			)
 		);
+		$this->assertEquals( 1, $callableCallCounter );
+
+		ScopedCallback::consume( $scopedOverride );
 	}
 
 	public function testResetNotificationTimestamp_noItemForced() {
@@ -2203,19 +2099,19 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 			->method( 'delete' )
 			->with( '0:SomeDbKey:1' );
 
-		$mockQueueGroup = $this->getMockJobQueueGroup();
 		$store = $this->newWatchedItemStore(
 			$this->getMockLBFactory( $mockDb ),
-			$mockQueueGroup,
 			$mockCache,
 			$this->getMockReadOnlyMode()
 		);
 
-		$mockQueueGroup->expects( $this->any() )
-			->method( 'lazyPush' )
-			->will( $this->returnCallback( function ( ActivityUpdateJob $job ) {
-				// don't run
-			} ) );
+		// Note: This does not actually assert the job is correct
+		$callableCallCounter = 0;
+		$mockCallback = function ( $callable ) use ( &$callableCallCounter ) {
+			$callableCallCounter++;
+			$this->assertInternalType( 'callable', $callable );
+		};
+		$scopedOverride = $store->overrideDeferredUpdatesAddCallableUpdateCallback( $mockCallback );
 
 		$this->assertTrue(
 			$store->resetNotificationTimestamp(
@@ -2224,6 +2120,9 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 				'force'
 			)
 		);
+		$this->assertEquals( 1, $callableCallCounter );
+
+		ScopedCallback::consume( $scopedOverride );
 	}
 
 	/**
@@ -2247,11 +2146,20 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 	}
 
 	private function verifyCallbackJob(
-		ActivityUpdateJob $job,
+		$callback,
 		LinkTarget $expectedTitle,
 		$expectedUserId,
 		callable $notificationTimestampCondition
 	) {
+		$this->assertInternalType( 'callable', $callback );
+
+		$callbackReflector = new ReflectionFunction( $callback );
+		$vars = $callbackReflector->getStaticVariables();
+		$this->assertArrayHasKey( 'job', $vars );
+		$this->assertInstanceOf( ActivityUpdateJob::class, $vars['job'] );
+
+		/** @var ActivityUpdateJob $job */
+		$job = $vars['job'];
 		$this->assertEquals( $expectedTitle->getDBkey(), $job->getTitle()->getDBkey() );
 		$this->assertEquals( $expectedTitle->getNamespace(), $job->getTitle()->getNamespace() );
 
@@ -2284,28 +2192,26 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 			->method( 'delete' )
 			->with( '0:SomeTitle:1' );
 
-		$mockQueueGroup = $this->getMockJobQueueGroup();
 		$store = $this->newWatchedItemStore(
 			$this->getMockLBFactory( $mockDb ),
-			$mockQueueGroup,
 			$mockCache,
 			$this->getMockReadOnlyMode()
 		);
 
-		$mockQueueGroup->expects( $this->any() )
-			->method( 'lazyPush' )
-			->will( $this->returnCallback(
-				function ( ActivityUpdateJob $job ) use ( $title, $user ) {
-					$this->verifyCallbackJob(
-						$job,
-						$title,
-						$user->getId(),
-						function ( $time ) {
-							return $time === null;
-						}
-					);
-				}
-			) );
+		$callableCallCounter = 0;
+		$scopedOverride = $store->overrideDeferredUpdatesAddCallableUpdateCallback(
+			function ( $callable ) use ( &$callableCallCounter, $title, $user ) {
+				$callableCallCounter++;
+				$this->verifyCallbackJob(
+					$callable,
+					$title,
+					$user->getId(),
+					function ( $time ) {
+						return $time === null;
+					}
+				);
+			}
+		);
 
 		$this->assertTrue(
 			$store->resetNotificationTimestamp(
@@ -2315,6 +2221,9 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 				$oldid
 			)
 		);
+		$this->assertEquals( 1, $callableCallCounter );
+
+		ScopedCallback::consume( $scopedOverride );
 	}
 
 	public function testResetNotificationTimestamp_oldidSpecifiedNotLatestRevisionForced() {
@@ -2351,28 +2260,26 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 			->method( 'delete' )
 			->with( '0:SomeDbKey:1' );
 
-		$mockQueueGroup = $this->getMockJobQueueGroup();
 		$store = $this->newWatchedItemStore(
 			$this->getMockLBFactory( $mockDb ),
-			$mockQueueGroup,
 			$mockCache,
 			$this->getMockReadOnlyMode()
 		);
 
-		$mockQueueGroup->expects( $this->any() )
-			->method( 'lazyPush' )
-			->will( $this->returnCallback(
-				function ( ActivityUpdateJob $job ) use ( $title, $user ) {
-					$this->verifyCallbackJob(
-						$job,
-						$title,
-						$user->getId(),
-						function ( $time ) {
-							return $time !== null && $time > '20151212010101';
-						}
-					);
-				}
-			) );
+		$addUpdateCallCounter = 0;
+		$scopedOverrideDeferred = $store->overrideDeferredUpdatesAddCallableUpdateCallback(
+			function ( $callable ) use ( &$addUpdateCallCounter, $title, $user ) {
+				$addUpdateCallCounter++;
+				$this->verifyCallbackJob(
+					$callable,
+					$title,
+					$user->getId(),
+					function ( $time ) {
+						return $time !== null && $time > '20151212010101';
+					}
+				);
+			}
+		);
 
 		$getTimestampCallCounter = 0;
 		$scopedOverrideRevision = $store->overrideRevisionGetTimestampFromIdCallback(
@@ -2391,8 +2298,10 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 				$oldid
 			)
 		);
-		$this->assertEquals( 2, $getTimestampCallCounter );
+		$this->assertEquals( 1, $addUpdateCallCounter );
+		$this->assertEquals( 1, $getTimestampCallCounter );
 
+		ScopedCallback::consume( $scopedOverrideDeferred );
 		ScopedCallback::consume( $scopedOverrideRevision );
 	}
 
@@ -2426,28 +2335,26 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 			->method( 'delete' )
 			->with( '0:SomeDbKey:1' );
 
-		$mockQueueGroup = $this->getMockJobQueueGroup();
 		$store = $this->newWatchedItemStore(
 			$this->getMockLBFactory( $mockDb ),
-			$mockQueueGroup,
 			$mockCache,
 			$this->getMockReadOnlyMode()
 		);
 
-		$mockQueueGroup->expects( $this->any() )
-			->method( 'lazyPush' )
-			->will( $this->returnCallback(
-				function ( ActivityUpdateJob $job ) use ( $title, $user ) {
-					$this->verifyCallbackJob(
-						$job,
-						$title,
-						$user->getId(),
-						function ( $time ) {
-							return $time === null;
-						}
-					);
-				}
-			) );
+		$callableCallCounter = 0;
+		$scopedOverride = $store->overrideDeferredUpdatesAddCallableUpdateCallback(
+			function ( $callable ) use ( &$callableCallCounter, $title, $user ) {
+				$callableCallCounter++;
+				$this->verifyCallbackJob(
+					$callable,
+					$title,
+					$user->getId(),
+					function ( $time ) {
+						return $time === null;
+					}
+				);
+			}
+		);
 
 		$this->assertTrue(
 			$store->resetNotificationTimestamp(
@@ -2457,6 +2364,9 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 				$oldid
 			)
 		);
+		$this->assertEquals( 1, $callableCallCounter );
+
+		ScopedCallback::consume( $scopedOverride );
 	}
 
 	public function testResetNotificationTimestamp_futureNotificationTimestampForced() {
@@ -2493,28 +2403,26 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 			->method( 'delete' )
 			->with( '0:SomeDbKey:1' );
 
-		$mockQueueGroup = $this->getMockJobQueueGroup();
 		$store = $this->newWatchedItemStore(
 			$this->getMockLBFactory( $mockDb ),
-			$mockQueueGroup,
 			$mockCache,
 			$this->getMockReadOnlyMode()
 		);
 
-		$mockQueueGroup->expects( $this->any() )
-			->method( 'lazyPush' )
-			->will( $this->returnCallback(
-				function ( ActivityUpdateJob $job ) use ( $title, $user ) {
-					$this->verifyCallbackJob(
-						$job,
-						$title,
-						$user->getId(),
-						function ( $time ) {
-							return $time === '30151212010101';
-						}
-					);
-				}
-			) );
+		$addUpdateCallCounter = 0;
+		$scopedOverrideDeferred = $store->overrideDeferredUpdatesAddCallableUpdateCallback(
+			function ( $callable ) use ( &$addUpdateCallCounter, $title, $user ) {
+				$addUpdateCallCounter++;
+				$this->verifyCallbackJob(
+					$callable,
+					$title,
+					$user->getId(),
+					function ( $time ) {
+						return $time === '30151212010101';
+					}
+				);
+			}
+		);
 
 		$getTimestampCallCounter = 0;
 		$scopedOverrideRevision = $store->overrideRevisionGetTimestampFromIdCallback(
@@ -2533,8 +2441,10 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 				$oldid
 			)
 		);
-		$this->assertEquals( 2, $getTimestampCallCounter );
+		$this->assertEquals( 1, $addUpdateCallCounter );
+		$this->assertEquals( 1, $getTimestampCallCounter );
 
+		ScopedCallback::consume( $scopedOverrideDeferred );
 		ScopedCallback::consume( $scopedOverrideRevision );
 	}
 
@@ -2572,28 +2482,26 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 			->method( 'delete' )
 			->with( '0:SomeDbKey:1' );
 
-		$mockQueueGroup = $this->getMockJobQueueGroup();
 		$store = $this->newWatchedItemStore(
 			$this->getMockLBFactory( $mockDb ),
-			$mockQueueGroup,
 			$mockCache,
 			$this->getMockReadOnlyMode()
 		);
 
-		$mockQueueGroup->expects( $this->any() )
-			->method( 'lazyPush' )
-			->will( $this->returnCallback(
-				function ( ActivityUpdateJob $job ) use ( $title, $user ) {
-					$this->verifyCallbackJob(
-						$job,
-						$title,
-						$user->getId(),
-						function ( $time ) {
-							return $time === false;
-						}
-					);
-				}
-			) );
+		$addUpdateCallCounter = 0;
+		$scopedOverrideDeferred = $store->overrideDeferredUpdatesAddCallableUpdateCallback(
+			function ( $callable ) use ( &$addUpdateCallCounter, $title, $user ) {
+				$addUpdateCallCounter++;
+				$this->verifyCallbackJob(
+					$callable,
+					$title,
+					$user->getId(),
+					function ( $time ) {
+						return $time === false;
+					}
+				);
+			}
+		);
 
 		$getTimestampCallCounter = 0;
 		$scopedOverrideRevision = $store->overrideRevisionGetTimestampFromIdCallback(
@@ -2612,15 +2520,16 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 				$oldid
 			)
 		);
-		$this->assertEquals( 2, $getTimestampCallCounter );
+		$this->assertEquals( 1, $addUpdateCallCounter );
+		$this->assertEquals( 1, $getTimestampCallCounter );
 
+		ScopedCallback::consume( $scopedOverrideDeferred );
 		ScopedCallback::consume( $scopedOverrideRevision );
 	}
 
 	public function testSetNotificationTimestampsForUser_anonUser() {
 		$store = $this->newWatchedItemStore(
 			$this->getMockLBFactory( $this->getMockDb() ),
-			$this->getMockJobQueueGroup(),
 			$this->getMockCache(),
 			$this->getMockReadOnlyMode()
 		);
@@ -2631,45 +2540,56 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 		$user = $this->getMockNonAnonUserWithId( 1 );
 		$timestamp = '20100101010101';
 
+		$mockDb = $this->getMockDb();
+		$mockDb->expects( $this->once() )
+			->method( 'update' )
+			->with(
+				'watchlist',
+				[ 'wl_notificationtimestamp' => 'TS' . $timestamp . 'TS' ],
+				[ 'wl_user' => 1 ]
+			)
+			->will( $this->returnValue( true ) );
+		$mockDb->expects( $this->exactly( 1 ) )
+			->method( 'timestamp' )
+			->will( $this->returnCallback( function ( $value ) {
+				return 'TS' . $value . 'TS';
+			} ) );
+
 		$store = $this->newWatchedItemStore(
-			$this->getMockLBFactory( $this->getMockDb() ),
-			$this->getMockJobQueueGroup(),
+			$this->getMockLBFactory( $mockDb ),
 			$this->getMockCache(),
 			$this->getMockReadOnlyMode()
 		);
 
-		// Note: This does not actually assert the job is correct
-		$callableCallCounter = 0;
-		$mockCallback = function ( $callable ) use ( &$callableCallCounter ) {
-			$callableCallCounter++;
-			$this->assertInternalType( 'callable', $callable );
-		};
-		$scopedOverride = $store->overrideDeferredUpdatesAddCallableUpdateCallback( $mockCallback );
-
 		$this->assertTrue(
 			$store->setNotificationTimestampsForUser( $user, $timestamp )
 		);
-		$this->assertEquals( 1, $callableCallCounter );
 	}
 
 	public function testSetNotificationTimestampsForUser_nullTimestamp() {
 		$user = $this->getMockNonAnonUserWithId( 1 );
 		$timestamp = null;
 
+		$mockDb = $this->getMockDb();
+		$mockDb->expects( $this->once() )
+			->method( 'update' )
+			->with(
+				'watchlist',
+				[ 'wl_notificationtimestamp' => null ],
+				[ 'wl_user' => 1 ]
+			)
+			->will( $this->returnValue( true ) );
+		$mockDb->expects( $this->exactly( 0 ) )
+			->method( 'timestamp' )
+			->will( $this->returnCallback( function ( $value ) {
+				return 'TS' . $value . 'TS';
+			} ) );
+
 		$store = $this->newWatchedItemStore(
-			$this->getMockLBFactory( $this->getMockDb() ),
-			$this->getMockJobQueueGroup(),
+			$this->getMockLBFactory( $mockDb ),
 			$this->getMockCache(),
 			$this->getMockReadOnlyMode()
 		);
-
-		// Note: This does not actually assert the job is correct
-		$callableCallCounter = 0;
-		$mockCallback = function ( $callable ) use ( &$callableCallCounter ) {
-			$callableCallCounter++;
-			$this->assertInternalType( 'callable', $callable );
-		};
-		$scopedOverride = $store->overrideDeferredUpdatesAddCallableUpdateCallback( $mockCallback );
 
 		$this->assertTrue(
 			$store->setNotificationTimestampsForUser( $user, $timestamp )
@@ -2687,7 +2607,7 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 			->with(
 				'watchlist',
 				[ 'wl_notificationtimestamp' => 'TS' . $timestamp . 'TS' ],
-				[ 'wl_user' => 1, 'wl_namespace' => 0, 'wl_title' => [ 'Foo', 'Bar' ] ]
+				[ 'wl_user' => 1, 0 => 'makeWhereFrom2d return value' ]
 			)
 			->will( $this->returnValue( true ) );
 		$mockDb->expects( $this->exactly( 1 ) )
@@ -2696,12 +2616,16 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 				return 'TS' . $value . 'TS';
 			} ) );
 		$mockDb->expects( $this->once() )
-			->method( 'affectedRows' )
-			->will( $this->returnValue( 2 ) );
+			->method( 'makeWhereFrom2d' )
+			->with(
+				[ [ 'Foo' => 1, 'Bar' => 1 ] ],
+				$this->isType( 'string' ),
+				$this->isType( 'string' )
+			)
+			->will( $this->returnValue( 'makeWhereFrom2d return value' ) );
 
 		$store = $this->newWatchedItemStore(
 			$this->getMockLBFactory( $mockDb ),
-			$this->getMockJobQueueGroup(),
 			$this->getMockCache(),
 			$this->getMockReadOnlyMode()
 		);
@@ -2745,7 +2669,6 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 
 		$store = $this->newWatchedItemStore(
 			$this->getMockLBFactory( $mockDb ),
-			$this->getMockJobQueueGroup(),
 			$mockCache,
 			$this->getMockReadOnlyMode()
 		);
@@ -2787,7 +2710,6 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 
 		$store = $this->newWatchedItemStore(
 			$this->getMockLBFactory( $mockDb ),
-			$this->getMockJobQueueGroup(),
 			$mockCache,
 			$this->getMockReadOnlyMode()
 		);
@@ -2832,7 +2754,6 @@ class WatchedItemStoreUnitTest extends MediaWikiTestCase {
 
 		$store = $this->newWatchedItemStore(
 			$this->getMockLBFactory( $mockDb ),
-			$this->getMockJobQueueGroup(),
 			$mockCache,
 			$this->getMockReadOnlyMode()
 		);

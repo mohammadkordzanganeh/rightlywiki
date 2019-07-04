@@ -32,6 +32,5 @@ class UDPRCFeedEngine extends RCFeedEngine {
 	public function send( array $feed, $line ) {
 		$transport = UDPTransport::newFromString( $feed['uri'] );
 		$transport->emit( $line );
-		return true;
 	}
 }

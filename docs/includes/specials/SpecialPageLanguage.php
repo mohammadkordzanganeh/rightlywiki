@@ -44,7 +44,6 @@ class SpecialPageLanguage extends FormSpecialPage {
 
 	protected function preText() {
 		$this->getOutput()->addModules( 'mediawiki.special.pageLanguage' );
-		return parent::preText();
 	}
 
 	protected function getFormFields() {

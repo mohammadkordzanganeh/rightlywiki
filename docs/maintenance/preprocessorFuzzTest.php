@@ -239,7 +239,7 @@ class PPFuzzTest {
 class PPFuzzUser extends User {
 	public $ppfz_test, $mDataLoaded;
 
-	function load( $flags = null ) {
+	function load() {
 		if ( $this->mDataLoaded ) {
 			return;
 		}

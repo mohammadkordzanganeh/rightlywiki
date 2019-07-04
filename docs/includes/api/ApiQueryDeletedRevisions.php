@@ -39,6 +39,8 @@ class ApiQueryDeletedRevisions extends ApiQueryRevisionsBase {
 	}
 
 	protected function run( ApiPageSet $resultPageSet = null ) {
+		global $wgChangeTagsSchemaMigrationStage;
+
 		$user = $this->getUser();
 		// Before doing anything at all, let's check permissions
 		$this->checkUserRightsAny( 'deletedhistory' );
@@ -77,20 +79,28 @@ class ApiQueryDeletedRevisions extends ApiQueryRevisionsBase {
 		}
 
 		if ( $this->fld_tags ) {
-			$this->addFields( [ 'ts_tags' => ChangeTags::makeTagSummarySubquery( 'archive' ) ] );
+			$this->addTables( 'tag_summary' );
+			$this->addJoinConds(
+				[ 'tag_summary' => [ 'LEFT JOIN', [ 'ar_rev_id=ts_rev_id' ] ] ]
+			);
+			$this->addFields( 'ts_tags' );
 		}
 
 		if ( !is_null( $params['tag'] ) ) {
 			$this->addTables( 'change_tag' );
 			$this->addJoinConds(
-				[ 'change_tag' => [ 'JOIN', [ 'ar_rev_id=ct_rev_id' ] ] ]
+				[ 'change_tag' => [ 'INNER JOIN', [ 'ar_rev_id=ct_rev_id' ] ] ]
 			);
-			$changeTagDefStore = MediaWikiServices::getInstance()->getChangeTagDefStore();
-			try {
-				$this->addWhereFld( 'ct_tag_id', $changeTagDefStore->getId( $params['tag'] ) );
-			} catch ( NameTableAccessException $exception ) {
-				// Return nothing.
-				$this->addWhere( '1=0' );
+			if ( $wgChangeTagsSchemaMigrationStage > MIGRATION_WRITE_BOTH ) {
+				$changeTagDefStore = MediaWikiServices::getInstance()->getChangeTagDefStore();
+				try {
+					$this->addWhereFld( 'ct_tag_id', $changeTagDefStore->getId( $params['tag'] ) );
+				} catch ( NameTableAccessException $exception ) {
+					// Return nothing.
+					$this->addWhere( '1=0' );
+				}
+			} else {
+				$this->addWhereFld( 'ct_tag', $params['tag'] );
 			}
 		}
 
@@ -155,7 +165,7 @@ class ApiQueryDeletedRevisions extends ApiQueryRevisionsBase {
 			$op = ( $dir == 'newer' ? '>' : '<' );
 			if ( $revCount !== 0 ) {
 				$this->dieContinueUsageIf( count( $cont ) != 2 );
-				$rev = (int)$cont[0];
+				$rev = intval( $cont[0] );
 				$this->dieContinueUsageIf( strval( $rev ) !== $cont[0] );
 				$ar_id = (int)$cont[1];
 				$this->dieContinueUsageIf( strval( $ar_id ) !== $cont[1] );
@@ -164,7 +174,7 @@ class ApiQueryDeletedRevisions extends ApiQueryRevisionsBase {
 					"ar_id $op= $ar_id)" );
 			} else {
 				$this->dieContinueUsageIf( count( $cont ) != 4 );
-				$ns = (int)$cont[0];
+				$ns = intval( $cont[0] );
 				$this->dieContinueUsageIf( strval( $ns ) !== $cont[0] );
 				$title = $db->addQuotes( $cont[1] );
 				$ts = $db->addQuotes( $db->timestamp( $cont[2] ) );

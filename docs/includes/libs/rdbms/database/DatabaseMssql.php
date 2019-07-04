@@ -157,6 +157,7 @@ class DatabaseMssql extends Database {
 	/**
 	 * @param string $sql
 	 * @return bool|MssqlResultWrapper|resource
+	 * @throws DBUnexpectedError
 	 */
 	protected function doQuery( $sql ) {
 		// several extensions seem to think that all databases support limits
@@ -512,8 +513,6 @@ class DatabaseMssql extends Database {
 			throw $e;
 		}
 		$this->scrollableCursor = true;
-
-		return true;
 	}
 
 	/**
@@ -702,6 +701,12 @@ class DatabaseMssql extends Database {
 				}
 				if ( is_null( $value ) ) {
 					$sql .= 'null';
+				} elseif ( is_array( $value ) || is_object( $value ) ) {
+					if ( is_object( $value ) && $value instanceof Blob ) {
+						$sql .= $this->addQuotes( $value );
+					} else {
+						$sql .= $this->addQuotes( serialize( $value ) );
+					}
 				} else {
 					$sql .= $this->addQuotes( $value );
 				}
@@ -736,7 +741,7 @@ class DatabaseMssql extends Database {
 
 		$this->ignoreDupKeyErrors = false;
 
-		return true;
+		return $ret;
 	}
 
 	/**
@@ -752,14 +757,15 @@ class DatabaseMssql extends Database {
 	 * @param array $insertOptions
 	 * @param array $selectOptions
 	 * @param array $selectJoinConds
+	 * @return bool
 	 * @throws Exception
 	 */
-	protected function nativeInsertSelect( $destTable, $srcTable, $varMap, $conds, $fname = __METHOD__,
+	public function nativeInsertSelect( $destTable, $srcTable, $varMap, $conds, $fname = __METHOD__,
 		$insertOptions = [], $selectOptions = [], $selectJoinConds = []
 	) {
 		$this->scrollableCursor = false;
 		try {
-			parent::nativeInsertSelect(
+			$ret = parent::nativeInsertSelect(
 				$destTable,
 				$srcTable,
 				$varMap,
@@ -774,6 +780,8 @@ class DatabaseMssql extends Database {
 			throw $e;
 		}
 		$this->scrollableCursor = true;
+
+		return $ret;
 	}
 
 	/**
@@ -979,7 +987,10 @@ class DatabaseMssql extends Database {
 	 */
 	public function getServerVersion() {
 		$server_info = sqlsrv_server_info( $this->conn );
-		$version = $server_info['SQLServerVersion'] ?? 'Error';
+		$version = 'Error';
+		if ( isset( $server_info['SQLServerVersion'] ) ) {
+			$version = $server_info['SQLServerVersion'];
+		}
 
 		return $version;
 	}
@@ -1161,18 +1172,8 @@ class DatabaseMssql extends Database {
 	}
 
 	protected function doSelectDomain( DatabaseDomain $domain ) {
-		if ( $domain->getSchema() !== null ) {
-			throw new DBExpectedError( $this, __CLASS__ . ": domain schemas are not supported." );
-		}
-
-		$database = $domain->getDatabase();
-		if ( $database !== $this->getDBname() ) {
-			$encDatabase = $this->addIdentifierQuotes( $database );
-			$res = $this->doQuery( "USE $encDatabase" );
-			if ( !$res ) {
-				throw new DBExpectedError( $this, "Could not select database '$database'." );
-			}
-		}
+		$encDatabase = $this->addIdentifierQuotes( $domain->getDatabase() );
+		$this->query( "USE $encDatabase" );
 		// Update that domain fields on success (no exception thrown)
 		$this->currentDomain = $domain;
 
@@ -1322,9 +1323,8 @@ class DatabaseMssql extends Database {
 
 	/**
 	 * @param string $name
-	 * @param string $format One of "quoted" (default), "raw", or "split".
-	 * @return string|array When the requested $format is "split", a list of database, schema, and
-	 *  table name is returned. Database and schema can be `false`.
+	 * @param string $format
+	 * @return string
 	 */
 	function tableName( $name, $format = 'quoted' ) {
 		# Replace reserved words with better ones
@@ -1339,17 +1339,18 @@ class DatabaseMssql extends Database {
 	/**
 	 * call this instead of tableName() in the updater when renaming tables
 	 * @param string $name
-	 * @param string $format One of "quoted" (default), "raw", or "split".
-	 * @return string|array When the requested $format is "split", a list of database, schema, and
-	 *  table name is returned. Database and schema can be `false`.
-	 * @private
+	 * @param string $format One of quoted, raw, or split
+	 * @return string
 	 */
 	function realTableName( $name, $format = 'quoted' ) {
 		$table = parent::tableName( $name, $format );
 		if ( $format == 'split' ) {
 			// Used internally, we want the schema split off from the table name and returned
 			// as a list with 3 elements (database, schema, table)
-			return array_pad( explode( '.', $table, 3 ), -3, false );
+			$table = explode( '.', $table );
+			while ( count( $table ) < 3 ) {
+				array_unshift( $table, false );
+			}
 		}
 		return $table;
 	}
@@ -1400,14 +1401,6 @@ class DatabaseMssql extends Database {
 		}
 
 		return $old;
-	}
-
-	public function buildStringCast( $field ) {
-		return "CAST( $field AS NVARCHAR )";
-	}
-
-	public static function getAttributes() {
-		return [ self::ATTR_SCHEMAS_AS_TABLE_GROUPS => true ];
 	}
 }
 

@@ -87,6 +87,9 @@ class FileBackendMultiWrite extends FileBackend {
 	 *                      This will apply such updates post-send for web requests. Note that
 	 *                      any checks from "syncChecks" are still synchronous.
 	 *
+	 * Bogus warning
+	 * @suppress PhanAccessMethodProtected
+	 *
 	 * @param array $config
 	 * @throws FileBackendError
 	 */
@@ -257,11 +260,11 @@ class FileBackendMultiWrite extends FileBackend {
 						$status->fatal( 'backend-fail-synced', $path );
 						continue;
 					}
-					if ( ( $this->syncChecks & self::CHECK_SIZE )
-						&& $cStat['size'] != $mStat['size']
-					) { // wrong size
-						$status->fatal( 'backend-fail-synced', $path );
-						continue;
+					if ( $this->syncChecks & self::CHECK_SIZE ) {
+						if ( $cStat['size'] != $mStat['size'] ) { // wrong size
+							$status->fatal( 'backend-fail-synced', $path );
+							continue;
+						}
 					}
 					if ( $this->syncChecks & self::CHECK_TIME ) {
 						$mTs = wfTimestamp( TS_UNIX, $mStat['mtime'] );
@@ -271,12 +274,16 @@ class FileBackendMultiWrite extends FileBackend {
 							continue;
 						}
 					}
-					if ( ( $this->syncChecks & self::CHECK_SHA1 ) && $cBackend->getFileSha1Base36( $cParams ) !== $mSha1 ) { // wrong SHA1
-						$status->fatal( 'backend-fail-synced', $path );
-						continue;
+					if ( $this->syncChecks & self::CHECK_SHA1 ) {
+						if ( $cBackend->getFileSha1Base36( $cParams ) !== $mSha1 ) { // wrong SHA1
+							$status->fatal( 'backend-fail-synced', $path );
+							continue;
+						}
 					}
-				} elseif ( $cStat ) { // file is not in master; file should not exist
-					$status->fatal( 'backend-fail-synced', $path );
+				} else { // file is not in master
+					if ( $cStat ) { // file should not exist
+						$status->fatal( 'backend-fail-synced', $path );
+					}
 				}
 			}
 		}

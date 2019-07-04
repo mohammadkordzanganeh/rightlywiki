@@ -52,9 +52,9 @@ class ApiOptions extends ApiBase {
 			$this->dieWithError( [ 'apierror-missingparam', 'optionname' ] );
 		}
 
-		$resetKinds = $params['resetkinds'];
-		if ( !$params['reset'] ) {
-			$resetKinds = [];
+		if ( $params['reset'] ) {
+			$this->resetPreferences( $params['resetkinds'] );
+			$changed = true;
 		}
 
 		$changes = [];
@@ -68,14 +68,6 @@ class ApiOptions extends ApiBase {
 			$newValue = $params['optionvalue'] ?? null;
 			$changes[$params['optionname']] = $newValue;
 		}
-
-		Hooks::run( 'ApiOptions', [ $this, $user, $changes, $resetKinds ] );
-
-		if ( $resetKinds ) {
-			$this->resetPreferences( $resetKinds );
-			$changed = true;
-		}
-
 		if ( !$changed && !count( $changes ) ) {
 			$this->dieWithError( 'apierror-nochanges' );
 		}

@@ -33,8 +33,6 @@
  * @version first release
  */
 
-use MediaWiki\Shell\Shell;
-
 require_once __DIR__ . '/Maintenance.php';
 
 /**
@@ -90,7 +88,7 @@ class MWDocGen extends Maintenance {
 
 		// Do not use wfShellWikiCmd, because mwdoc-filter.php is not
 		// a Maintenance script.
-		$this->inputFilter = Shell::escape( [
+		$this->inputFilter = wfEscapeShellArg( [
 			$wgPhpCli,
 			$IP . '/maintenance/mwdoc-filter.php'
 		] );

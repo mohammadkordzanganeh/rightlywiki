@@ -2,9 +2,10 @@
 
 /**
  * See also:
+ * - ResourceLoaderTest::testExpandModuleNames
  * - ResourceLoaderImageModuleTest::testContext
  *
- * @group ResourceLoader
+ * @group Cache
  * @covers ResourceLoaderContext
  */
 class ResourceLoaderContextTest extends PHPUnit\Framework\TestCase {

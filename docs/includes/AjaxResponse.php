@@ -186,7 +186,6 @@ class AjaxResponse {
 				# Surrogate-Control controls our CDN, Cache-Control downstream caches
 
 				if ( $this->mConfig->get( 'UseESI' ) ) {
-					wfDeprecated( '$wgUseESI = true', '1.33' );
 					header( 'Surrogate-Control: max-age=' . $this->mCacheDuration . ', content="ESI/1.0"' );
 					header( 'Cache-Control: s-maxage=0, must-revalidate, max-age=0' );
 				} else {
@@ -282,8 +281,7 @@ class AjaxResponse {
 			return false;
 		}
 
-		$cache = MediaWikiServices::getInstance()->getMainWANObjectCache();
-		$mcvalue = $cache->get( $mckey );
+		$mcvalue = ObjectCache::getMainWANInstance()->get( $mckey );
 		if ( $mcvalue ) {
 			# Check to see if the value has been invalidated
 			if ( $touched <= $mcvalue['timestamp'] ) {
@@ -305,13 +303,11 @@ class AjaxResponse {
 	 * @return bool
 	 */
 	function storeInMemcached( $mckey, $expiry = 86400 ) {
-		$cache = MediaWikiServices::getInstance()->getMainWANObjectCache();
-		$cache->set( $mckey,
+		ObjectCache::getMainWANInstance()->set( $mckey,
 			[
 				'timestamp' => wfTimestampNow(),
 				'value' => $this->mText
-			],
-			$expiry
+			], $expiry
 		);
 
 		return true;

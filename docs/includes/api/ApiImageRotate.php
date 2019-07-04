@@ -33,6 +33,8 @@ class ApiImageRotate extends ApiBase {
 		$pageSet = $this->getPageSet();
 		$pageSet->execute();
 
+		$result = [];
+
 		$result = $pageSet->getInvalidTitlesAndRevisions( [
 			'invalidTitles', 'special', 'missingIds', 'missingRevIds', 'interwikiTitles',
 		] );

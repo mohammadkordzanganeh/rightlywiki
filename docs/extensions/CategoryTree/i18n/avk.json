@@ -1,8 +1,7 @@
 {
 	"@metadata": {
 		"authors": [
-			"Wikimistusik",
-			"Axel xadolik"
+			"Wikimistusik"
 		]
 	},
 	"categorytree": "LomaAal",
@@ -15,10 +14,6 @@
 	"categorytree-mode-all": "bueem",
 	"categorytree-collapse": "koatcera",
 	"categorytree-expand": "divatcera",
-	"categorytree-member-counts": "Tir dem {{PLURAL:$1|1 veyloma}}, {{PLURAL:$2|1 bu|$2 bu}}, is {{PLURAL:$3|1 iyeltak|$3 iyeltak}}",
-	"categorytree-num-categories": "$1 P",
-	"categorytree-num-pages": "$1 P",
-	"categorytree-num-files": "$1 iy-",
 	"categorytree-load": "vajara",
 	"categorytree-loading": "vajas",
 	"categorytree-nothing-found": "mek trasiks",

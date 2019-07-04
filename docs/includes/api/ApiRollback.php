@@ -55,15 +55,6 @@ class ApiRollback extends ApiBase {
 			}
 		}
 
-		// @TODO: remove this hack once rollback uses POST (T88044)
-		$fname = __METHOD__;
-		$trxLimits = $this->getConfig()->get( 'TrxProfilerLimits' );
-		$trxProfiler = Profiler::instance()->getTransactionProfiler();
-		$trxProfiler->redefineExpectations( $trxLimits['POST'], $fname );
-		DeferredUpdates::addCallableUpdate( function () use ( $trxProfiler, $trxLimits, $fname ) {
-			$trxProfiler->redefineExpectations( $trxLimits['PostSend-POST'], $fname );
-		} );
-
 		$retval = $pageObj->doRollback(
 			$this->getRbUser( $params ),
 			$summary,
@@ -78,20 +69,23 @@ class ApiRollback extends ApiBase {
 			$this->dieStatus( $this->errorArrayToStatus( $retval, $user ) );
 		}
 
-		$watch = $params['watchlist'] ?? 'preferences';
+		$watch = 'preferences';
+		if ( isset( $params['watchlist'] ) ) {
+			$watch = $params['watchlist'];
+		}
 
 		// Watch pages
 		$this->setWatch( $watch, $titleObj, 'watchrollback' );
 
 		$info = [
 			'title' => $titleObj->getPrefixedText(),
-			'pageid' => (int)$details['current']->getPage(),
+			'pageid' => intval( $details['current']->getPage() ),
 			'summary' => $details['summary'],
-			'revid' => (int)$details['newid'],
+			'revid' => intval( $details['newid'] ),
 			// The revision being reverted (previously the current revision of the page)
-			'old_revid' => (int)$details['current']->getID(),
+			'old_revid' => intval( $details['current']->getID() ),
 			// The revision being restored (the last revision before revision(s) by the reverted user)
-			'last_revid' => (int)$details['target']->getID()
+			'last_revid' => intval( $details['target']->getID() )
 		];
 
 		$this->getResult()->addValue( null, $this->getModuleName(), $info );

@@ -49,7 +49,7 @@ class UpdateSpecialPages extends Maintenance {
 		$this->doSpecialPageCacheUpdates( $dbw );
 
 		foreach ( QueryPage::getPages() as $page ) {
-			list( , $special ) = $page;
+			list( $class, $special ) = $page;
 			$limit = $page[2] ?? null;
 
 			# --list : just show the name of pages

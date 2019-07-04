@@ -39,7 +39,7 @@ class DumpRev extends Maintenance {
 	}
 
 	public function execute() {
-		$id = (int)$this->getArg( 0 );
+		$id = (int)$this->getArg();
 
 		$lookup = MediaWikiServices::getInstance()->getRevisionLookup();
 		$rev = $lookup->getRevisionById( $id );

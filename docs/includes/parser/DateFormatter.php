@@ -213,7 +213,10 @@ class DateFormatter {
 	 */
 	private function replace( $matches ) {
 		# Extract information from $matches
-		$linked = $this->mLinked ?? true;
+		$linked = true;
+		if ( isset( $this->mLinked ) ) {
+			$linked = $this->mLinked;
+		}
 
 		$bits = [];
 		$key = $this->keys[$this->mSource];

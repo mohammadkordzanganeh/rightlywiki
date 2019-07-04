@@ -47,10 +47,12 @@ class Xml {
 		}
 		if ( is_null( $contents ) ) {
 			$out .= '>';
-		} elseif ( $allowShortTag && $contents === '' ) {
-			$out .= ' />';
 		} else {
-			$out .= '>' . htmlspecialchars( $contents, ENT_NOQUOTES ) . "</$element>";
+			if ( $allowShortTag && $contents === '' ) {
+				$out .= ' />';
+			} else {
+				$out .= '>' . htmlspecialchars( $contents, ENT_NOQUOTES ) . "</$element>";
+			}
 		}
 		return $out;
 	}

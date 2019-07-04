@@ -37,7 +37,7 @@
  *
  * @since 1.22
  */
-class RedisPubSubFeedEngine extends FormattedRCFeed {
+class RedisPubSubFeedEngine extends RCFeedEngine {
 
 	/**
 	 * @see FormattedRCFeed::send
@@ -68,8 +68,8 @@ class RedisPubSubFeedEngine extends FormattedRCFeed {
 		if ( $conn !== false ) {
 			$conn->publish( $channel, $line );
 			return true;
+		} else {
+			return false;
 		}
-
-		return false;
 	}
 }

@@ -92,8 +92,8 @@ class TitleBlacklistHooks {
 		}
 
 		$msg = wfMessage( 'titleblacklist-warning' );
-		$notices['titleblacklist'] = $msg->plaintextParams(
-			$blacklisted->getRaw() )->parseAsBlock();
+		$notices['titleblacklist'] = $msg->rawParams(
+			htmlspecialchars( $blacklisted->getRaw() ) )->parseAsBlock();
 		return true;
 	}
 

@@ -73,8 +73,9 @@ class RecentChangesUpdateJob extends Job {
 	protected function purgeExpiredRows() {
 		global $wgRCMaxAge, $wgUpdateRowsPerQuery;
 
+		$lockKey = wfWikiID() . ':recentchanges-prune';
+
 		$dbw = wfGetDB( DB_MASTER );
-		$lockKey = $dbw->getDomainID() . ':recentchanges-prune';
 		if ( !$dbw->lock( $lockKey, __METHOD__, 0 ) ) {
 			// already in progress
 			return;
@@ -127,7 +128,7 @@ class RecentChangesUpdateJob extends Job {
 		$factory = MediaWikiServices::getInstance()->getDBLoadBalancerFactory();
 		$ticket = $factory->getEmptyTransactionTicket( __METHOD__ );
 
-		$lockKey = $dbw->getDomainID() . '-activeusers';
+		$lockKey = wfWikiID() . '-activeusers';
 		if ( !$dbw->lock( $lockKey, __METHOD__, 0 ) ) {
 			// Exclusive update (avoids duplicate entries)… it's usually fine to just
 			// drop out here, if the Job is already running.

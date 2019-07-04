@@ -21,7 +21,6 @@
  * @ingroup Parser
  */
 use MediaWiki\Linker\LinkRenderer;
-use MediaWiki\Linker\LinkRendererFactory;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Special\SpecialPageFactory;
 use Wikimedia\ScopedCallback;
@@ -274,35 +273,25 @@ class Parser {
 	/** @var SpecialPageFactory */
 	private $specialPageFactory;
 
-	/** @var Config */
-	private $siteConfig;
-
-	/** @var LinkRendererFactory */
-	private $linkRendererFactory;
-
 	/**
-	 * @param array $parserConf See $wgParserConf documentation
+	 * @param array $conf See $wgParserConf documentation
 	 * @param MagicWordFactory|null $magicWordFactory
 	 * @param Language|null $contLang Content language
 	 * @param ParserFactory|null $factory
 	 * @param string|null $urlProtocols As returned from wfUrlProtocols()
 	 * @param SpecialPageFactory|null $spFactory
-	 * @param Config|null $siteConfig
-	 * @param LinkRendererFactory|null $linkRendererFactory
 	 */
 	public function __construct(
-		array $parserConf = [], MagicWordFactory $magicWordFactory = null,
-		Language $contLang = null, ParserFactory $factory = null, $urlProtocols = null,
-		SpecialPageFactory $spFactory = null, Config $siteConfig = null,
-		LinkRendererFactory $linkRendererFactory = null
+		array $conf = [], MagicWordFactory $magicWordFactory = null, Language $contLang = null,
+		ParserFactory $factory = null, $urlProtocols = null, SpecialPageFactory $spFactory = null
 	) {
-		$this->mConf = $parserConf;
+		$this->mConf = $conf;
 		$this->mUrlProtocols = $urlProtocols ?? wfUrlProtocols();
 		$this->mExtLinkBracketedRegex = '/\[(((?i)' . $this->mUrlProtocols . ')' .
 			self::EXT_LINK_ADDR .
 			self::EXT_LINK_URL_CLASS . '*)\p{Zs}*([^\]\\x00-\\x08\\x0a-\\x1F\\x{FFFD}]*?)\]/Su';
-		if ( isset( $parserConf['preprocessorClass'] ) ) {
-			$this->mPreprocessorClass = $parserConf['preprocessorClass'];
+		if ( isset( $conf['preprocessorClass'] ) ) {
+			$this->mPreprocessorClass = $conf['preprocessorClass'];
 		} elseif ( wfIsHHVM() ) {
 			# Under HHVM Preprocessor_Hash is much faster than Preprocessor_DOM
 			$this->mPreprocessorClass = Preprocessor_Hash::class;
@@ -325,10 +314,6 @@ class Parser {
 
 		$this->factory = $factory ?? $services->getParserFactory();
 		$this->specialPageFactory = $spFactory ?? $services->getSpecialPageFactory();
-		$this->siteConfig = $siteConfig ?? MediaWikiServices::getInstance()->getMainConfig();
-
-		$this->linkRendererFactory =
-			$linkRendererFactory ?? MediaWikiServices::getInstance()->getLinkRendererFactory();
 	}
 
 	/**
@@ -557,6 +542,8 @@ class Parser {
 	 * @return string
 	 */
 	protected function makeLimitReport() {
+		global $wgShowHostnames;
+
 		$maxIncludeSize = $this->mOptions->getMaxIncludeSize();
 
 		$cpuTime = $this->mOutput->getTimeSinceStart( 'cpu' );
@@ -597,7 +584,7 @@ class Parser {
 		Hooks::run( 'ParserLimitReportPrepare', [ $this, $this->mOutput ] );
 
 		$limitReport = "NewPP limit report\n";
-		if ( $this->siteConfig->get( 'ShowHostnames' ) ) {
+		if ( $wgShowHostnames ) {
 			$limitReport .= 'Parsed by ' . wfHostname() . "\n";
 		}
 		$limitReport .= 'Cached time: ' . $this->mOutput->getCacheTime() . "\n";
@@ -648,7 +635,7 @@ class Parser {
 		$this->mOutput->setLimitReportData( 'limitreport-timingprofile', $profileReport );
 
 		// Add other cache related metadata
-		if ( $this->siteConfig->get( 'ShowHostnames' ) ) {
+		if ( $wgShowHostnames ) {
 			$this->mOutput->setLimitReportData( 'cachereport-origin', wfHostname() );
 		}
 		$this->mOutput->setLimitReportData( 'cachereport-timestamp',
@@ -982,9 +969,9 @@ class Parser {
 	 * @return LinkRenderer
 	 */
 	public function getLinkRenderer() {
-		// XXX We make the LinkRenderer with current options and then cache it forever
 		if ( !$this->mLinkRenderer ) {
-			$this->mLinkRenderer = $this->linkRendererFactory->create();
+			$this->mLinkRenderer = MediaWikiServices::getInstance()
+				->getLinkRendererFactory()->create();
 			$this->mLinkRenderer->setStubThreshold(
 				$this->getOptions()->getStubThreshold()
 			);
@@ -1038,7 +1025,7 @@ class Parser {
 		$matches = [];
 
 		$taglist = implode( '|', $elements );
-		$start = "/<($taglist)(\\s+[^>]*?|\\s*?)(\/?>)|<(!--)/i";
+		$start = "/<($taglist)(\\s+[^>]*?|\\s*?)(\/?" . ">)|<(!--)/i";
 
 		while ( $text != '' ) {
 			$p = preg_split( $start, $text, 2, PREG_SPLIT_DELIM_CAPTURE );
@@ -1054,7 +1041,10 @@ class Parser {
 				$inside = $p[5];
 			} else {
 				# tag
-				list( , $element, $attributes, $close, $inside ) = $p;
+				$element = $p[1];
+				$attributes = $p[2];
+				$close = $p[3];
+				$inside = $p[4];
 			}
 
 			$marker = self::MARKER_PREFIX . "-$element-" . sprintf( '%08X', $n++ ) . self::MARKER_SUFFIX;
@@ -1078,7 +1068,8 @@ class Parser {
 					$tail = '';
 					$text = '';
 				} else {
-					list( , $tail, $text ) = $q;
+					$tail = $q[1];
+					$text = $q[2];
 				}
 			}
 
@@ -1430,12 +1421,13 @@ class Parser {
 		 */
 		if ( !( $this->mOptions->getDisableContentConversion()
 			|| isset( $this->mDoubleUnderscores['nocontentconvert'] ) )
-			&& !$this->mOptions->getInterfaceMessage()
 		) {
-			# The position of the convert() call should not be changed. it
-			# assumes that the links are all replaced and the only thing left
-			# is the <nowiki> mark.
-			$text = $this->getTargetLanguage()->convert( $text );
+			if ( !$this->mOptions->getInterfaceMessage() ) {
+				# The position of the convert() call should not be changed. it
+				# assumes that the links are all replaced and the only thing left
+				# is the <nowiki> mark.
+				$text = $this->getTargetLanguage()->convert( $text );
+			}
 		}
 
 		$text = $this->mStripState->unstripNoWiki( $text );
@@ -1456,8 +1448,6 @@ class Parser {
 		} else {
 			# attempt to sanitize at least some nesting problems
 			# (T4702 and quite a few others)
-			# This code path is buggy and deprecated!
-			wfDeprecated( 'disabling tidy', '1.33' );
 			$tidyregs = [
 				# ''Something [http://www.cool.com cool''] -->
 				# <i>Something</i><a href="http://www.cool.com"..><i>cool></i></a>
@@ -1775,8 +1765,10 @@ class Parser {
 						// if $firstsingleletterword is set, we don't
 						// look at the other options, so we can bail early.
 						break;
-					} elseif ( $firstmultiletterword == -1 ) {
-						$firstmultiletterword = $i;
+					} else {
+						if ( $firstmultiletterword == -1 ) {
+							$firstmultiletterword = $i;
+						}
 					}
 				}
 			}
@@ -2030,19 +2022,7 @@ class Parser {
 	 * @return string
 	 */
 	public static function normalizeLinkUrl( $url ) {
-		# Test for RFC 3986 IPv6 syntax
-		$scheme = '[a-z][a-z0-9+.-]*:';
-		$userinfo = '(?:[a-z0-9\-._~!$&\'()*+,;=:]|%[0-9a-f]{2})*';
-		$ipv6Host = '\\[((?:[0-9a-f:]|%3[0-A]|%[46][1-6])+)\\]';
-		if ( preg_match( "<^(?:{$scheme})?//(?:{$userinfo}@)?{$ipv6Host}(?:[:/?#].*|)$>i", $url, $m ) &&
-			IP::isValid( rawurldecode( $m[1] ) )
-		) {
-			$isIPv6 = rawurldecode( $m[1] );
-		} else {
-			$isIPv6 = false;
-		}
-
-		# Make sure unsafe characters are encoded
+		# First, make sure unsafe characters are encoded
 		$url = preg_replace_callback( '/[\x00-\x20"<>\[\\\\\]^`{|}\x7F-\xFF]/',
 			function ( $m ) {
 				return rawurlencode( $m[0] );
@@ -2073,16 +2053,6 @@ class Parser {
 		# (we assume no userinfo or encoded colons in the host)
 		$ret = self::normalizeUrlComponent(
 			substr( $url, 0, $end ), '"#%<>[\]^`{|}/?' ) . $ret;
-
-		# Fix IPv6 syntax
-		if ( $isIPv6 !== false ) {
-			$ipv6Host = "%5B({$isIPv6})%5D";
-			$ret = preg_replace(
-				"<^((?:{$scheme})?//(?:{$userinfo}@)?){$ipv6Host}(?=[:/?#]|$)>i",
-				"$1[$2]",
-				$ret
-			);
-		}
 
 		return $ret;
 	}
@@ -2183,6 +2153,8 @@ class Parser {
 	 * @private
 	 */
 	public function replaceInternalLinks2( &$s ) {
+		global $wgExtraInterlanguageLinkPrefixes;
+
 		static $tc = false, $e1, $e1_img;
 		# the % is needed to support urlencoded titles as well
 		if ( !$tc ) {
@@ -2242,7 +2214,8 @@ class Parser {
 
 			if ( $useLinkPrefixExtension ) {
 				if ( preg_match( $e2, $s, $m ) ) {
-					list( , $s, $prefix ) = $m;
+					$prefix = $m[2];
+					$s = $m[1];
 				} else {
 					$prefix = '';
 				}
@@ -2386,7 +2359,7 @@ class Parser {
 				if (
 					$iw && $this->mOptions->getInterwikiMagic() && $nottalk && (
 						Language::fetchLanguageName( $iw, null, 'mw' ) ||
-						in_array( $iw, $this->siteConfig->get( 'ExtraInterlanguageLinkPrefixes' ) )
+						in_array( $iw, $wgExtraInterlanguageLinkPrefixes )
 					)
 				) {
 					# T26502: filter duplicates
@@ -2568,6 +2541,9 @@ class Parser {
 	 * @return string
 	 */
 	public function getVariableValue( $index, $frame = false ) {
+		global $wgSitename, $wgServer, $wgServerName;
+		global $wgArticlePath, $wgScriptPath, $wgStylePath;
+
 		if ( is_null( $this->mTitle ) ) {
 			// If no title set, bad things are going to happen
 			// later. Title should always be set since this
@@ -2584,26 +2560,14 @@ class Parser {
 		 * Some of these require message or data lookups and can be
 		 * expensive to check many times.
 		 */
-		if ( Hooks::run( 'ParserGetVariableValueVarCache', [ &$parser, &$this->mVarCache ] )
-			&& isset( $this->mVarCache[$index] )
-		) {
-			return $this->mVarCache[$index];
+		if ( Hooks::run( 'ParserGetVariableValueVarCache', [ &$parser, &$this->mVarCache ] ) ) {
+			if ( isset( $this->mVarCache[$index] ) ) {
+				return $this->mVarCache[$index];
+			}
 		}
 
 		$ts = wfTimestamp( TS_UNIX, $this->mOptions->getTimestamp() );
 		Hooks::run( 'ParserGetVariableValueTs', [ &$parser, &$ts ] );
-
-		// In miser mode, disable words that always cause double-parses on page save (T137900)
-		static $slowRevWords = [ 'revisionid' => true ]; // @TODO: 'revisiontimestamp'
-		if (
-			isset( $slowRevWords[$index] ) &&
-			$this->siteConfig->get( 'MiserMode' ) &&
-			!$this->mOptions->getInterfaceMessage() &&
-			// @TODO: disallow this word on all namespaces
-			MWNamespace::isContent( $this->mTitle->getNamespace() )
-		) {
-			return $this->mRevisionId ? '-' : '';
-		};
 
 		$pageLang = $this->getFunctionLang();
 
@@ -2881,21 +2845,22 @@ class Parser {
 				$value = SpecialVersion::getVersion();
 				break;
 			case 'articlepath':
-				return $this->siteConfig->get( 'ArticlePath' );
+				return $wgArticlePath;
 			case 'sitename':
-				return $this->siteConfig->get( 'Sitename' );
+				return $wgSitename;
 			case 'server':
-				return $this->siteConfig->get( 'Server' );
+				return $wgServer;
 			case 'servername':
-				return $this->siteConfig->get( 'ServerName' );
+				return $wgServerName;
 			case 'scriptpath':
-				return $this->siteConfig->get( 'ScriptPath' );
+				return $wgScriptPath;
 			case 'stylepath':
-				return $this->siteConfig->get( 'StylePath' );
+				return $wgStylePath;
 			case 'directionmark':
 				return $pageLang->getDirMark();
 			case 'contentlanguage':
-				return $this->siteConfig->get( 'LanguageCode' );
+				global $wgLanguageCode;
+				return $wgLanguageCode;
 			case 'pagelanguage':
 				$value = $pageLang->getCode();
 				break;
@@ -3159,7 +3124,7 @@ class Parser {
 		# $args is a list of argument nodes, starting from index 0, not including $part1
 		# @todo FIXME: If piece['parts'] is null then the call to getLength()
 		# below won't work b/c this $args isn't an object
-		$args = ( $piece['parts'] == null ) ? [] : $piece['parts'];
+		$args = ( null == $piece['parts'] ) ? [] : $piece['parts'];
 
 		$profileSection = null; // profile templates
 
@@ -3694,6 +3659,7 @@ class Parser {
 		$deps = [];
 
 		# Loop to fetch the article, with up to 1 redirect
+		// phpcs:ignore Generic.CodeAnalysis.ForLoopWithTestFunctionCall
 		for ( $i = 0; $i < 2 && is_object( $title ); $i++ ) {
 			# Give extensions a chance to select the revision instead
 			$id = false; # Assume current
@@ -3837,7 +3803,9 @@ class Parser {
 	 * @return string
 	 */
 	public function interwikiTransclude( $title, $action ) {
-		if ( !$this->siteConfig->get( 'EnableScaryTranscluding' ) ) {
+		global $wgEnableScaryTranscluding, $wgTranscludeCacheExpiry;
+
+		if ( !$wgEnableScaryTranscluding ) {
 			return wfMessage( 'scarytranscludedisabled' )->inContentLanguage()->text();
 		}
 
@@ -3857,7 +3825,7 @@ class Parser {
 				( $wikiId !== false ) ? $wikiId : 'external',
 				sha1( $url )
 			),
-			$this->siteConfig->get( 'TranscludeCacheExpiry' ),
+			$wgTranscludeCacheExpiry,
 			function ( $oldValue, &$ttl ) use ( $url, $fname, $cache ) {
 				$req = MWHttpRequest::factory( $url, [], $fname );
 
@@ -3992,7 +3960,7 @@ class Parser {
 			$name = strtolower( $name );
 			$attributes = Sanitizer::decodeTagAttributes( $attrText );
 			if ( isset( $params['attributes'] ) ) {
-				$attributes += $params['attributes'];
+				$attributes = $attributes + $params['attributes'];
 			}
 
 			if ( isset( $this->mTagHooks[$name] ) ) {
@@ -4159,6 +4127,8 @@ class Parser {
 	 * @private
 	 */
 	public function formatHeadings( $text, $origText, $isMain = true ) {
+		global $wgMaxTocLevel;
+
 		# Inhibit editsection links if requested in the page
 		if ( isset( $this->mDoubleUnderscores['noeditsection'] ) ) {
 			$maybeShowEditLink = false;
@@ -4229,7 +4199,6 @@ class Parser {
 
 		$headlines = $numMatches !== false ? $matches[3] : [];
 
-		$maxTocLevel = $this->siteConfig->get( 'MaxTocLevel' );
 		foreach ( $headlines as $headline ) {
 			$isTemplate = false;
 			$titleText = false;
@@ -4252,7 +4221,7 @@ class Parser {
 				# Increase TOC level
 				$toclevel++;
 				$sublevelCount[$toclevel] = 0;
-				if ( $toclevel < $maxTocLevel ) {
+				if ( $toclevel < $wgMaxTocLevel ) {
 					$prevtoclevel = $toclevel;
 					$toc .= Linker::tocIndent();
 					$numVisible++;
@@ -4274,8 +4243,8 @@ class Parser {
 				if ( $i == 0 ) {
 					$toclevel = 1;
 				}
-				if ( $toclevel < $maxTocLevel ) {
-					if ( $prevtoclevel < $maxTocLevel ) {
+				if ( $toclevel < $wgMaxTocLevel ) {
+					if ( $prevtoclevel < $wgMaxTocLevel ) {
 						# Unindent only if the previous toc level was shown :p
 						$toc .= Linker::tocUnindent( $prevtoclevel - $toclevel );
 						$prevtoclevel = $toclevel;
@@ -4285,7 +4254,7 @@ class Parser {
 				}
 			} else {
 				# No change in level, end TOC line
-				if ( $toclevel < $maxTocLevel ) {
+				if ( $toclevel < $wgMaxTocLevel ) {
 					$toc .= Linker::tocLineEnd();
 				}
 			}
@@ -4383,7 +4352,7 @@ class Parser {
 			$anchor = $safeHeadline;
 			$fallbackAnchor = $fallbackHeadline;
 			if ( isset( $refers[$arrayKey] ) ) {
-				// phpcs:ignore Generic.Formatting.DisallowMultipleStatements
+				// phpcs:ignore Generic.CodeAnalysis.ForLoopWithTestFunctionCall,Generic.Formatting.DisallowMultipleStatements
 				for ( $i = 2; isset( $refers["${arrayKey}_$i"] ); ++$i );
 				$anchor .= "_$i";
 				$linkAnchor .= "_$i";
@@ -4392,7 +4361,7 @@ class Parser {
 				$refers[$arrayKey] = true;
 			}
 			if ( $fallbackHeadline !== false && isset( $refers[$fallbackArrayKey] ) ) {
-				// phpcs:ignore Generic.Formatting.DisallowMultipleStatements
+				// phpcs:ignore Generic.CodeAnalysis.ForLoopWithTestFunctionCall,Generic.Formatting.DisallowMultipleStatements
 				for ( $i = 2; isset( $refers["${fallbackArrayKey}_$i"] ); ++$i );
 				$fallbackAnchor .= "_$i";
 				$refers["${fallbackArrayKey}_$i"] = true;
@@ -4410,7 +4379,7 @@ class Parser {
 				) . ' ' . $headline;
 			}
 
-			if ( $enoughToc && ( !isset( $maxTocLevel ) || $toclevel < $maxTocLevel ) ) {
+			if ( $enoughToc && ( !isset( $wgMaxTocLevel ) || $toclevel < $wgMaxTocLevel ) ) {
 				$toc .= Linker::tocLine( $linkAnchor, $tocline,
 					$numbering, $toclevel, ( $isTemplate ? false : $sectionIndex ) );
 			}
@@ -4491,7 +4460,7 @@ class Parser {
 		}
 
 		if ( $enoughToc ) {
-			if ( $prevtoclevel > 0 && $prevtoclevel < $maxTocLevel ) {
+			if ( $prevtoclevel > 0 && $prevtoclevel < $wgMaxTocLevel ) {
 				$toc .= Linker::tocUnindent( $prevtoclevel - 1 );
 			}
 			$toc = Linker::tocList( $toc, $this->mOptions->getUserLangObj() );
@@ -4535,7 +4504,7 @@ class Parser {
 		if ( $enoughToc && $isMain && !$this->mForceTocPosition ) {
 			// append the TOC at the beginning
 			// Top anchor now in skin
-			$sections[0] .= $toc . "\n";
+			$sections[0] = $sections[0] . $toc . "\n";
 		}
 
 		$full .= implode( '', $sections );
@@ -4670,6 +4639,8 @@ class Parser {
 	 * @return string
 	 */
 	public function getUserSig( &$user, $nickname = false, $fancySig = null ) {
+		global $wgMaxSigChars;
+
 		$username = $user->getName();
 
 		# If not given, retrieve from the user object.
@@ -4683,7 +4654,7 @@ class Parser {
 
 		$nickname = $nickname == null ? $username : $nickname;
 
-		if ( mb_strlen( $nickname ) > $this->siteConfig->get( 'MaxSigChars' ) ) {
+		if ( mb_strlen( $nickname ) > $wgMaxSigChars ) {
 			$nickname = $username;
 			wfDebug( __METHOD__ . ": $username has overlong signature.\n" );
 		} elseif ( $fancySig !== false ) {
@@ -5078,10 +5049,9 @@ class Parser {
 			$ig->setShowFilename( false );
 		}
 		if ( isset( $params['caption'] ) ) {
-			// NOTE: We aren't passing a frame here or below.  Frame info
-			// is currently opaque to Parsoid, which acts on OT_PREPROCESS.
-			// See T107332#4030581
-			$caption = $this->recursiveTagParse( $params['caption'] );
+			$caption = $params['caption'];
+			$caption = htmlspecialchars( $caption );
+			$caption = $this->replaceInternalLinks( $caption );
 			$ig->setCaptionHtml( $caption );
 		}
 		if ( isset( $params['perrow'] ) ) {
@@ -5135,7 +5105,7 @@ class Parser {
 				'img_link' => 'gallery-internal-link',
 			];
 			if ( $handler ) {
-				$paramMap += $handler->getParamMap();
+				$paramMap = $paramMap + $handler->getParamMap();
 				// We don't want people to specify per-image widths.
 				// Additionally the width parameter would need special casing anyhow.
 				unset( $paramMap['img_width'] );
@@ -5170,7 +5140,7 @@ class Parser {
 								$alt = $this->stripAltText( $match, false );
 								break;
 							case 'gallery-internal-link':
-								$linkValue = $this->stripAltText( $match, false );
+								$linkValue = strip_tags( $this->replaceLinkHoldersText( $match ) );
 								if ( preg_match( '/^-{R|(.*)}-$/', $linkValue ) ) {
 									// Result of LanguageConverter::markNoConversion
 									// invoked on an external link.
@@ -5364,17 +5334,16 @@ class Parser {
 								$value = $this->stripAltText( $value, $holders );
 								break;
 							case 'link':
-								list( $paramName, $value ) =
-									$this->parseLinkParameter(
-										$this->stripAltText( $value, $holders )
-									);
+								list( $paramName, $value ) = $this->parseLinkParameter( $value );
 								if ( $paramName ) {
 									$validated = true;
 									if ( $paramName === 'no-link' ) {
 										$value = true;
 									}
-									if ( ( $paramName === 'link-url' ) && $this->mOptions->getExternalLinkTarget() ) {
-										$params[$type]['link-target'] = $this->mOptions->getExternalLinkTarget();
+									if ( $paramName === 'link-url' ) {
+										if ( $this->mOptions->getExternalLinkTarget() ) {
+											$params[$type]['link-target'] = $this->mOptions->getExternalLinkTarget();
+										}
 									}
 								}
 								break;
@@ -5453,7 +5422,6 @@ class Parser {
 			# Use the "caption" for the tooltip text
 			$params['frame']['title'] = $this->stripAltText( $caption, $holders );
 		}
-		$params['handler']['targetlang'] = $this->getTargetLanguage()->getCode();
 
 		Hooks::run( 'ParserMakeImageParams', [ $title, $file, &$params, $this ] );
 
@@ -5476,7 +5444,6 @@ class Parser {
 	 * Adds an entry to appropriate link tables.
 	 *
 	 * @since 1.32
-	 * @param string $value
 	 * @return array of `[ type, target ]`, where:
 	 *   - `type` is one of:
 	 *     - `null`: Given value is not a valid link target, use default
@@ -5532,40 +5499,6 @@ class Parser {
 		# that are later expanded to html- so expand them now and
 		# remove the tags
 		$tooltip = $this->mStripState->unstripBoth( $tooltip );
-		# Compatibility hack!  In HTML certain entity references not terminated
-		# by a semicolon are decoded (but not if we're in an attribute; that's
-		# how link URLs get away without properly escaping & in queries).
-		# But wikitext has always required semicolon-termination of entities,
-		# so encode & where needed to avoid decode of semicolon-less entities.
-		# See T209236 and
-		# https://www.w3.org/TR/html5/syntax.html#named-character-references
-		# T210437 discusses moving this workaround to Sanitizer::stripAllTags.
-		$tooltip = preg_replace( "/
-			&			# 1. entity prefix
-			(?=			# 2. followed by:
-			(?:			#  a. one of the legacy semicolon-less named entities
-				A(?:Elig|MP|acute|circ|grave|ring|tilde|uml)|
-				C(?:OPY|cedil)|E(?:TH|acute|circ|grave|uml)|
-				GT|I(?:acute|circ|grave|uml)|LT|Ntilde|
-				O(?:acute|circ|grave|slash|tilde|uml)|QUOT|REG|THORN|
-				U(?:acute|circ|grave|uml)|Yacute|
-				a(?:acute|c(?:irc|ute)|elig|grave|mp|ring|tilde|uml)|brvbar|
-				c(?:cedil|edil|urren)|cent(?!erdot;)|copy(?!sr;)|deg|
-				divide(?!ontimes;)|e(?:acute|circ|grave|th|uml)|
-				frac(?:1(?:2|4)|34)|
-				gt(?!c(?:c|ir)|dot|lPar|quest|r(?:a(?:pprox|rr)|dot|eq(?:less|qless)|less|sim);)|
-				i(?:acute|circ|excl|grave|quest|uml)|laquo|
-				lt(?!c(?:c|ir)|dot|hree|imes|larr|quest|r(?:Par|i(?:e|f|));)|
-				m(?:acr|i(?:cro|ddot))|n(?:bsp|tilde)|
-				not(?!in(?:E|dot|v(?:a|b|c)|)|ni(?:v(?:a|b|c)|);)|
-				o(?:acute|circ|grave|rd(?:f|m)|slash|tilde|uml)|
-				p(?:lusmn|ound)|para(?!llel;)|quot|r(?:aquo|eg)|
-				s(?:ect|hy|up(?:1|2|3)|zlig)|thorn|times(?!b(?:ar|)|d;)|
-				u(?:acute|circ|grave|ml|uml)|y(?:acute|en|uml)
-			)
-			(?:[^;]|$))	#  b. and not followed by a semicolon
-			# S = study, for efficiency
-			/Sx", '&amp;', $tooltip );
 		$tooltip = Sanitizer::stripAllTags( $tooltip );
 
 		return $tooltip;
@@ -5715,15 +5648,15 @@ class Parser {
 			if ( $sectionIndex == 0 ) {
 				if ( $mode === 'get' ) {
 					return '';
+				} else {
+					return $newText;
 				}
-
-				return $newText;
 			} else {
 				if ( $mode === 'get' ) {
 					return $newText;
+				} else {
+					return $text;
 				}
-
-				return $text;
 			}
 		}
 
@@ -5998,9 +5931,9 @@ class Parser {
 		return '#' . Sanitizer::escapeIdForLink( $sectionName );
 	}
 
-	private function makeLegacyAnchor( $sectionName ) {
-		$fragmentMode = $this->siteConfig->get( 'FragmentMode' );
-		if ( isset( $fragmentMode[1] ) && $fragmentMode[1] === 'legacy' ) {
+	private static function makeLegacyAnchor( $sectionName ) {
+		global $wgFragmentMode;
+		if ( isset( $wgFragmentMode[1] ) && $wgFragmentMode[1] === 'legacy' ) {
 			// ForAttribute() and ForLink() are the same for legacy encoding
 			$id = Sanitizer::escapeIdForAttribute( $sectionName, Sanitizer::ID_FALLBACK );
 		} else {
@@ -6038,7 +5971,7 @@ class Parser {
 		# Strip out wikitext links(they break the anchor)
 		$text = $this->stripSectionName( $text );
 		$sectionName = self::getSectionNameFromStrippedText( $text );
-		return $this->makeLegacyAnchor( $sectionName );
+		return self::makeLegacyAnchor( $sectionName );
 	}
 
 	/**
@@ -6338,8 +6271,10 @@ class Parser {
 	 */
 	public static function stripOuterParagraph( $html ) {
 		$m = [];
-		if ( preg_match( '/^<p>(.*)\n?<\/p>\n?$/sU', $html, $m ) && strpos( $m[1], '</p>' ) === false ) {
-			$html = $m[1];
+		if ( preg_match( '/^<p>(.*)\n?<\/p>\n?$/sU', $html, $m ) ) {
+			if ( strpos( $m[1], '</p>' ) === false ) {
+				$html = $m[1];
+			}
 		}
 
 		return $html;

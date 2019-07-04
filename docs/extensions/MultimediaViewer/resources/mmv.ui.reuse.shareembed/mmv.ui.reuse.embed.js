@@ -15,7 +15,7 @@
  * along with MultimediaViewer.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-( function () {
+( function ( mw, $, oo ) {
 	// Shortcut for prototype later
 	var EP;
 
@@ -97,7 +97,7 @@
 		 */
 		this.currentDefaultItem = mw.user.isAnon() ? this.defaultHtmlItem : this.defaultWikitextItem;
 	}
-	OO.inheritClass( Embed, mw.mmv.ui.reuse.Tab );
+	oo.inheritClass( Embed, mw.mmv.ui.reuse.Tab );
 	EP = Embed.prototype;
 
 	/** @property {number} Width threshold at which an image is to be considered "large" */
@@ -117,7 +117,7 @@
 
 		( mw.user.isAnon() ? htmlClasses : wikitextClasses ).push( 'active' );
 
-		this.embedTextHtml = new OO.ui.MultilineTextInputWidget( {
+		this.embedTextHtml = new oo.ui.MultilineTextInputWidget( {
 			classes: htmlClasses,
 			readOnly: true
 		} );
@@ -129,7 +129,7 @@
 			mw.mmv.actionLogger.log( 'embed-html-copied' );
 		} );
 
-		this.embedTextWikitext = new OO.ui.MultilineTextInputWidget( {
+		this.embedTextWikitext = new oo.ui.MultilineTextInputWidget( {
 			classes: wikitextClasses,
 			readOnly: true
 		} );
@@ -183,15 +183,15 @@
 		var wikitextButtonOption,
 			htmlButtonOption;
 
-		this.embedSwitch = new OO.ui.ButtonSelectWidget( {
+		this.embedSwitch = new oo.ui.ButtonSelectWidget( {
 			classes: [ 'mw-mmv-embed-select' ]
 		} );
 
-		wikitextButtonOption = new OO.ui.ButtonOptionWidget( {
+		wikitextButtonOption = new oo.ui.ButtonOptionWidget( {
 			data: 'wikitext',
 			label: mw.message( 'multimediaviewer-embed-wt' ).text()
 		} );
-		htmlButtonOption = new OO.ui.ButtonOptionWidget( {
+		htmlButtonOption = new oo.ui.ButtonOptionWidget( {
 			data: 'html',
 			label: mw.message( 'multimediaviewer-embed-html' ).text()
 		} );
@@ -453,8 +453,8 @@
 	 *
 	 * @param {mw.mmv.model.Image} image
 	 * @param {mw.mmv.model.Repo} repo
-	 * @param {string} [caption]
-	 * @param {string} [alt]
+	 * @param {string} caption
+	 * @param {string} alt
 	 */
 	EP.set = function ( image, repo, caption, alt ) {
 		var embed = this,
@@ -464,9 +464,7 @@
 			wikitextSizeOptions = wikitextSizeSwitch.getItems(),
 			sizes = this.getSizeOptions( image.width, image.height );
 
-		this.embedFileInfo = { imageInfo: image, repoInfo: repo };
-		if ( caption ) { this.embedFileInfo.caption = caption; }
-		if ( alt ) { this.embedFileInfo.alt = alt; }
+		this.embedFileInfo = new mw.mmv.model.EmbedFileInfo( image, repo, caption, alt );
 
 		this.utils.updateMenuOptions( sizes.html, htmlSizeOptions );
 		this.utils.updateMenuOptions( sizes.wikitext, wikitextSizeOptions );
@@ -541,4 +539,4 @@
 	};
 
 	mw.mmv.ui.reuse.Embed = Embed;
-}() );
+}( mediaWiki, jQuery, OO ) );

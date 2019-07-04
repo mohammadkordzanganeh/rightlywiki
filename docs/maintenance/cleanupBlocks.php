@@ -92,12 +92,11 @@ class CleanupBlocks extends Maintenance {
 						$keep = $block->getExpiry() > $bestBlock->getExpiry();
 					}
 					if ( $keep === null ) {
-						if ( $block->isCreateAccountBlocked() xor $bestBlock->isCreateAccountBlocked() ) {
-							$keep = $block->isCreateAccountBlocked();
-						} elseif ( $block->isEmailBlocked() xor $bestBlock->isEmailBlocked() ) {
-							$keep = $block->isEmailBlocked();
-						} elseif ( $block->isUsertalkEditAllowed() xor $bestBlock->isUsertalkEditAllowed() ) {
-							$keep = $block->isUsertalkEditAllowed();
+						foreach ( [ 'createaccount', 'sendemail', 'editownusertalk' ] as $action ) {
+							if ( $block->prevents( $action ) xor $bestBlock->prevents( $action ) ) {
+								$keep = $block->prevents( $action );
+								break;
+							}
 						}
 					}
 

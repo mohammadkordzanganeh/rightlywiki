@@ -1,12 +1,13 @@
 <?php
 
-class ComposerLockTest extends PHPUnit\Framework\TestCase {
+class ComposerLockTest extends MediaWikiTestCase {
 
 	private $lock;
 
 	public function setUp() {
 		parent::setUp();
-		$this->lock = __DIR__ . "/../../../data/composer/composer.lock";
+		global $IP;
+		$this->lock = "$IP/tests/phpunit/data/composer/composer.lock";
 	}
 
 	/**
@@ -15,7 +16,7 @@ class ComposerLockTest extends PHPUnit\Framework\TestCase {
 	 */
 	public function testGetInstalledDependencies() {
 		$lock = new ComposerLock( $this->lock );
-		$this->assertEquals( [
+		$this->assertArrayEquals( [
 			'wikimedia/cdb' => [
 				'version' => '1.0.1',
 				'type' => 'library',
@@ -114,7 +115,7 @@ class ComposerLockTest extends PHPUnit\Framework\TestCase {
 					'and configure its support in an easy way. ' .
 					'Main features are language selection, input methods and web fonts.',
 			],
-		], $lock->getInstalledDependencies() );
+		], $lock->getInstalledDependencies(), false, true );
 	}
 
 }

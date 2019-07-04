@@ -84,7 +84,7 @@ class DumpNamespaceFilter extends DumpFilter {
 	 * @param object $page
 	 * @return bool
 	 */
-	protected function pass( $page ) {
+	function pass( $page ) {
 		$match = isset( $this->namespaces[$page->page_namespace] );
 		return $this->invert xor $match;
 	}

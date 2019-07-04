@@ -57,7 +57,7 @@ class ParserOptions {
 
 	/**
 	 * Lazy-loaded options
-	 * @var callable[]
+	 * @var callback[]
 	 */
 	private static $lazyOptions = [
 		'dateformat' => [ __CLASS__, 'initDateFormat' ],
@@ -650,10 +650,8 @@ class ParserOptions {
 
 	/**
 	 * Lazy initializer for dateFormat
-	 * @param ParserOptions $popt
-	 * @return string
 	 */
-	private static function initDateFormat( ParserOptions $popt ) {
+	private static function initDateFormat( $popt ) {
 		return $popt->mUser->getDatePreference();
 	}
 
@@ -733,7 +731,6 @@ class ParserOptions {
 	public function getMagicPMIDLinks() {
 		return $this->getOption( 'magicPMIDLinks' );
 	}
-
 	/**
 	 * Are magic RFC links enabled?
 	 * @since 1.28
@@ -1101,7 +1098,7 @@ class ParserOptions {
 			// *UPDATE* ParserOptions::matches() if any of this changes as needed
 			self::$defaults = [
 				'dateformat' => null,
-				'tidy' => true,
+				'tidy' => false,
 				'interfaceMessage' => false,
 				'targetLanguage' => null,
 				'removeComments' => true,
@@ -1167,6 +1164,7 @@ class ParserOptions {
 		global $wgEnableParserLimitReporting;
 
 		return [
+			'tidy' => true,
 			'enableLimitReport' => $wgEnableParserLimitReporting,
 		];
 	}
@@ -1259,6 +1257,25 @@ class ParserOptions {
 		if ( $this->onAccessCallback ) {
 			call_user_func( $this->onAccessCallback, $optionName );
 		}
+	}
+
+	/**
+	 * Returns the full array of options that would have been used by
+	 * in 1.16.
+	 * Used to get the old parser cache entries when available.
+	 * @deprecated since 1.30. You probably want self::allCacheVaryingOptions() instead.
+	 * @return string[]
+	 */
+	public static function legacyOptions() {
+		wfDeprecated( __METHOD__, '1.30' );
+		return [
+			'stubthreshold',
+			'numberheadings',
+			'userlang',
+			'thumbsize',
+			'editsection',
+			'printable'
+		];
 	}
 
 	/**

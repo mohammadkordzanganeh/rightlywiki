@@ -162,8 +162,7 @@ class ApiExpandTemplates extends ApiBase {
 				}
 				if ( isset( $prop['modules'] ) ) {
 					$retval['modules'] = array_values( array_unique( $p_output->getModules() ) );
-					// Deprecated since 1.32 (T188689)
-					$retval['modulescripts'] = [];
+					$retval['modulescripts'] = array_values( array_unique( $p_output->getModuleScripts() ) );
 					$retval['modulestyles'] = array_values( array_unique( $p_output->getModuleStyles() ) );
 				}
 				if ( isset( $prop['jsconfigvars'] ) ) {

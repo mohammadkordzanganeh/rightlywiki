@@ -16,8 +16,7 @@ class WikiEditorHooks {
 	/* Static Methods */
 
 	/**
-	 * Log stuff to EventLogging's Schema:EditAttemptStep -
-	 * see https://meta.wikimedia.org/wiki/Schema:EditAttemptStep
+	 * Log stuff to EventLogging's Schema:Edit - see https://meta.wikimedia.org/wiki/Schema:Edit
 	 * If you don't have EventLogging installed, does nothing.
 	 *
 	 * @param string $action
@@ -26,17 +25,12 @@ class WikiEditorHooks {
 	 * @return bool Whether the event was logged or not.
 	 */
 	public static function doEventLogging( $action, $article, $data = [] ) {
-		global $wgVersion, $wgWMESchemaEditAttemptStepSamplingRate;
-		$extensionRegistry = ExtensionRegistry::getInstance();
-		if ( !$extensionRegistry->isLoaded( 'EventLogging' ) ) {
+		global $wgVersion;
+		if ( !ExtensionRegistry::getInstance()->isLoaded( 'EventLogging' ) ) {
 			return false;
 		}
-		// Sample 6.25%
-		$samplingRate = $wgWMESchemaEditAttemptStepSamplingRate ?? 0.0625;
-		$inSample = EventLogging::sessionInSample( 1 / $samplingRate, $data['editing_session_id'] );
-		$shouldOversample = $extensionRegistry->isLoaded( 'WikimediaEvents' ) &&
-			WikimediaEventsHooks::shouldSchemaEditAttemptStepOversample( $article->getContext() );
-		if ( !$inSample && !$shouldOversample ) {
+		// Sample 6.25% (via hex digit)
+		if ( $data['editingSessionId'][0] > '0' ) {
 			return false;
 		}
 
@@ -47,24 +41,23 @@ class WikiEditorHooks {
 		$data = [
 			'action' => $action,
 			'version' => 1,
-			'is_oversample' => !$inSample,
-			'editor_interface' => 'wikitext',
+			'editor' => 'wikitext',
 			'platform' => 'desktop', // FIXME
 			'integration' => 'page',
-			'page_id' => $page->getId(),
-			'page_title' => $title->getPrefixedText(),
-			'page_ns' => $title->getNamespace(),
-			'revision_id' => $page->getRevision() ? $page->getRevision()->getId() : 0,
-			'user_id' => $user->getId(),
-			'user_editcount' => $user->getEditCount() ?: 0,
-			'mw_version' => $wgVersion,
+			'page.id' => $page->getId(),
+			'page.title' => $title->getPrefixedText(),
+			'page.ns' => $title->getNamespace(),
+			'page.revid' => $page->getRevision() ? $page->getRevision()->getId() : 0,
+			'user.id' => $user->getId(),
+			'user.editCount' => $user->getEditCount() ?: 0,
+			'mediawiki.version' => $wgVersion
 		] + $data;
 
 		if ( $user->isAnon() ) {
-			$data['user_class'] = 'IP';
+			$data['user.class'] = 'IP';
 		}
 
-		return EventLogging::logEvent( 'EditAttemptStep', 18530416, $data );
+		return EventLogging::logEvent( 'Edit', 17541122, $data );
 	}
 
 	/**
@@ -74,10 +67,11 @@ class WikiEditorHooks {
 	 *
 	 * @param EditPage $editPage the current EditPage object.
 	 * @param OutputPage $outputPage object.
+	 * @return bool
 	 */
 	public static function editPageShowEditFormInitial( EditPage $editPage, OutputPage $outputPage ) {
 		if ( $editPage->contentModel !== CONTENT_MODEL_WIKITEXT ) {
-			return;
+			return true;
 		}
 
 		$article = $editPage->getArticle();
@@ -95,24 +89,26 @@ class WikiEditorHooks {
 		// changes.
 		if ( ExtensionRegistry::getInstance()->isLoaded( 'EventLogging' ) && !$request->wasPosted() ) {
 			$data = [];
-			$data['editing_session_id'] = self::getEditingStatsId();
+			$data['editingSessionId'] = self::getEditingStatsId();
 			if ( $request->getVal( 'section' ) ) {
-				$data['init_type'] = 'section';
+				$data['action.init.type'] = 'section';
 			} else {
-				$data['init_type'] = 'page';
+				$data['action.init.type'] = 'page';
 			}
 			if ( $request->getHeader( 'Referer' ) ) {
 				if ( $request->getVal( 'section' ) === 'new' || !$article->exists() ) {
-					$data['init_mechanism'] = 'new';
+					$data['action.init.mechanism'] = 'new';
 				} else {
-					$data['init_mechanism'] = 'click';
+					$data['action.init.mechanism'] = 'click';
 				}
 			} else {
-				$data['init_mechanism'] = 'url';
+				$data['action.init.mechanism'] = 'url';
 			}
 
 			self::doEventLogging( 'init', $article, $data );
 		}
+
+		return true;
 	}
 
 	/**
@@ -122,10 +118,11 @@ class WikiEditorHooks {
 	 *
 	 * @param EditPage $editPage the current EditPage object.
 	 * @param OutputPage $outputPage object.
+	 * @return bool
 	 */
 	public static function editPageShowEditFormFields( EditPage $editPage, OutputPage $outputPage ) {
 		if ( $editPage->contentModel !== CONTENT_MODEL_WIKITEXT ) {
-			return;
+			return true;
 		}
 
 		$req = $outputPage->getRequest();
@@ -145,6 +142,7 @@ class WikiEditorHooks {
 				]
 			)
 		);
+		return true;
 	}
 
 	/**
@@ -173,30 +171,69 @@ class WikiEditorHooks {
 	 *
 	 * @param User $user current user
 	 * @param array &$defaultPreferences list of default user preference controls
+	 * @return bool
 	 */
 	public static function getPreferences( $user, &$defaultPreferences ) {
 		// Ideally this key would be 'wikieditor-toolbar'
 		$defaultPreferences['usebetatoolbar'] = [
 			'type' => 'toggle',
 			'label-message' => 'wikieditor-toolbar-preference',
-			'help-message' => 'wikieditor-toolbar-preference-help',
 			'section' => 'editing/editor',
 		];
+
+		return true;
 	}
 
 	/**
 	 * @param array &$vars
+	 * @return bool
 	 */
 	public static function resourceLoaderGetConfigVars( &$vars ) {
 		// expose magic words for use by the wikieditor toolbar
 		self::getMagicWords( $vars );
 
 		$vars['mw.msg.wikieditor'] = wfMessage( 'sig-text', '~~~~' )->inContentLanguage()->text();
+
+		return true;
+	}
+
+	/**
+	 * ResourceLoaderTestModules hook
+	 *
+	 * Registers JavaScript test modules
+	 *
+	 * @param array &$testModules array of javascript testing modules. 'qunit' is fed using
+	 * tests/qunit/QUnitTestResources.php.
+	 * @param ResourceLoader &$resourceLoader
+	 * @return bool
+	 */
+	public static function resourceLoaderTestModules( &$testModules, &$resourceLoader ) {
+		$testModules['qunit']['ext.wikiEditor.toolbar.test'] = [
+			'scripts' => [ 'tests/qunit/ext.wikiEditor.toolbar.test.js' ],
+			'dependencies' => [ 'ext.wikiEditor' ],
+			'localBasePath' => __DIR__ . '/..',
+			'remoteExtPath' => 'WikiEditor',
+		];
+		return true;
+	}
+
+	/**
+	 * MakeGlobalVariablesScript hook
+	 *
+	 * Adds enabled/disabled switches for WikiEditor modules
+	 * @param array &$vars
+	 * @return bool
+	 */
+	public static function makeGlobalVariablesScript( &$vars ) {
+		// Build and export old-style wgWikiEditorEnabledModules object for back compat
+		$vars['wgWikiEditorEnabledModules'] = [];
+		return true;
 	}
 
 	/**
 	 * Expose useful magic words which are used by the wikieditor toolbar
 	 * @param array &$vars
+	 * @return bool
 	 */
 	private static function getMagicWords( &$vars ) {
 		$requiredMagicWords = [
@@ -221,6 +258,7 @@ class WikiEditorHooks {
 			}
 		}
 		$vars['wgWikiEditorMagicWords'] = $magicWords;
+		return true;
 	}
 
 	/**
@@ -238,6 +276,7 @@ class WikiEditorHooks {
 	 * This is attached to the MediaWiki 'EditPage::attemptSave' hook.
 	 *
 	 * @param EditPage $editPage
+	 * @return bool
 	 */
 	public static function editPageAttemptSave( EditPage $editPage ) {
 		$article = $editPage->getArticle();
@@ -246,9 +285,11 @@ class WikiEditorHooks {
 			self::doEventLogging(
 				'saveAttempt',
 				$article,
-				[ 'editing_session_id' => $request->getVal( 'editingStatsId' ) ]
+				[ 'editingSessionId' => $request->getVal( 'editingStatsId' ) ]
 			);
 		}
+
+		return true;
 	}
 
 	/**
@@ -256,13 +297,14 @@ class WikiEditorHooks {
 	 *
 	 * @param EditPage $editPage
 	 * @param Status $status
+	 * @return bool
 	 */
 	public static function editPageAttemptSaveAfter( EditPage $editPage, Status $status ) {
 		$article = $editPage->getArticle();
 		$request = $article->getContext()->getRequest();
 		if ( $request->getVal( 'editingStatsId' ) ) {
 			$data = [];
-			$data['editing_session_id'] = $request->getVal( 'editingStatsId' );
+			$data['editingSessionId'] = $request->getVal( 'editingStatsId' );
 
 			if ( $status->isOK() ) {
 				$action = 'saveSuccess';
@@ -271,27 +313,29 @@ class WikiEditorHooks {
 				$errors = $status->getErrorsArray();
 
 				if ( isset( $errors[0][0] ) ) {
-					$data['save_failure_message'] = $errors[0][0];
+					$data['action.saveFailure.message'] = $errors[0][0];
 				}
 
 				if ( $status->value === EditPage::AS_CONFLICT_DETECTED ) {
-					$data['save_failure_type'] = 'editConflict';
+					$data['action.saveFailure.type'] = 'editConflict';
 				} elseif ( $status->value === EditPage::AS_ARTICLE_WAS_DELETED ) {
-					$data['save_failure_type'] = 'editPageDeleted';
+					$data['action.saveFailure.type'] = 'editPageDeleted';
 				} elseif ( isset( $errors[0][0] ) && $errors[0][0] === 'abusefilter-disallowed' ) {
-					$data['save_failure_type'] = 'extensionAbuseFilter';
+					$data['action.saveFailure.type'] = 'extensionAbuseFilter';
 				} elseif ( isset( $editPage->getArticle()->getPage()->ConfirmEdit_ActivateCaptcha ) ) {
 					// TODO: :(
-					$data['save_failure_type'] = 'extensionCaptcha';
+					$data['action.saveFailure.type'] = 'extensionCaptcha';
 				} elseif ( isset( $errors[0][0] ) && $errors[0][0] === 'spamprotectiontext' ) {
-					$data['save_failure_type'] = 'extensionSpamBlacklist';
+					$data['action.saveFailure.type'] = 'extensionSpamBlacklist';
 				} else {
 					// Catch everything else... We don't seem to get userBadToken or
 					// userNewUser through this hook.
-					$data['save_failure_type'] = 'responseUnknown';
+					$data['action.saveFailure.type'] = 'responseUnknown';
 				}
 			}
 			self::doEventLogging( $action, $article, $data );
 		}
+
+		return true;
 	}
 }

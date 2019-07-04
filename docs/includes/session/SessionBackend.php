@@ -50,25 +50,15 @@ final class SessionBackend {
 	/** @var SessionId */
 	private $id;
 
-	/** @var bool */
 	private $persist = false;
-
-	/** @var bool */
 	private $remember = false;
-
-	/** @var bool */
 	private $forceHTTPS = false;
 
 	/** @var array|null */
 	private $data = null;
 
-	/** @var bool */
 	private $forcePersist = false;
-
-	/** @var bool */
 	private $metaDirty = false;
-
-	/** @var bool */
 	private $dataDirty = false;
 
 	/** @var string Used to detect subarray modifications */
@@ -86,7 +76,6 @@ final class SessionBackend {
 	/** @var User */
 	private $user;
 
-	/** @var int */
 	private $curIndex = 0;
 
 	/** @var WebRequest[] Session requests */
@@ -98,21 +87,13 @@ final class SessionBackend {
 	/** @var array|null provider-specified metadata */
 	private $providerMetadata = null;
 
-	/** @var int */
 	private $expires = 0;
-
-	/** @var int */
 	private $loggedOut = 0;
-
-	/** @var int */
 	private $delaySave = 0;
 
-	/** @var bool */
 	private $usePhpSessionHandling = true;
-	/** @var bool */
 	private $checkPHPSessionRecursionGuard = false;
 
-	/** @var bool */
 	private $shutdown = false;
 
 	/**
@@ -270,8 +251,6 @@ final class SessionBackend {
 			// Delete the data for the old session ID now
 			$this->store->delete( $this->store->makeKey( 'MWSession', $oldId ) );
 		}
-
-		return $this->id;
 	}
 
 	/**

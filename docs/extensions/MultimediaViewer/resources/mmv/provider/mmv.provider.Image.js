@@ -15,7 +15,7 @@
  * along with MultimediaViewer.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-( function () {
+( function ( mw, $ ) {
 
 	/**
 	 * Loads an image.
@@ -67,13 +67,13 @@
 
 		if ( !this.cache[ cacheKey ] ) {
 			if ( this.imagePreloadingSupported() ) {
-				rawGet = provider.rawGet.bind( provider, url, true );
+				rawGet = $.proxy( provider.rawGet, provider, url, true );
 				this.cache[ cacheKey ] = this.performance.record( 'image', url, extraStatsDeferred ).then( rawGet, rawGet );
 			} else {
-				start = ( new Date() ).getTime();
+				start = $.now();
 				this.cache[ cacheKey ] = this.rawGet( url );
 				this.cache[ cacheKey ].always( function () {
-					provider.performance.recordEntry( 'image', ( new Date() ).getTime() - start, url, undefined, extraStatsDeferred );
+					provider.performance.recordEntry( 'image', $.now() - start, url, undefined, extraStatsDeferred );
 				} );
 			}
 			this.cache[ cacheKey ].fail( function ( error ) {
@@ -150,4 +150,4 @@
 	};
 
 	mw.mmv.provider.Image = Image;
-}() );
+}( mediaWiki, jQuery ) );

@@ -29,7 +29,6 @@ use MediaWiki\MediaWikiServices;
  * @ingroup FileAbstraction
  */
 
-// @phan-file-suppress PhanTypeMissingReturn false positives
 /**
  * Implements some public methods and some protected utility functions which
  * are required by multiple child classes. Contains stub functionality for
@@ -208,7 +207,7 @@ abstract class File implements IDBAccessObject {
 		if ( !is_callable( $function ) ) {
 			return null;
 		} else {
-			$this->$name = $function();
+			$this->$name = call_user_func( $function );
 
 			return $this->$name;
 		}
@@ -634,15 +633,20 @@ abstract class File implements IDBAccessObject {
 			// one would not expect it to be animated
 			// so true.
 			return true;
+		} else {
+			if ( $this->allowInlineDisplay()
+				&& $handler->isAnimatedImage( $this )
+				&& !$handler->canAnimateThumbnail( $this )
+			) {
+				// Image is animated, but thumbnail isn't.
+				// This is unexpected to the user.
+				return false;
+			} else {
+				// Image is not animated, so one would
+				// not expect thumb to be
+				return true;
+			}
 		}
-
-		return !$this->allowInlineDisplay()
-			// Image is not animated, so one would
-			// not expect thumb to be
-			|| !$handler->isAnimatedImage( $this )
-			// Image is animated, but thumbnail isn't.
-			// This is unexpected to the user.
-			|| $handler->canAnimateThumbnail( $this );
 	}
 
 	/**
@@ -1539,7 +1543,7 @@ abstract class File implements IDBAccessObject {
 	function getArchiveRel( $suffix = false ) {
 		$path = 'archive/' . $this->getHashPath();
 		if ( $suffix === false ) {
-			$path = rtrim( $path, '/' );
+			$path = substr( $path, 0, -1 );
 		} else {
 			$path .= $suffix;
 		}
@@ -1582,9 +1586,11 @@ abstract class File implements IDBAccessObject {
 	 * @return string
 	 */
 	function getArchiveThumbRel( $archiveName, $suffix = false ) {
-		$path = $this->getArchiveRel( $archiveName );
-		if ( $suffix !== false ) {
-			$path .= '/' . $suffix;
+		$path = 'archive/' . $this->getHashPath() . $archiveName . "/";
+		if ( $suffix === false ) {
+			$path = substr( $path, 0, -1 );
+		} else {
+			$path .= $suffix;
 		}
 
 		return $path;
@@ -1651,7 +1657,7 @@ abstract class File implements IDBAccessObject {
 		$ext = $this->getExtension();
 		$path = $this->repo->getZoneUrl( 'public', $ext ) . '/archive/' . $this->getHashPath();
 		if ( $suffix === false ) {
-			$path = rtrim( $path, '/' );
+			$path = substr( $path, 0, -1 );
 		} else {
 			$path .= rawurlencode( $suffix );
 		}
@@ -1670,9 +1676,11 @@ abstract class File implements IDBAccessObject {
 		$this->assertRepoDefined();
 		$ext = $this->getExtension();
 		$path = $this->repo->getZoneUrl( 'thumb', $ext ) . '/archive/' .
-			$this->getHashPath() . rawurlencode( $archiveName );
-		if ( $suffix !== false ) {
-			$path .= '/' . rawurlencode( $suffix );
+			$this->getHashPath() . rawurlencode( $archiveName ) . "/";
+		if ( $suffix === false ) {
+			$path = substr( $path, 0, -1 );
+		} else {
+			$path .= rawurlencode( $suffix );
 		}
 
 		return $path;
@@ -1742,7 +1750,7 @@ abstract class File implements IDBAccessObject {
 		$this->assertRepoDefined();
 		$path = $this->repo->getVirtualUrl() . '/public/archive/' . $this->getHashPath();
 		if ( $suffix === false ) {
-			$path = rtrim( $path, '/' );
+			$path = substr( $path, 0, -1 );
 		} else {
 			$path .= rawurlencode( $suffix );
 		}
@@ -2015,7 +2023,7 @@ abstract class File implements IDBAccessObject {
 	 * @note Use getWidth()/getHeight() instead of this method unless you have a
 	 *  a good reason. This method skips all caches.
 	 *
-	 * @param string $filePath The path to the file (e.g. From getLocalRefPath() )
+	 * @param string $filePath The path to the file (e.g. From getLocalPathRef() )
 	 * @return array|false The width, followed by height, with optionally more things after
 	 */
 	function getImageSize( $filePath ) {

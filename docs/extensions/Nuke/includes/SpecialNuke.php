@@ -176,8 +176,27 @@ class SpecialNuke extends SpecialPage {
 		);
 
 		// Select: All, None, Invert
-		$listToggle = new ListToggle( $this->getOutput() );
-		$selectLinks = $listToggle->getHTML();
+		// ListToggle was introduced in 1.27, old code kept for B/C
+		if ( class_exists( 'ListToggle' ) ) {
+			$listToggle = new ListToggle( $this->getOutput() );
+			$selectLinks = $listToggle->getHTML();
+		} else {
+			$out->addModules( 'ext.nuke' );
+
+			$links = [];
+			$links[] = '<a href="#" id="toggleall">' .
+				$this->msg( 'powersearch-toggleall' )->escaped() . '</a>';
+			$links[] = '<a href="#" id="togglenone">' .
+				$this->msg( 'powersearch-togglenone' )->escaped() . '</a>';
+			$links[] = '<a href="#" id="toggleinvert">' .
+				$this->msg( 'nuke-toggleinvert' )->escaped() . '</a>';
+
+			$selectLinks = Xml::tags( 'p',
+				null,
+				$this->msg( 'nuke-select' )
+					->rawParams( $this->getLanguage()->commaList( $links ) )->escaped()
+			);
+		}
 
 		$out->addHTML(
 			$selectLinks .
@@ -247,7 +266,7 @@ class SpecialNuke extends SpecialPage {
 
 		$where = [ "(rc_new = 1) OR (rc_log_type = 'upload' AND rc_log_action = 'upload')" ];
 
-		if ( class_exists( ActorMigration::class ) ) {
+		if ( class_exists( 'ActorMigration' ) ) {
 			if ( $username === '' ) {
 				$actorQuery = ActorMigration::newMigration()->getJoin( 'rc_user' );
 				$what['rc_user_text'] = $actorQuery['fields']['rc_user_text'];
@@ -371,6 +390,9 @@ class SpecialNuke extends SpecialPage {
 	 * @return string[] Matching subpages
 	 */
 	public function prefixSearchSubpages( $search, $limit, $offset ) {
+		if ( !class_exists( 'UserNamePrefixSearch' ) ) { // check for version 1.27
+			return [];
+		}
 		$user = User::newFromName( $search );
 		if ( !$user ) {
 			// No prefix suggestion for invalid user

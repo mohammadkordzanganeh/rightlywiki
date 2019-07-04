@@ -84,7 +84,7 @@ class ApiQueryRevisions extends ApiQueryRevisionsBase {
 	}
 
 	protected function run( ApiPageSet $resultPageSet = null ) {
-		global $wgActorTableSchemaMigrationStage;
+		global $wgChangeTagsSchemaMigrationStage;
 
 		$params = $this->extractRequestParams( false );
 		$revisionStore = MediaWikiServices::getInstance()->getRevisionStore();
@@ -133,19 +133,6 @@ class ApiQueryRevisions extends ApiQueryRevisionsBase {
 
 		$db = $this->getDB();
 
-		$idField = 'rev_id';
-		$tsField = 'rev_timestamp';
-		$pageField = 'rev_page';
-		if ( $params['user'] !== null &&
-			( $wgActorTableSchemaMigrationStage & SCHEMA_COMPAT_READ_NEW )
-		) {
-			// We're going to want to use the page_actor_timestamp index (on revision_actor_temp)
-			// so use that table's denormalized fields.
-			$idField = 'revactor_rev';
-			$tsField = 'revactor_timestamp';
-			$pageField = 'revactor_page';
-		}
-
 		if ( $resultPageSet === null ) {
 			$this->parseParameters( $params );
 			$this->token = $params['token'];
@@ -160,15 +147,6 @@ class ApiQueryRevisions extends ApiQueryRevisionsBase {
 				$opts[] = 'user';
 			}
 			$revQuery = $revisionStore->getQueryInfo( $opts );
-
-			if ( $idField !== 'rev_id' ) {
-				$aliasFields = [ 'rev_id' => $idField, 'rev_timestamp' => $tsField, 'rev_page' => $pageField ];
-				$revQuery['fields'] = array_merge(
-					$aliasFields,
-					array_diff( $revQuery['fields'], array_keys( $aliasFields ) )
-				);
-			}
-
 			$this->addTables( $revQuery['tables'] );
 			$this->addFields( $revQuery['fields'] );
 			$this->addJoinConds( $revQuery['joins'] );
@@ -177,28 +155,34 @@ class ApiQueryRevisions extends ApiQueryRevisionsBase {
 			// Always join 'page' so orphaned revisions are filtered out
 			$this->addTables( [ 'revision', 'page' ] );
 			$this->addJoinConds(
-				[ 'page' => [ 'JOIN', [ 'page_id = rev_page' ] ] ]
+				[ 'page' => [ 'INNER JOIN', [ 'page_id = rev_page' ] ] ]
 			);
-			$this->addFields( [
-				'rev_id' => $idField, 'rev_timestamp' => $tsField, 'rev_page' => $pageField
-			] );
+			$this->addFields( [ 'rev_id', 'rev_timestamp', 'rev_page' ] );
 		}
 
 		if ( $this->fld_tags ) {
-			$this->addFields( [ 'ts_tags' => ChangeTags::makeTagSummarySubquery( 'revision' ) ] );
+			$this->addTables( 'tag_summary' );
+			$this->addJoinConds(
+				[ 'tag_summary' => [ 'LEFT JOIN', [ 'rev_id=ts_rev_id' ] ] ]
+			);
+			$this->addFields( 'ts_tags' );
 		}
 
 		if ( $params['tag'] !== null ) {
 			$this->addTables( 'change_tag' );
 			$this->addJoinConds(
-				[ 'change_tag' => [ 'JOIN', [ 'rev_id=ct_rev_id' ] ] ]
+				[ 'change_tag' => [ 'INNER JOIN', [ 'rev_id=ct_rev_id' ] ] ]
 			);
-			$changeTagDefStore = MediaWikiServices::getInstance()->getChangeTagDefStore();
-			try {
-				$this->addWhereFld( 'ct_tag_id', $changeTagDefStore->getId( $params['tag'] ) );
-			} catch ( NameTableAccessException $exception ) {
-				// Return nothing.
-				$this->addWhere( '1=0' );
+			if ( $wgChangeTagsSchemaMigrationStage > MIGRATION_WRITE_BOTH ) {
+				$changeTagDefStore = MediaWikiServices::getInstance()->getChangeTagDefStore();
+				try {
+					$this->addWhereFld( 'ct_tag_id', $changeTagDefStore->getId( $params['tag'] ) );
+				} catch ( NameTableAccessException $exception ) {
+					// Return nothing.
+					$this->addWhere( '1=0' );
+				}
+			} else {
+				$this->addWhereFld( 'ct_tag', $params['tag'] );
 			}
 		}
 
@@ -223,7 +207,6 @@ class ApiQueryRevisions extends ApiQueryRevisionsBase {
 		if ( $enumRevMode ) {
 			// Indexes targeted:
 			//  page_timestamp if we don't have rvuser
-			//  page_actor_timestamp (on revision_actor_temp) if we have rvuser in READ_NEW mode
 			//  page_user_timestamp if we have a logged-in rvuser
 			//  page_timestamp or usertext_timestamp if we have an IP rvuser
 
@@ -239,9 +222,9 @@ class ApiQueryRevisions extends ApiQueryRevisionsBase {
 				$continueTimestamp = $db->addQuotes( $db->timestamp( $cont[0] ) );
 				$continueId = (int)$cont[1];
 				$this->dieContinueUsageIf( $continueId != $cont[1] );
-				$this->addWhere( "$tsField $op $continueTimestamp OR " .
-					"($tsField = $continueTimestamp AND " .
-					"$idField $op= $continueId)"
+				$this->addWhere( "rev_timestamp $op $continueTimestamp OR " .
+					"(rev_timestamp = $continueTimestamp AND " .
+					"rev_id $op= $continueId)"
 				);
 			}
 
@@ -268,7 +251,7 @@ class ApiQueryRevisions extends ApiQueryRevisionsBase {
 						[ 'ar_rev_id' => $revids ],
 						__METHOD__
 					),
-				], $db::UNION_DISTINCT );
+				], false );
 				$res = $db->query( $sql, __METHOD__ );
 				foreach ( $res as $row ) {
 					if ( (int)$row->id === (int)$params['startid'] ) {
@@ -291,24 +274,24 @@ class ApiQueryRevisions extends ApiQueryRevisionsBase {
 					$op = ( $params['dir'] === 'newer' ? '>' : '<' );
 					$ts = $db->addQuotes( $db->timestampOrNull( $params['start'] ) );
 					if ( $params['startid'] !== null ) {
-						$this->addWhere( "$tsField $op $ts OR "
-							. "$tsField = $ts AND $idField $op= " . (int)$params['startid'] );
+						$this->addWhere( "rev_timestamp $op $ts OR "
+							. "rev_timestamp = $ts AND rev_id $op= " . intval( $params['startid'] ) );
 					} else {
-						$this->addWhere( "$tsField $op= $ts" );
+						$this->addWhere( "rev_timestamp $op= $ts" );
 					}
 				}
 				if ( $params['end'] !== null ) {
 					$op = ( $params['dir'] === 'newer' ? '<' : '>' ); // Yes, opposite of the above
 					$ts = $db->addQuotes( $db->timestampOrNull( $params['end'] ) );
 					if ( $params['endid'] !== null ) {
-						$this->addWhere( "$tsField $op $ts OR "
-							. "$tsField = $ts AND $idField $op= " . (int)$params['endid'] );
+						$this->addWhere( "rev_timestamp $op $ts OR "
+							. "rev_timestamp = $ts AND rev_id $op= " . intval( $params['endid'] ) );
 					} else {
-						$this->addWhere( "$tsField $op= $ts" );
+						$this->addWhere( "rev_timestamp $op= $ts" );
 					}
 				}
 			} else {
-				$this->addTimestampWhereRange( $tsField, $params['dir'],
+				$this->addTimestampWhereRange( 'rev_timestamp', $params['dir'],
 					$params['start'], $params['end'] );
 			}
 
@@ -317,7 +300,7 @@ class ApiQueryRevisions extends ApiQueryRevisionsBase {
 
 			// There is only one ID, use it
 			$ids = array_keys( $pageSet->getGoodTitles() );
-			$this->addWhereFld( $pageField, reset( $ids ) );
+			$this->addWhereFld( 'rev_page', reset( $ids ) );
 
 			if ( $params['user'] !== null ) {
 				$actorQuery = ActorMigration::newMigration()
@@ -354,7 +337,7 @@ class ApiQueryRevisions extends ApiQueryRevisionsBase {
 			$this->addWhereFld( 'rev_id', array_keys( $revs ) );
 
 			if ( $params['continue'] !== null ) {
-				$this->addWhere( 'rev_id >= ' . (int)$params['continue'] );
+				$this->addWhere( 'rev_id >= ' . intval( $params['continue'] ) );
 			}
 			$this->addOption( 'ORDER BY', 'rev_id' );
 		} elseif ( $pageCount > 0 ) {
@@ -374,8 +357,8 @@ class ApiQueryRevisions extends ApiQueryRevisionsBase {
 			if ( $params['continue'] !== null ) {
 				$cont = explode( '|', $params['continue'] );
 				$this->dieContinueUsageIf( count( $cont ) != 2 );
-				$pageid = (int)$cont[0];
-				$revid = (int)$cont[1];
+				$pageid = intval( $cont[0] );
+				$revid = intval( $cont[1] );
 				$this->addWhere(
 					"rev_page > $pageid OR " .
 					"(rev_page = $pageid AND " .
@@ -403,12 +386,12 @@ class ApiQueryRevisions extends ApiQueryRevisionsBase {
 				// additional pages to be had. Stop here...
 				if ( $enumRevMode ) {
 					$this->setContinueEnumParameter( 'continue',
-						$row->rev_timestamp . '|' . (int)$row->rev_id );
+						$row->rev_timestamp . '|' . intval( $row->rev_id ) );
 				} elseif ( $revCount > 0 ) {
-					$this->setContinueEnumParameter( 'continue', (int)$row->rev_id );
+					$this->setContinueEnumParameter( 'continue', intval( $row->rev_id ) );
 				} else {
-					$this->setContinueEnumParameter( 'continue', (int)$row->rev_page .
-						'|' . (int)$row->rev_id );
+					$this->setContinueEnumParameter( 'continue', intval( $row->rev_page ) .
+						'|' . intval( $row->rev_id ) );
 				}
 				break;
 			}
@@ -438,12 +421,12 @@ class ApiQueryRevisions extends ApiQueryRevisionsBase {
 				if ( !$fit ) {
 					if ( $enumRevMode ) {
 						$this->setContinueEnumParameter( 'continue',
-							$row->rev_timestamp . '|' . (int)$row->rev_id );
+							$row->rev_timestamp . '|' . intval( $row->rev_id ) );
 					} elseif ( $revCount > 0 ) {
-						$this->setContinueEnumParameter( 'continue', (int)$row->rev_id );
+						$this->setContinueEnumParameter( 'continue', intval( $row->rev_id ) );
 					} else {
-						$this->setContinueEnumParameter( 'continue', (int)$row->rev_page .
-							'|' . (int)$row->rev_id );
+						$this->setContinueEnumParameter( 'continue', intval( $row->rev_page ) .
+							'|' . intval( $row->rev_id ) );
 					}
 					break;
 				}

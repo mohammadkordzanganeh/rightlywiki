@@ -4,7 +4,7 @@
  * @covers PageDataRequestHandler
  * @group PageData
  */
-class PageDataRequestHandlerTest extends \MediaWikiLangTestCase {
+class PageDataRequestHandlerTest extends \MediaWikiTestCase {
 
 	/**
 	 * @var Title
@@ -19,10 +19,9 @@ class PageDataRequestHandlerTest extends \MediaWikiLangTestCase {
 	protected function setUp() {
 		parent::setUp();
 
-		$this->interfaceTitle = Title::newFromText( __CLASS__ );
-		$this->obLevel = ob_get_level();
+		$this->interfaceTitle = Title::newFromText( "Special:PageDataRequestHandlerTest" );
 
-		$this->setMwGlobals( 'wgArticlePath', '/wiki/$1' );
+		$this->obLevel = ob_get_level();
 	}
 
 	protected function tearDown() {
@@ -45,7 +44,7 @@ class PageDataRequestHandlerTest extends \MediaWikiLangTestCase {
 	 * @return PageDataRequestHandler
 	 */
 	protected function newHandler() {
-		return new PageDataRequestHandler();
+		return new PageDataRequestHandler( 'json' );
 	}
 
 	/**
@@ -77,16 +76,9 @@ class PageDataRequestHandlerTest extends \MediaWikiLangTestCase {
 	public function handleRequestProvider() {
 		$cases = [];
 
-		$cases[] = [ '', [], [], 'Invalid title', 400 ];
+		$cases[] = [ '', [], [], '!!', 400 ];
 
-		$cases[] = [
-			'',
-			[ 'target' => 'Helsinki' ],
-			[],
-			'',
-			303,
-			[ 'Location' => '?title=Helsinki&action=raw' ]
-		];
+		$cases[] = [ '', [ 'target' => 'Helsinki' ], [], '!!', 303,  [ 'Location' => '!.+!' ] ];
 
 		$subpageCases = [];
 		foreach ( $cases as $c ) {
@@ -107,9 +99,9 @@ class PageDataRequestHandlerTest extends \MediaWikiLangTestCase {
 			'',
 			[ 'target' => 'Helsinki' ],
 			[ 'Accept' => 'text/HTML' ],
-			'',
+			'!!',
 			303,
-			[ 'Location' => '/wiki/Helsinki' ]
+			[ 'Location' => '!Helsinki$!' ]
 		];
 
 		$cases[] = [
@@ -119,18 +111,18 @@ class PageDataRequestHandlerTest extends \MediaWikiLangTestCase {
 				'revision' => '4242',
 			],
 			[ 'Accept' => 'text/HTML' ],
-			'',
+			'!!',
 			303,
-			[ 'Location' => '?title=Helsinki&oldid=4242' ]
+			[ 'Location' => '!Helsinki(\?|&)oldid=4242!' ]
 		];
 
 		$cases[] = [
 			'/Helsinki',
 			[],
 			[],
-			'',
+			'!!',
 			303,
-			[ 'Location' => '?title=Helsinki&action=raw' ]
+			[ 'Location' => '!Helsinki&action=raw!' ]
 		];
 
 		// #31: /Q5 with "Accept: text/foobar" triggers a 406
@@ -138,59 +130,36 @@ class PageDataRequestHandlerTest extends \MediaWikiLangTestCase {
 			'main/Helsinki',
 			[],
 			[ 'Accept' => 'text/foobar' ],
-			'No matching format found',
+			'!!',
 			406,
-		];
-
-		$cases[] = [
-			'no slash',
 			[],
-			[ 'Accept' => 'text/HTML' ],
-			'Invalid title',
-			400,
-		];
-
-		$cases[] = [
-			'main',
-			[],
-			[ 'Accept' => 'text/HTML' ],
-			'Invalid title',
-			400,
-		];
-
-		$cases[] = [
-			'xyz/Helsinki',
-			[],
-			[ 'Accept' => 'text/HTML' ],
-			'Invalid title',
-			400,
 		];
 
 		$cases[] = [
 			'main/Helsinki',
 			[],
 			[ 'Accept' => 'text/HTML' ],
-			'',
+			'!!',
 			303,
-			[ 'Location' => '/wiki/Helsinki' ]
+			[ 'Location' => '!Helsinki$!' ]
 		];
 
 		$cases[] = [
 			'/Helsinki',
 			[],
 			[ 'Accept' => 'text/HTML' ],
-			'',
+			'!!',
 			303,
-			[ 'Location' => '/wiki/Helsinki' ]
+			[ 'Location' => '!Helsinki$!' ]
 		];
 
 		$cases[] = [
 			'main/AC/DC',
 			[],
 			[ 'Accept' => 'text/HTML' ],
-			'',
+			'!!',
 			303,
-			[ 'Location' => '/wiki/AC/DC' ]
+			[ 'Location' => '!AC/DC$!' ]
 		];
 
 		return $cases;
@@ -202,7 +171,7 @@ class PageDataRequestHandlerTest extends \MediaWikiLangTestCase {
 	 * @param string $subpage The subpage to request (or '')
 	 * @param array  $params  Request parameters
 	 * @param array  $headers  Request headers
-	 * @param string $expectedOutput
+	 * @param string $expectedOutput Regex to match the output against.
 	 * @param int $expectedStatusCode Expected HTTP status code.
 	 * @param string[] $expectedHeaders Expected HTTP response headers.
 	 */
@@ -210,7 +179,7 @@ class PageDataRequestHandlerTest extends \MediaWikiLangTestCase {
 		$subpage,
 		array $params,
 		array $headers,
-		$expectedOutput = '',
+		$expectedOutput,
 		$expectedStatusCode = 200,
 		array $expectedHeaders = []
 	) {
@@ -232,21 +201,22 @@ class PageDataRequestHandlerTest extends \MediaWikiLangTestCase {
 				$output->output();
 			}
 
-			$text = ob_get_clean();
+			$text = ob_get_contents();
+			ob_end_clean();
 
 			$this->assertEquals( $expectedStatusCode, $response->getStatusCode(), 'status code' );
-			$this->assertSame( $expectedOutput, $text, 'output' );
+			$this->assertRegExp( $expectedOutput, $text, 'output' );
 
 			foreach ( $expectedHeaders as $name => $exp ) {
 				$value = $response->getHeader( $name );
 				$this->assertNotNull( $value, "header: $name" );
 				$this->assertInternalType( 'string', $value, "header: $name" );
-				$this->assertStringEndsWith( $exp, $value, "header: $name" );
+				$this->assertRegExp( $exp, $value, "header: $name" );
 			}
 		} catch ( HttpError $e ) {
 			ob_end_clean();
 			$this->assertEquals( $expectedStatusCode, $e->getStatusCode(), 'status code' );
-			$this->assertContains( $expectedOutput, $e->getHTML(), 'error output' );
+			$this->assertRegExp( $expectedOutput, $e->getHTML(), 'error output' );
 		}
 
 		// We always set "Access-Control-Allow-Origin: *"

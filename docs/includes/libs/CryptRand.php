@@ -46,7 +46,6 @@ class CryptRand {
 	 * @return string
 	 */
 	protected function initialRandomState() {
-		wfDeprecated( __METHOD__, '1.32' );
 		return '';
 	}
 
@@ -60,7 +59,6 @@ class CryptRand {
 	 * @author Tim Starling
 	 */
 	protected function driftHash( $data ) {
-		wfDeprecated( __METHOD__, '1.32' );
 		return '';
 	}
 
@@ -72,7 +70,6 @@ class CryptRand {
 	 * @return string A new weak random state
 	 */
 	protected function randomState() {
-		wfDeprecated( __METHOD__, '1.32' );
 		return '';
 	}
 
@@ -86,7 +83,6 @@ class CryptRand {
 	 * @return bool Always true
 	 */
 	public function wasStrong() {
-		wfDeprecated( __METHOD__, '1.32' );
 		return true;
 	}
 
@@ -100,7 +96,6 @@ class CryptRand {
 	 * @return string Raw binary random data
 	 */
 	public function generate( $bytes ) {
-		wfDeprecated( __METHOD__, '1.32' );
 		$bytes = floor( $bytes );
 		return random_bytes( $bytes );
 	}
@@ -113,7 +108,6 @@ class CryptRand {
 	 * @return string Hexadecimal random data
 	 */
 	public function generateHex( $chars ) {
-		wfDeprecated( __METHOD__, '1.32' );
 		return MWCryptRand::generateHex( $chars );
 	}
 }

@@ -22,7 +22,7 @@ class HTMLInfoField extends HTMLFormField {
 	public function getDefault() {
 		$default = parent::getDefault();
 		if ( $default instanceof Closure ) {
-			$default = $default( $this->mParams );
+			$default = call_user_func( $default, $this->mParams );
 		}
 		return $default;
 	}

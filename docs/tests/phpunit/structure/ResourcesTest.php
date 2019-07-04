@@ -1,11 +1,8 @@
 <?php
-
-use MediaWiki\MediaWikiServices;
-use Wikimedia\TestingAccessWrapper;
-
 /**
  * Sanity checks for making sure registered resources are sane.
  *
+ * @file
  * @author Antoine Musso
  * @author Niklas Laxström
  * @author Santhosh Thottingal
@@ -155,7 +152,7 @@ class ResourcesTest extends MediaWikiTestCase {
 		$css = file_get_contents( $basepath . 'comments.css' );
 		$files = CSSMin::getLocalFileReferences( $css, $basepath );
 		$expected = [ $basepath . 'not-commented.gif' ];
-		$this->assertSame(
+		$this->assertArrayEquals(
 			$expected,
 			$files,
 			'Url(...) expression in comment should be omitted.'
@@ -174,8 +171,8 @@ class ResourcesTest extends MediaWikiTestCase {
 		$org_wgEnableJavaScriptTest = $wgEnableJavaScriptTest;
 		$wgEnableJavaScriptTest = true;
 
-		// Get main ResourceLoader
-		$rl = MediaWikiServices::getInstance()->getResourceLoader();
+		// Initialize ResourceLoader
+		$rl = new ResourceLoader();
 
 		$modules = [];
 
@@ -246,6 +243,9 @@ class ResourcesTest extends MediaWikiTestCase {
 	/**
 	 * Get all resource files from modules that are an instance of
 	 * ResourceLoaderFileModule (or one of its subclasses).
+	 *
+	 * Since the raw data is stored in protected properties, we have to
+	 * overrride this through ReflectionObject methods.
 	 */
 	public static function provideResourceFiles() {
 		$data = self::getAllModules();
@@ -273,12 +273,14 @@ class ResourcesTest extends MediaWikiTestCase {
 				continue;
 			}
 
-			$moduleProxy = TestingAccessWrapper::newFromObject( $module );
+			$reflectedModule = new ReflectionObject( $module );
 
 			$files = [];
 
 			foreach ( $filePathProps['lists'] as $propName ) {
-				$list = $moduleProxy->$propName;
+				$property = $reflectedModule->getProperty( $propName );
+				$property->setAccessible( true );
+				$list = $property->getValue( $module );
 				foreach ( $list as $key => $value ) {
 					// 'scripts' are numeral arrays.
 					// 'styles' can be numeral or associative.
@@ -293,7 +295,9 @@ class ResourcesTest extends MediaWikiTestCase {
 			}
 
 			foreach ( $filePathProps['nested-lists'] as $propName ) {
-				$lists = $moduleProxy->$propName;
+				$property = $reflectedModule->getProperty( $propName );
+				$property->setAccessible( true );
+				$lists = $property->getValue( $module );
 				foreach ( $lists as $list ) {
 					foreach ( $list as $key => $value ) {
 						// We need the same filter as for 'lists',
@@ -307,23 +311,29 @@ class ResourcesTest extends MediaWikiTestCase {
 				}
 			}
 
+			// Get method for resolving the paths to full paths
+			$method = $reflectedModule->getMethod( 'getLocalPath' );
+			$method->setAccessible( true );
+
 			// Populate cases
 			foreach ( $files as $file ) {
 				$cases[] = [
-					$moduleProxy->getLocalPath( $file ),
+					$method->invoke( $module, $file ),
 					$moduleName,
 					( $file instanceof ResourceLoaderFilePath ? $file->getPath() : $file ),
 				];
 			}
 
 			// To populate missingLocalFileRefs. Not sure how sane this is inside this test...
-			$moduleProxy->readStyleFiles(
+			$module->readStyleFiles(
 				$module->getStyleFiles( $data['context'] ),
 				$module->getFlip( $data['context'] ),
 				$data['context']
 			);
 
-			$missingLocalFileRefs = $moduleProxy->missingLocalFileRefs;
+			$property = $reflectedModule->getProperty( 'missingLocalFileRefs' );
+			$property->setAccessible( true );
+			$missingLocalFileRefs = $property->getValue( $module );
 
 			foreach ( $missingLocalFileRefs as $file ) {
 				$cases[] = [

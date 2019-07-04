@@ -27,7 +27,7 @@ trait IconElement {
 
 	/**
 	 * @param array $config Configuration options
-	 *      - string $config['icon'] Symbolic icon name
+	 * @param string $config['icon'] Symbolic icon name
 	 */
 	public function initializeIconElement( array $config = [] ) {
 		// Properties

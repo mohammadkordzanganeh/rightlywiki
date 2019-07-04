@@ -15,7 +15,7 @@
  * along with MediaViewer.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-( function () {
+( function ( mw, $ ) {
 	var EFFP;
 
 	/**
@@ -38,9 +38,7 @@
 	/**
 	 * Returns the caption of the image (possibly a fallback generated from image metadata).
 	 *
-	 * @param {Object} info
-	 * @param {mw.mmv.model.Image} info.imageInfo
-	 * @param {string} [info.caption]
+	 * @param {mw.mmv.model.EmbedFileInfo} info
 	 * @return {string}
 	 */
 	EFFP.getCaption = function ( info ) {
@@ -73,8 +71,7 @@
 	/**
 	 * Helper function to generate thumbnail wikicode
 	 *
-	 * @param {Object} info
-	 * @param {mw.mmv.model.Image} info.imageInfo
+	 * @param {mw.mmv.model.EmbedFileInfo} info
 	 * @param {number} [width]
 	 * @return {string}
 	 */
@@ -120,8 +117,7 @@
 	/**
 	 * Generates the plain text embed code for the image credit line.
 	 *
-	 * @param {Object} info
-	 * @param {mw.mmv.model.Image} info.imageInfo
+	 * @param {mw.mmv.model.EmbedFileInfo} info
 	 * @return {string}
 	 */
 	EFFP.getCreditText = function ( info ) {
@@ -161,8 +157,7 @@
 	/**
 	 * Generates the HTML embed code for the image credit line.
 	 *
-	 * @param {Object} info
-	 * @param {mw.mmv.model.Image} info.imageInfo
+	 * @param {mw.mmv.model.EmbedFileInfo} info
 	 * @return {string}
 	 */
 	EFFP.getCreditHtml = function ( info ) {
@@ -198,8 +193,7 @@
 	/**
 	 * Returns HTML code for a link to the site of the image.
 	 *
-	 * @param {Object} info
-	 * @param {mw.mmv.model.Image} info.imageInfo
+	 * @param {mw.mmv.model.EmbedFileInfo} info
 	 * @return {string}
 	 */
 	EFFP.getSiteLink = function ( info ) {
@@ -218,8 +212,7 @@
 	/**
 	 * Generates the HTML embed code for the image.
 	 *
-	 * @param {Object} info
-	 * @param {mw.mmv.model.Image} info.imageInfo
+	 * @param {mw.mmv.model.EmbedFileInfo} info
 	 * @param {string} imgUrl URL to the file itself.
 	 * @param {number} [width] Width to put into the image element.
 	 * @param {number} [height] Height to put into the image element.
@@ -246,8 +239,7 @@
 	/**
 	 * Generate a link which we will be using for sharing stuff.
 	 *
-	 * @param {Object} info
-	 * @param {mw.mmv.model.Image} info.imageInfo
+	 * @param {mw.mmv.model.EmbedFileInfo} info
 	 * @return {string} URL
 	 */
 	EFFP.getLinkUrl = function ( info ) {
@@ -256,4 +248,4 @@
 	};
 
 	mw.mmv.EmbedFileFormatter = EmbedFileFormatter;
-}() );
+}( mediaWiki, jQuery ) );

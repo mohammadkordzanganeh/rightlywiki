@@ -74,13 +74,13 @@ class ApiQueryPrefixSearch extends ApiQueryGeneratorBase {
 			$count = 0;
 			foreach ( $titles as $title ) {
 				$vals = [
-					'ns' => (int)$title->getNamespace(),
+					'ns' => intval( $title->getNamespace() ),
 					'title' => $title->getPrefixedText(),
 				];
 				if ( $title->isSpecialPage() ) {
 					$vals['special'] = true;
 				} else {
-					$vals['pageid'] = (int)$title->getArticleID();
+					$vals['pageid'] = intval( $title->getArticleID() );
 				}
 				$fit = $result->addValue( [ 'query', $this->getModuleName() ], null, $vals );
 				++$count;

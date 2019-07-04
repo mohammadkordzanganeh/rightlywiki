@@ -39,7 +39,7 @@ class UnusedCategoriesPage extends QueryPage {
 
 	public function getQueryInfo() {
 		return [
-			'tables' => [ 'page', 'categorylinks', 'page_props' ],
+			'tables' => [ 'page', 'categorylinks' ],
 			'fields' => [
 				'namespace' => 'page_namespace',
 				'title' => 'page_title',
@@ -48,16 +48,9 @@ class UnusedCategoriesPage extends QueryPage {
 			'conds' => [
 				'cl_from IS NULL',
 				'page_namespace' => NS_CATEGORY,
-				'page_is_redirect' => 0,
-				'pp_page IS NULL'
+				'page_is_redirect' => 0
 			],
-			'join_conds' => [
-				'categorylinks' => [ 'LEFT JOIN', 'cl_to = page_title' ],
-				'page_props' => [ 'LEFT JOIN', [
-					'page_id = pp_page',
-					'pp_propname' => 'expectunusedcategory'
-				] ]
-			]
+			'join_conds' => [ 'categorylinks' => [ 'LEFT JOIN', 'cl_to = page_title' ] ]
 		];
 	}
 

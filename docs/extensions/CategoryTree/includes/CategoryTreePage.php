@@ -22,8 +22,6 @@
  * @author Daniel Kinzler, brightbyte.de
  */
 
-use MediaWiki\MediaWikiServices;
-
 /**
  * Special page for the CategoryTree extension, an AJAX based gadget
  * to display the category structure of a wiki
@@ -199,11 +197,9 @@ class CategoryTreePage extends SpecialPage {
 			// No prefix suggestion outside of category namespace
 			return [];
 		}
-		$searchEngine = MediaWikiServices::getInstance()->newSearchEngine();
-		$searchEngine->setLimitOffset( $limit, $offset );
 		// Autocomplete subpage the same as a normal search, but just for categories
-		$searchEngine->setNamespaces( [ NS_CATEGORY ] );
-		$result = $searchEngine->defaultPrefixSearch( $search );
+		$prefixSearcher = new TitlePrefixSearch;
+		$result = $prefixSearcher->search( $title->getPrefixedText(), $limit, [ NS_CATEGORY ], $offset );
 
 		return array_map( function ( Title $t ) {
 			// Remove namespace in search suggestion
@@ -211,9 +207,6 @@ class CategoryTreePage extends SpecialPage {
 		}, $result );
 	}
 
-	/**
-	 * @inheritDoc
-	 */
 	protected function getGroupName() {
 		return 'pages';
 	}

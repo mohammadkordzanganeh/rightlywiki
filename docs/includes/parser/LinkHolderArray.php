@@ -275,7 +275,6 @@ class LinkHolderArray {
 
 	/**
 	 * Replace internal links
-	 * @suppress SecurityCheck-XSS Gets confused with $entry['pdbk']
 	 * @param string &$text
 	 */
 	protected function replaceInternal( &$text ) {
@@ -419,7 +418,6 @@ class LinkHolderArray {
 	/**
 	 * Replace interwiki links
 	 * @param string &$text
-	 * @suppress SecurityCheck-XSS Gets confused with $this->interwikis['pdbk']
 	 */
 	protected function replaceInterwiki( &$text ) {
 		if ( empty( $this->interwikis ) ) {
@@ -632,7 +630,8 @@ class LinkHolderArray {
 	 * @private
 	 */
 	public function replaceTextCallback( $matches ) {
-		list( , $type, $key ) = $matches;
+		$type = $matches[1];
+		$key = $matches[2];
 		if ( $type == 'LINK' ) {
 			list( $ns, $index ) = explode( ':', $key, 2 );
 			if ( isset( $this->internals[$ns][$index]['text'] ) ) {

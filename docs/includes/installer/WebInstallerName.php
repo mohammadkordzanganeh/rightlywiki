@@ -28,8 +28,10 @@ class WebInstallerName extends WebInstallerPage {
 	 */
 	public function execute() {
 		$r = $this->parent->request;
-		if ( $r->wasPosted() && $this->submit() ) {
-			return 'continue';
+		if ( $r->wasPosted() ) {
+			if ( $this->submit() ) {
+				return 'continue';
+			}
 		}
 
 		$this->startForm();

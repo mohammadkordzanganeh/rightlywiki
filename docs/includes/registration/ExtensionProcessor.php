@@ -46,7 +46,6 @@ class ExtensionProcessor implements Processor {
 		'PasswordPolicy',
 		'RateLimits',
 		'RawHtmlMessages',
-		'ReauthenticateTime',
 		'RecentChangesFlags',
 		'RemoveCredentialsBlacklist',
 		'RemoveGroups',
@@ -107,7 +106,7 @@ class ExtensionProcessor implements Processor {
 	];
 
 	/**
-	 * Things that are not 'attributes', and are not in
+	 * Things that are not 'attributes', but are not in
 	 * $globalSettings or $creditsAttributes.
 	 *
 	 * @var array
@@ -119,7 +118,6 @@ class ExtensionProcessor implements Processor {
 		'ResourceFileModulePaths',
 		'ResourceModules',
 		'ResourceModuleSkinStyles',
-		'QUnitTestModule',
 		'ExtensionMessagesFiles',
 		'MessagesDirs',
 		'type',
@@ -189,6 +187,7 @@ class ExtensionProcessor implements Processor {
 	 * @param string $path
 	 * @param array $info
 	 * @param int $version manifest_version for info
+	 * @return array
 	 */
 	public function extractInfo( $path, array $info, $version ) {
 		$dir = dirname( $path );
@@ -394,19 +393,6 @@ class ExtensionProcessor implements Processor {
 				}
 			}
 		}
-
-		if ( isset( $info['QUnitTestModule'] ) ) {
-			$data = $info['QUnitTestModule'];
-			if ( isset( $data['localBasePath'] ) ) {
-				if ( $data['localBasePath'] === '' ) {
-					// Avoid double slashes (e.g. /extensions/Example//path)
-					$data['localBasePath'] = $dir;
-				} else {
-					$data['localBasePath'] = "$dir/{$data['localBasePath']}";
-				}
-			}
-			$this->attributes['QUnitTestModules']["test.{$info['name']}"] = $data;
-		}
 	}
 
 	protected function extractExtensionMessagesFiles( $dir, array $info ) {
@@ -498,7 +484,11 @@ class ExtensionProcessor implements Processor {
 	 * @param string $dir
 	 */
 	protected function extractConfig2( array $info, $dir ) {
-		$prefix = $info['config_prefix'] ?? 'wg';
+		if ( isset( $info['config_prefix'] ) ) {
+			$prefix = $info['config_prefix'];
+		} else {
+			$prefix = 'wg';
+		}
 		if ( isset( $info['config'] ) ) {
 			foreach ( $info['config'] as $key => $data ) {
 				$value = $data['value'];

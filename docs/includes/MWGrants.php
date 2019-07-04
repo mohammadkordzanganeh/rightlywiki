@@ -86,8 +86,10 @@ class MWGrants {
 	 * @return string[] Corresponding grant descriptions
 	 */
 	public static function grantNames( array $grants, $lang = null ) {
-		if ( $lang !== null && is_string( $lang ) ) {
-			$lang = Language::factory( $lang );
+		if ( $lang !== null ) {
+			if ( is_string( $lang ) ) {
+				$lang = Language::factory( $lang );
+			}
 		}
 
 		$ret = [];

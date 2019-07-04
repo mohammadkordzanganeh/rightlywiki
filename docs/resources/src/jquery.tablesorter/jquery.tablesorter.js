@@ -59,40 +59,33 @@
 		return false;
 	}
 
-	/**
-	 * @param {HTMLElement} node
-	 * @return {string}
-	 */
 	function getElementSortKey( node ) {
-		// Get data-sort-value attribute. Uses jQuery to allow live value
-		// changes from other code paths via data(), which reside only in jQuery.
-		// Must use $().data() instead of $.data(), as the latter *only*
-		// accesses the live values, without reading HTML5 attribs first (T40152).
-		var data = $( node ).data( 'sortValue' );
+		var $node = $( node ),
+			// Use data-sort-value attribute.
+			// Use data() instead of attr() so that live value changes
+			// are processed as well (T40152).
+			data = $node.data( 'sortValue' );
 
 		if ( data !== null && data !== undefined ) {
 			// Cast any numbers or other stuff to a string, methods
 			// like charAt, toLowerCase and split are expected.
 			return String( data );
 		}
-		if ( node.tagName.toLowerCase() === 'img' ) {
-			return node.alt;
+		if ( !node ) {
+			return $node.text();
 		}
-		// Iterate the NodeList (not an array).
-		// Also uses null-return as filter in the same pass.
-		// eslint-disable-next-line no-jquery/no-map-util
-		return $.map( node.childNodes, function ( elem ) {
+		if ( node.tagName.toLowerCase() === 'img' ) {
+			return $node.attr( 'alt' ) || ''; // handle undefined alt
+		}
+		return $.makeArray( node.childNodes ).map( function ( elem ) {
 			if ( elem.nodeType === Node.ELEMENT_NODE ) {
 				if ( $( elem ).hasClass( 'reference' ) ) {
 					return null;
+				} else {
+					return getElementSortKey( elem );
 				}
-				return getElementSortKey( elem );
 			}
-			if ( elem.nodeType === Node.TEXT_NODE ) {
-				return elem.textContent;
-			}
-			// Ignore other node types, such as HTML comments.
-			return null;
+			return $.text( elem );
 		} ).join( '' );
 	}
 
@@ -331,7 +324,7 @@
 
 			// Loop through all the dom cells of the thead
 			$tableRows.each( function ( rowIndex, row ) {
-				// eslint-disable-next-line no-jquery/no-each-util
+				// eslint-disable-next-line no-restricted-properties
 				$.each( row.cells, function ( columnIndex, cell ) {
 					var matrixRowIndex,
 						matrixColumnIndex;
@@ -438,8 +431,7 @@
 		headerToColumns.forEach( function ( columns, headerIndex ) {
 
 			columns.forEach( function ( columnIndex, i ) {
-				var j, sortColumn,
-					header = $headers[ headerIndex ],
+				var header = $headers[ headerIndex ],
 					$header = $( header );
 
 				if ( !isValueInArray( columnIndex, sortList ) ) {
@@ -450,16 +442,15 @@
 					} );
 				} else {
 					// Column shall be sorted: Apply designated count and order.
-					for ( j = 0; j < sortList.length; j++ ) {
-						sortColumn = sortList[ j ];
+					sortList.forEach( function ( sortColumn ) {
 						if ( sortColumn[ 0 ] === i ) {
 							$header.data( {
 								order: sortColumn[ 1 ],
 								count: sortColumn[ 1 ] + 1
 							} );
-							break;
+							return false;
 						}
-					}
+					} );
 				}
 			} );
 
@@ -469,7 +460,7 @@
 	function setHeadersCss( table, $headers, list, css, msg, columnToHeader ) {
 		var i, len;
 		// Remove all header information and reset titles to default message
-		$headers.removeClass( css ).attr( 'title', msg[ 1 ] );
+		$headers.removeClass( css[ 0 ] ).removeClass( css[ 1 ] ).attr( 'title', msg[ 1 ] );
 
 		for ( i = 0, len = list.length; i < len; i++ ) {
 			$headers
@@ -780,7 +771,7 @@
 	function convertSortList( sortObjects ) {
 		var sortList = [];
 		sortObjects.forEach( function ( sortObject ) {
-			// eslint-disable-next-line no-jquery/no-each-util
+			// eslint-disable-next-line no-restricted-properties
 			$.each( sortObject, function ( columnIndex, order ) {
 				var orderIndex = ( order === 'desc' ) ? 1 : 0;
 				sortList.push( [ parseInt( columnIndex, 10 ), orderIndex ] );
@@ -823,10 +814,6 @@
 					$table = $( table ),
 					firstTime = true;
 
-				// Don't construct twice on the same table
-				if ( $.data( table, 'tablesorter' ) ) {
-					return;
-				}
 				// Quit if no tbody
 				if ( !table.tBodies ) {
 					return;
@@ -990,7 +977,7 @@
 					}
 
 				// Cancel selection
-				} ).on( 'mousedown', function () {
+				} ).mousedown( function () {
 					if ( config.cancelSelection ) {
 						this.onselectstart = function () {
 							return false;

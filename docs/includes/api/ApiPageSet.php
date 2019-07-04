@@ -760,7 +760,7 @@ class ApiPageSet extends ApiBase {
 		$linkCache = MediaWikiServices::getInstance()->getLinkCache();
 		$linkCache->addGoodLinkObjFromRow( $title, $row );
 
-		$pageId = (int)$row->page_id;
+		$pageId = intval( $row->page_id );
 		$this->mAllPages[$row->page_namespace][$row->page_title] = $pageId;
 		$this->mTitles[] = $title;
 
@@ -819,9 +819,8 @@ class ApiPageSet extends ApiBase {
 	/**
 	 * Does the same as initFromTitles(), but is based on page IDs instead
 	 * @param array $pageids Array of page IDs
-	 * @param bool $filterIds Whether the IDs need filtering
 	 */
-	private function initFromPageIds( $pageids, $filterIds = true ) {
+	private function initFromPageIds( $pageids ) {
 		if ( !$pageids ) {
 			return;
 		}
@@ -829,9 +828,7 @@ class ApiPageSet extends ApiBase {
 		$pageids = array_map( 'intval', $pageids ); // paranoia
 		$remaining = array_flip( $pageids );
 
-		if ( $filterIds ) {
-			$pageids = $this->filterIDs( [ [ 'page', 'page_id' ] ], $pageids );
-		}
+		$pageids = self::getPositiveIntegers( $pageids );
 
 		$res = null;
 		if ( !empty( $pageids ) ) {
@@ -869,7 +866,7 @@ class ApiPageSet extends ApiBase {
 		$usernames = [];
 		if ( $res ) {
 			foreach ( $res as $row ) {
-				$pageId = (int)$row->page_id;
+				$pageId = intval( $row->page_id );
 
 				// Remove found page from the list of remaining items
 				if ( isset( $remaining ) ) {
@@ -942,10 +939,9 @@ class ApiPageSet extends ApiBase {
 		$pageids = [];
 		$remaining = array_flip( $revids );
 
-		$revids = $this->filterIDs( [ [ 'revision', 'rev_id' ], [ 'archive', 'ar_rev_id' ] ], $revids );
-		$goodRemaining = array_flip( $revids );
+		$revids = self::getPositiveIntegers( $revids );
 
-		if ( $revids ) {
+		if ( !empty( $revids ) ) {
 			$tables = [ 'revision', 'page' ];
 			$fields = [ 'rev_id', 'rev_page' ];
 			$where = [ 'rev_id' => $revids, 'rev_page = page_id' ];
@@ -953,31 +949,33 @@ class ApiPageSet extends ApiBase {
 			// Get pageIDs data from the `page` table
 			$res = $db->select( $tables, $fields, $where, __METHOD__ );
 			foreach ( $res as $row ) {
-				$revid = (int)$row->rev_id;
-				$pageid = (int)$row->rev_page;
+				$revid = intval( $row->rev_id );
+				$pageid = intval( $row->rev_page );
 				$this->mGoodRevIDs[$revid] = $pageid;
 				$this->mLiveRevIDs[$revid] = $pageid;
 				$pageids[$pageid] = '';
 				unset( $remaining[$revid] );
-				unset( $goodRemaining[$revid] );
 			}
 		}
 
+		$this->mMissingRevIDs = array_keys( $remaining );
+
 		// Populate all the page information
-		$this->initFromPageIds( array_keys( $pageids ), false );
+		$this->initFromPageIds( array_keys( $pageids ) );
 
 		// If the user can see deleted revisions, pull out the corresponding
 		// titles from the archive table and include them too. We ignore
 		// ar_page_id because deleted revisions are tied by title, not page_id.
-		if ( $goodRemaining && $this->getUser()->isAllowed( 'deletedhistory' ) ) {
+		if ( !empty( $this->mMissingRevIDs ) && $this->getUser()->isAllowed( 'deletedhistory' ) ) {
+			$remaining = array_flip( $this->mMissingRevIDs );
 			$tables = [ 'archive' ];
 			$fields = [ 'ar_rev_id', 'ar_namespace', 'ar_title' ];
-			$where = [ 'ar_rev_id' => array_keys( $goodRemaining ) ];
+			$where = [ 'ar_rev_id' => $this->mMissingRevIDs ];
 
 			$res = $db->select( $tables, $fields, $where, __METHOD__ );
 			$titles = [];
 			foreach ( $res as $row ) {
-				$revid = (int)$row->ar_rev_id;
+				$revid = intval( $row->ar_rev_id );
 				$titles[$revid] = Title::makeTitle( $row->ar_namespace, $row->ar_title );
 				unset( $remaining[$revid] );
 			}
@@ -1004,9 +1002,9 @@ class ApiPageSet extends ApiBase {
 					$remaining[$revid] = true;
 				}
 			}
-		}
 
-		$this->mMissingRevIDs = array_keys( $remaining );
+			$this->mMissingRevIDs = array_keys( $remaining );
+		}
 	}
 
 	/**
@@ -1068,7 +1066,7 @@ class ApiPageSet extends ApiBase {
 					__METHOD__
 				);
 			foreach ( $res as $row ) {
-				$rdfrom = (int)$row->rd_from;
+				$rdfrom = intval( $row->rd_from );
 				$from = $this->mPendingRedirectIDs[$rdfrom]->getPrefixedText();
 				$to = Title::makeTitle(
 					$row->rd_namespace,
@@ -1398,10 +1396,10 @@ class ApiPageSet extends ApiBase {
 						$data[$toPageId],
 						$this->mGeneratorData[$fromNs][$fromDBkey]
 					);
-					if ( $result instanceof ApiResult &&
-						!$result->addValue( $path, $toPageId, $data[$toPageId], ApiResult::OVERRIDE )
-					) {
-						return false;
+					if ( $result instanceof ApiResult ) {
+						if ( !$result->addValue( $path, $toPageId, $data[$toPageId], ApiResult::OVERRIDE ) ) {
+							return false;
+						}
 					}
 				}
 			}
@@ -1416,6 +1414,25 @@ class ApiPageSet extends ApiBase {
 	 */
 	protected function getDB() {
 		return $this->mDbSource->getDB();
+	}
+
+	/**
+	 * Returns the input array of integers with all values < 0 removed
+	 *
+	 * @param array $array
+	 * @return array
+	 */
+	private static function getPositiveIntegers( $array ) {
+		// T27734 API: possible issue with revids validation
+		// It seems with a load of revision rows, MySQL gets upset
+		// Remove any < 0 integers, as they can't be valid
+		foreach ( $array as $i => $int ) {
+			if ( $int < 0 ) {
+				unset( $array[$i] );
+			}
+		}
+
+		return $array;
 	}
 
 	public function getAllowedParams( $flags = 0 ) {

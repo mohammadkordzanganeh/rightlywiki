@@ -98,7 +98,7 @@ abstract class QuorumLockManager extends LockManager {
 						$bucket = $this->getBucketFromPath( $path );
 						$pathsToUnlock[$bucket][$type][] = $path;
 					}
-					if ( $this->locksHeld[$path] === [] ) {
+					if ( !count( $this->locksHeld[$path] ) ) {
 						unset( $this->locksHeld[$path] ); // no SH or EX locks left for key
 					}
 				}
@@ -110,7 +110,7 @@ abstract class QuorumLockManager extends LockManager {
 		foreach ( $pathsToUnlock as $bucket => $pathsToUnlockByType ) {
 			$status->merge( $this->doUnlockingRequestBucket( $bucket, $pathsToUnlockByType ) );
 		}
-		if ( $this->locksHeld === [] ) {
+		if ( !count( $this->locksHeld ) ) {
 			$status->merge( $this->releaseAllLocks() );
 			$this->degradedBuckets = []; // safe to retry the normal quorum
 		}

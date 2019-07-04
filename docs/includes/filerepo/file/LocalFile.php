@@ -634,6 +634,7 @@ class LocalFile extends File {
 		}
 
 		$this->fileExists = true;
+		$this->maybeUpgradeRow();
 	}
 
 	/**
@@ -658,7 +659,7 @@ class LocalFile extends File {
 	/**
 	 * Upgrade a row if it needs it
 	 */
-	protected function maybeUpgradeRow() {
+	function maybeUpgradeRow() {
 		global $wgUpdateCompatibleMetadata;
 
 		if ( wfReadOnly() || $this->upgrading ) {
@@ -705,7 +706,7 @@ class LocalFile extends File {
 	 * Fix assorted version-related problems with the image row by reloading it from the file
 	 */
 	function upgradeRow() {
-		$this->lock();
+		$this->lock(); // begin
 
 		$this->loadFromFile();
 
@@ -745,7 +746,7 @@ class LocalFile extends File {
 
 		$this->invalidateCache();
 
-		$this->unlock();
+		$this->unlock(); // done
 		$this->upgraded = true; // avoid rework/retries
 	}
 
@@ -796,14 +797,11 @@ class LocalFile extends File {
 	/** isVisible inherited */
 
 	/**
-	 * Checks if this file exists in its parent repo, as referenced by its
-	 * virtual URL.
-	 *
 	 * @return bool
 	 */
 	function isMissing() {
 		if ( $this->missing === null ) {
-			$fileExists = $this->repo->fileExists( $this->getVirtualUrl() );
+			list( $fileExists ) = $this->repo->fileExists( $this->getVirtualUrl() );
 			$this->missing = !$fileExists;
 		}
 
@@ -1030,7 +1028,6 @@ class LocalFile extends File {
 	 */
 	function purgeCache( $options = [] ) {
 		// Refresh metadata cache
-		$this->maybeUpgradeRow();
 		$this->purgeMetadataCache();
 
 		// Delete thumbnails
@@ -1245,7 +1242,7 @@ class LocalFile extends File {
 				$fileQuery['joins']
 			);
 
-			if ( $dbr->numRows( $this->historyRes ) == 0 ) {
+			if ( 0 == $dbr->numRows( $this->historyRes ) ) {
 				$this->historyRes = null;
 
 				return false;
@@ -1306,13 +1303,12 @@ class LocalFile extends File {
 	 *   (This doesn't check $user's permissions.)
 	 * @param bool $createNullRevision Set to false to avoid creation of a null revision on file
 	 *   upload, see T193621
-	 * @param bool $revert If this file upload is a revert
 	 * @return Status On success, the value member contains the
 	 *     archive name, or an empty string if it was a new file.
 	 */
 	function upload( $src, $comment, $pageText, $flags = 0, $props = false,
 		$timestamp = false, $user = null, $tags = [],
-		$createNullRevision = true, $revert = false
+		$createNullRevision = true
 	) {
 		if ( $this->getRepo()->getReadOnlyReason() !== false ) {
 			return $this->readOnlyFatalStatus();
@@ -1324,7 +1320,7 @@ class LocalFile extends File {
 
 		$srcPath = ( $src instanceof FSFile ) ? $src->getPath() : $src;
 		if ( !$props ) {
-			if ( FileRepo::isVirtualUrl( $srcPath )
+			if ( $this->repo->isVirtualUrl( $srcPath )
 				|| FileBackend::isStoragePath( $srcPath )
 			) {
 				$props = $this->repo->getFileProps( $srcPath );
@@ -1351,7 +1347,7 @@ class LocalFile extends File {
 		// Trim spaces on user supplied text
 		$comment = trim( $comment );
 
-		$this->lock();
+		$this->lock(); // begin
 		$status = $this->publish( $src, $flags, $options );
 
 		if ( $status->successCount >= 2 ) {
@@ -1370,8 +1366,7 @@ class LocalFile extends File {
 				$timestamp,
 				$user,
 				$tags,
-				$createNullRevision,
-				$revert
+				$createNullRevision
 			);
 			if ( !$uploadStatus->isOK() ) {
 				if ( $uploadStatus->hasMessage( 'filenotfound' ) ) {
@@ -1383,7 +1378,8 @@ class LocalFile extends File {
 			}
 		}
 
-		$this->unlock();
+		$this->unlock(); // done
+
 		return $status;
 	}
 
@@ -1430,14 +1426,13 @@ class LocalFile extends File {
 	 * @param string[] $tags
 	 * @param bool $createNullRevision Set to false to avoid creation of a null revision on file
 	 *   upload, see T193621
-	 * @param bool $revert If this file upload is a revert
 	 * @return Status
 	 */
 	function recordUpload2(
 		$oldver, $comment, $pageText, $props = false, $timestamp = false, $user = null, $tags = [],
-		$createNullRevision = true, $revert = false
+		$createNullRevision = true
 	) {
-		global $wgActorTableSchemaMigrationStage;
+		global $wgCommentTableSchemaMigrationStage, $wgActorTableSchemaMigrationStage;
 
 		if ( is_null( $user ) ) {
 			global $wgUser;
@@ -1534,7 +1529,6 @@ class LocalFile extends File {
 				'oi_width' => 'img_width',
 				'oi_height' => 'img_height',
 				'oi_bits' => 'img_bits',
-				'oi_description_id' => 'img_description_id',
 				'oi_timestamp' => 'img_timestamp',
 				'oi_metadata' => 'img_metadata',
 				'oi_media_type' => 'img_media_type',
@@ -1543,6 +1537,39 @@ class LocalFile extends File {
 				'oi_sha1' => 'img_sha1',
 			];
 			$joins = [];
+
+			if ( $wgCommentTableSchemaMigrationStage <= MIGRATION_WRITE_BOTH ) {
+				$fields['oi_description'] = 'img_description';
+			}
+			if ( $wgCommentTableSchemaMigrationStage >= MIGRATION_WRITE_BOTH ) {
+				$fields['oi_description_id'] = 'img_description_id';
+			}
+
+			if ( $wgCommentTableSchemaMigrationStage !== MIGRATION_OLD &&
+				$wgCommentTableSchemaMigrationStage !== MIGRATION_NEW
+			) {
+				// Upgrade any rows that are still old-style. Otherwise an upgrade
+				// might be missed if a deletion happens while the migration script
+				// is running.
+				$res = $dbw->select(
+					[ 'image' ],
+					[ 'img_name', 'img_description' ],
+					[
+						'img_name' => $this->getName(),
+						'img_description_id' => 0,
+					],
+					__METHOD__
+				);
+				foreach ( $res as $row ) {
+					$imgFields = $commentStore->insert( $dbw, 'img_description', $row->img_description );
+					$dbw->update(
+						'image',
+						$imgFields,
+						[ 'img_name' => $row->img_name ],
+						__METHOD__
+					);
+				}
+			}
 
 			if ( $wgActorTableSchemaMigrationStage & SCHEMA_COMPAT_WRITE_OLD ) {
 				$fields['oi_user'] = 'img_user';
@@ -1608,16 +1635,8 @@ class LocalFile extends File {
 		$wikiPage = new WikiFilePage( $descTitle );
 		$wikiPage->setFile( $this );
 
-		// Determine log action. If reupload is done by reverting, use a special log_action.
-		if ( $revert === true ) {
-			$logAction = 'revert';
-		} elseif ( $reupload === true ) {
-			$logAction = 'overwrite';
-		} else {
-			$logAction = 'upload';
-		}
 		// Add the log entry...
-		$logEntry = new ManualLogEntry( 'upload', $logAction );
+		$logEntry = new ManualLogEntry( 'upload', $reupload ? 'overwrite' : 'upload' );
 		$logEntry->setTimestamp( $this->timestamp );
 		$logEntry->setPerformer( $user );
 		$logEntry->setComment( $comment );
@@ -1839,18 +1858,13 @@ class LocalFile extends File {
 			return $this->readOnlyFatalStatus();
 		}
 
-		$this->lock();
+		$this->lock(); // begin
 
-		if ( $this->isOld() ) {
-			$archiveRel = $dstRel;
-			$archiveName = basename( $archiveRel );
-		} else {
-			$archiveName = wfTimestamp( TS_MW ) . '!' . $this->getName();
-			$archiveRel = $this->getArchiveRel( $archiveName );
-		}
+		$archiveName = wfTimestamp( TS_MW ) . '!' . $this->getName();
+		$archiveRel = 'archive/' . $this->getHashPath() . $archiveName;
 
 		if ( $repo->hasSha1Storage() ) {
-			$sha1 = FileRepo::isVirtualUrl( $srcPath )
+			$sha1 = $repo->isVirtualUrl( $srcPath )
 				? $repo->getFileSha1( $srcPath )
 				: FSFile::getSha1Base36FromPath( $srcPath );
 			/** @var FileBackendDBRepoWrapper $wrapperBackend */
@@ -1875,7 +1889,8 @@ class LocalFile extends File {
 			}
 		}
 
-		$this->unlock();
+		$this->unlock(); // done
+
 		return $status;
 	}
 
@@ -1904,11 +1919,11 @@ class LocalFile extends File {
 		wfDebugLog( 'imagemove', "Got request to move {$this->name} to " . $target->getText() );
 		$batch = new LocalFileMoveBatch( $this, $target );
 
-		$this->lock();
+		$this->lock(); // begin
 		$batch->addCurrent();
 		$archiveNames = $batch->addOlds();
 		$status = $batch->execute();
-		$this->unlock();
+		$this->unlock(); // done
 
 		wfDebugLog( 'imagemove', "Finished moving {$this->name}" );
 
@@ -1962,12 +1977,12 @@ class LocalFile extends File {
 
 		$batch = new LocalFileDeleteBatch( $this, $reason, $suppress, $user );
 
-		$this->lock();
+		$this->lock(); // begin
 		$batch->addCurrent();
 		// Get old version relative paths
 		$archiveNames = $batch->addOlds();
 		$status = $batch->execute();
-		$this->unlock();
+		$this->unlock(); // done
 
 		if ( $status->isOK() ) {
 			DeferredUpdates::addUpdate( SiteStatsUpdate::factory( [ 'images' => -1 ] ) );
@@ -2020,10 +2035,10 @@ class LocalFile extends File {
 
 		$batch = new LocalFileDeleteBatch( $this, $reason, $suppress, $user );
 
-		$this->lock();
+		$this->lock(); // begin
 		$batch->addOld( $archiveName );
 		$status = $batch->execute();
-		$this->unlock();
+		$this->unlock(); // done
 
 		$this->purgeOldThumbnails( $archiveName );
 		if ( $status->isOK() ) {
@@ -2056,7 +2071,7 @@ class LocalFile extends File {
 
 		$batch = new LocalFileRestoreBatch( $this, $unsuppress );
 
-		$this->lock();
+		$this->lock(); // begin
 		if ( !$versions ) {
 			$batch->addAll();
 		} else {
@@ -2069,8 +2084,8 @@ class LocalFile extends File {
 			$cleanupStatus->failCount = 0;
 			$status->merge( $cleanupStatus );
 		}
+		$this->unlock(); // done
 
-		$this->unlock();
 		return $status;
 	}
 
@@ -2167,7 +2182,7 @@ class LocalFile extends File {
 		$this->load();
 		// Initialise now if necessary
 		if ( $this->sha1 == '' && $this->fileExists ) {
-			$this->lock();
+			$this->lock(); // begin
 
 			$this->sha1 = $this->repo->getFileSha1( $this->getPath() );
 			if ( !wfReadOnly() && strval( $this->sha1 ) != '' ) {
@@ -2179,7 +2194,7 @@ class LocalFile extends File {
 				$this->invalidateCache();
 			}
 
-			$this->unlock();
+			$this->unlock(); // done
 		}
 
 		return $this->sha1;
@@ -2457,7 +2472,7 @@ class LocalFileDeleteBatch {
 	}
 
 	protected function doDBInserts() {
-		global $wgActorTableSchemaMigrationStage;
+		global $wgCommentTableSchemaMigrationStage, $wgActorTableSchemaMigrationStage;
 
 		$now = time();
 		$dbw = $this->file->repo->getMasterDB();
@@ -2502,7 +2517,6 @@ class LocalFileDeleteBatch {
 				'fa_media_type' => 'img_media_type',
 				'fa_major_mime' => 'img_major_mime',
 				'fa_minor_mime' => 'img_minor_mime',
-				'fa_description_id' => 'img_description_id',
 				'fa_timestamp' => 'img_timestamp',
 				'fa_sha1' => 'img_sha1'
 			];
@@ -2512,6 +2526,39 @@ class LocalFileDeleteBatch {
 				[ $dbw, 'addQuotes' ],
 				$commentStore->insert( $dbw, 'fa_deleted_reason', $this->reason )
 			);
+
+			if ( $wgCommentTableSchemaMigrationStage <= MIGRATION_WRITE_BOTH ) {
+				$fields['fa_description'] = 'img_description';
+			}
+			if ( $wgCommentTableSchemaMigrationStage >= MIGRATION_WRITE_BOTH ) {
+				$fields['fa_description_id'] = 'img_description_id';
+			}
+
+			if ( $wgCommentTableSchemaMigrationStage !== MIGRATION_OLD &&
+				$wgCommentTableSchemaMigrationStage !== MIGRATION_NEW
+			) {
+				// Upgrade any rows that are still old-style. Otherwise an upgrade
+				// might be missed if a deletion happens while the migration script
+				// is running.
+				$res = $dbw->select(
+					[ 'image' ],
+					[ 'img_name', 'img_description' ],
+					[
+						'img_name' => $this->file->getName(),
+						'img_description_id' => 0,
+					],
+					__METHOD__
+				);
+				foreach ( $res as $row ) {
+					$imgFields = $commentStore->insert( $dbw, 'img_description', $row->img_description );
+					$dbw->update(
+						'image',
+						$imgFields,
+						[ 'img_name' => $row->img_name ],
+						__METHOD__
+					);
+				}
+			}
 
 			if ( $wgActorTableSchemaMigrationStage & SCHEMA_COMPAT_WRITE_OLD ) {
 				$fields['fa_user'] = 'img_user';
@@ -3215,7 +3262,7 @@ class LocalFileMoveBatch {
 		$status = $repo->newGood();
 		$destFile = wfLocalFile( $this->target );
 
-		$this->file->lock();
+		$this->file->lock(); // begin
 		$destFile->lock(); // quickly fail if destination is not available
 
 		$triplets = $this->getMoveTriplets();
@@ -3266,7 +3313,7 @@ class LocalFileMoveBatch {
 			"{$statusDb->successCount} successes, {$statusDb->failCount} failures" );
 
 		$destFile->unlock();
-		$this->file->unlock();
+		$this->file->unlock(); // done
 
 		// Everything went ok, remove the source files
 		$this->cleanupSource( $triplets );

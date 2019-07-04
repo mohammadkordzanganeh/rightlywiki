@@ -1,6 +1,23 @@
 <?php
+/**
+ * This file host two test case classes for the MediaWiki FormOptions class:
+ *  - FormOptionsInitializationTest : tests initialization of the class.
+ *  - FormOptionsTest : tests methods an on instance
+ *
+ * The split let us take advantage of setting up a fixture for the methods
+ * tests.
+ */
 
-use Wikimedia\TestingAccessWrapper;
+/**
+ * Dummy class to makes FormOptions::$options public.
+ * Used by FormOptionsInitializationTest which need to verify the $options
+ * array is correctly set through the FormOptions::add() function.
+ */
+class FormOptionsExposed extends FormOptions {
+	public function getOptions() {
+		return $this->options;
+	}
+}
 
 /**
  * Test class for FormOptions initialization
@@ -22,11 +39,11 @@ class FormOptionsInitializationTest extends MediaWikiTestCase {
 	 */
 	protected function setUp() {
 		parent::setUp();
-		$this->object = TestingAccessWrapper::newFromObject( new FormOptions() );
+		$this->object = new FormOptionsExposed();
 	}
 
 	/**
-	 * @covers FormOptions::add
+	 * @covers FormOptionsExposed::add
 	 */
 	public function testAddStringOption() {
 		$this->object->add( 'foo', 'string value' );
@@ -39,12 +56,12 @@ class FormOptionsInitializationTest extends MediaWikiTestCase {
 					'value' => null,
 				]
 			],
-			$this->object->options
+			$this->object->getOptions()
 		);
 	}
 
 	/**
-	 * @covers FormOptions::add
+	 * @covers FormOptionsExposed::add
 	 */
 	public function testAddIntegers() {
 		$this->object->add( 'one', 1 );
@@ -64,7 +81,7 @@ class FormOptionsInitializationTest extends MediaWikiTestCase {
 					'type' => FormOptions::INT,
 				]
 			],
-			$this->object->options
+			$this->object->getOptions()
 		);
 	}
 }

@@ -1792,6 +1792,7 @@ hidepatrolled
 hideredirects
 hiderevision
 hideuser
+hidpi
 highlimit
 highmax
 highuse
@@ -2425,6 +2426,7 @@ mkdir
 mms
 mobile
 mobileformat
+mobilelanding
 mobileview
 modified
 modifiedarticleprotection
@@ -3304,6 +3306,7 @@ qvalues
 rabdiff
 radic
 radius
+raggett
 raii
 raimond
 random

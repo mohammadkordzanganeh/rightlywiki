@@ -85,7 +85,7 @@ class ApiQueryTags extends ApiQueryBase {
 			}
 
 			if ( $fld_hitcount ) {
-				$tag['hitcount'] = (int)$tagHitcounts[$tagName];
+				$tag['hitcount'] = intval( $tagHitcounts[$tagName] );
 			}
 
 			$isSoftware = isset( $softwareDefinedTags[$tagName] );

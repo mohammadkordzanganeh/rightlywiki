@@ -14,14 +14,8 @@
 		"destructive": {
 			"color": "#d33"
 		},
-		"error": {
-			"color": "#d33"
-		},
 		"warning": {
-			"color": "#fc3"
-		},
-		"success": {
-			"color": "#14866d"
+			"color": "#ff5d00"
 		}
 	},
 	"images": {

@@ -52,15 +52,15 @@ class CleanupSpam extends Maintenance {
 		// Hack: Grant bot rights so we don't flood RecentChanges
 		$wgUser->addGroup( 'bot' );
 
-		$spec = $this->getArg( 0 );
+		$spec = $this->getArg();
 
-		$protConds = [];
+		$likes = [];
 		foreach ( [ 'http://', 'https://' ] as $prot ) {
-			$conds = LinkFilter::getQueryConditions( $spec, [ 'protocol' => $prot ] );
-			if ( !$conds ) {
+			$like = LinkFilter::makeLikeArray( $spec, $prot );
+			if ( !$like ) {
 				$this->fatalError( "Not a valid hostname specification: $spec" );
 			}
-			$protConds[$prot] = $conds;
+			$likes[$prot] = $like;
 		}
 
 		if ( $this->hasOption( 'all' ) ) {
@@ -71,11 +71,11 @@ class CleanupSpam extends Maintenance {
 				/** @var $dbr Database */
 				$dbr = $this->getDB( DB_REPLICA, [], $wikiID );
 
-				foreach ( $protConds as $conds ) {
+				foreach ( $likes as $like ) {
 					$count = $dbr->selectField(
 						'externallinks',
 						'COUNT(*)',
-						$conds,
+						[ 'el_index' . $dbr->buildLike( $like ) ],
 						__METHOD__
 					);
 					if ( $count ) {
@@ -99,11 +99,11 @@ class CleanupSpam extends Maintenance {
 			$count = 0;
 			/** @var $dbr Database */
 			$dbr = $this->getDB( DB_REPLICA );
-			foreach ( $protConds as $prot => $conds ) {
+			foreach ( $likes as $prot => $like ) {
 				$res = $dbr->select(
 					'externallinks',
 					[ 'DISTINCT el_from' ],
-					$conds,
+					[ 'el_index' . $dbr->buildLike( $like ) ],
 					__METHOD__
 				);
 				$count = $dbr->numRows( $res );

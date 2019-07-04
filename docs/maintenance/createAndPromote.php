@@ -66,7 +66,7 @@ class CreateAndPromote extends Maintenance {
 			$this->fatalError( "invalid username." );
 		}
 
-		$exists = ( $user->idForName() !== 0 );
+		$exists = ( 0 !== $user->idForName() );
 
 		if ( $exists && !$force ) {
 			$this->fatalError( "Account exists. Perhaps you want the --force option?" );
@@ -112,16 +112,9 @@ class CreateAndPromote extends Maintenance {
 		}
 
 		if ( !$exists ) {
-			// Create the user via AuthManager as there may be various side
-			// effects that are perfomed by the configured AuthManager chain.
-			$status = MediaWiki\Auth\AuthManager::singleton()->autoCreateUser(
-				$user,
-				MediaWiki\Auth\AuthManager::AUTOCREATE_SOURCE_MAINT,
-				false
-			);
-			if ( !$status->isGood() ) {
-				$this->fatalError( $status->getWikiText( null, null, 'en' ) );
-			}
+			# Insert the account into the database
+			$user->addToDatabase();
+			$user->saveSettings();
 		}
 
 		if ( $password ) {

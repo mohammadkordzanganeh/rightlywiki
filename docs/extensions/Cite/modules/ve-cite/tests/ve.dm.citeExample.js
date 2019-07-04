@@ -26,10 +26,7 @@ ve.dm.citeExample.refListItemClipboard = function ( text ) {
 ve.dm.citeExample.domToDataCases = {
 	'mw:Reference': {
 		// Wikitext:
-		// Foo<ref name="bar" /> Baz<ref group="g1" name=":0">Quux</ref> Whee<ref name="bar">[[Bar]]
-		// </ref> Yay<ref group="g1">No name</ref> Quux<ref name="bar">Different content</ref> Foo
-		// <ref group="g1" name="foo" />
-		//
+		// Foo<ref name="bar" /> Baz<ref group="g1" name=":0">Quux</ref> Whee<ref name="bar">[[Bar]]</ref> Yay<ref group="g1">No name</ref> Quux<ref name="bar">Different content</ref> Foo<ref group="g1" name="foo" />
 		// <references group="g1"><ref group="g1" name="foo">Ref in refs</ref></references>
 		body:
 			'<p>Foo' +
@@ -288,7 +285,8 @@ ve.dm.citeExample.domToDataCases = {
 						title: 'Bar',
 						origTitle: 'Bar',
 						normalizedTitle: 'Bar',
-						lookupTitle: 'Bar'
+						lookupTitle: 'Bar',
+						hrefPrefix: './'
 					}
 				} ]
 			],
@@ -300,7 +298,8 @@ ve.dm.citeExample.domToDataCases = {
 						title: 'Bar',
 						origTitle: 'Bar',
 						normalizedTitle: 'Bar',
-						lookupTitle: 'Bar'
+						lookupTitle: 'Bar',
+						hrefPrefix: './'
 					}
 				} ]
 			],
@@ -312,7 +311,8 @@ ve.dm.citeExample.domToDataCases = {
 						title: 'Bar',
 						origTitle: 'Bar',
 						normalizedTitle: 'Bar',
-						lookupTitle: 'Bar'
+						lookupTitle: 'Bar',
+						hrefPrefix: './'
 					}
 				} ]
 			],

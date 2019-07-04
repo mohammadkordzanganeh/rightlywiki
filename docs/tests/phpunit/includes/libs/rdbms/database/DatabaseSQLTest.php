@@ -311,8 +311,8 @@ class DatabaseSQLTest extends PHPUnit\Framework\TestCase {
 	/**
 	 * @covers Wikimedia\Rdbms\Subquery
 	 * @dataProvider provideSelectRowCount
-	 * @param array $sql
-	 * @param string $sqlText
+	 * @param $sql
+	 * @param $sqlText
 	 */
 	public function testSelectRowCount( $sql, $sqlText ) {
 		$this->database->selectRowCount(
@@ -740,10 +740,6 @@ class DatabaseSQLTest extends PHPUnit\Framework\TestCase {
 		];
 	}
 
-	/**
-	 * @covers Wikimedia\Rdbms\Database::insertSelect
-	 * @covers Wikimedia\Rdbms\Database::nativeInsertSelect
-	 */
 	public function testInsertSelectBatching() {
 		$dbWeb = new DatabaseTestHelper( __CLASS__, [ 'cliMode' => false ] );
 		$rows = [];
@@ -1343,7 +1339,7 @@ class DatabaseSQLTest extends PHPUnit\Framework\TestCase {
 	}
 
 	/**
-	 * @covers Wikimedia\Rdbms\Database::registerTempTableWrite
+	 * @covers Wikimedia\Rdbms\Database::registerTempTableOperation
 	 */
 	public function testSessionTempTables() {
 		$temp1 = $this->database->tableName( 'tmp_table_1' );
@@ -1853,7 +1849,7 @@ class DatabaseSQLTest extends PHPUnit\Framework\TestCase {
 		} catch ( DBUnexpectedError $ex ) {
 			$this->assertSame(
 				'Invalid atomic section ended (got ' . __METHOD__ . ' but expected ' .
-					__METHOD__ . 'X).',
+					__METHOD__ . 'X' . ').',
 				$ex->getMessage()
 			);
 		}
@@ -1878,7 +1874,6 @@ class DatabaseSQLTest extends PHPUnit\Framework\TestCase {
 
 	/**
 	 * @expectedException \Wikimedia\Rdbms\DBTransactionStateError
-	 * @covers \Wikimedia\Rdbms\Database::assertTransactionStatus
 	 */
 	public function testTransactionErrorState1() {
 		$wrapper = TestingAccessWrapper::newFromObject( $this->database );

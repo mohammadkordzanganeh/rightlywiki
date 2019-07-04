@@ -8,6 +8,7 @@ use InvalidArgumentException;
  * Helper class to handle automatically marking connections as reusable (via RAII pattern)
  * as well handling deferring the actual network connection until the handle is used
  *
+ * @note: proxy methods are defined explicitly to avoid interface errors
  * @ingroup Database
  * @since 1.22
  */
@@ -18,8 +19,6 @@ class DBConnRef implements IDatabase {
 	private $conn;
 	/** @var array|null N-tuple of (server index, group, DatabaseDomain|string) */
 	private $params;
-	/** @var int One of DB_MASTER/DB_REPLICA */
-	private $role;
 
 	const FLD_INDEX = 0;
 	const FLD_GROUP = 1;
@@ -28,13 +27,10 @@ class DBConnRef implements IDatabase {
 
 	/**
 	 * @param ILoadBalancer $lb Connection manager for $conn
-	 * @param Database|array $conn Database or (server index, query groups, domain, flags)
-	 * @param int $role The type of connection asked for; one of DB_MASTER/DB_REPLICA
-	 * @internal This method should not be called outside of LoadBalancer
+	 * @param Database|array $conn Database handle or (server index, query groups, domain, flags)
 	 */
-	public function __construct( ILoadBalancer $lb, $conn, $role ) {
+	public function __construct( ILoadBalancer $lb, $conn ) {
 		$this->lb = $lb;
-		$this->role = $role;
 		if ( $conn instanceof Database ) {
 			$this->conn = $conn; // live handle
 		} elseif ( is_array( $conn ) && count( $conn ) >= 4 && $conn[self::FLD_DOMAIN] !== false ) {
@@ -51,14 +47,6 @@ class DBConnRef implements IDatabase {
 		}
 
 		return $this->conn->$name( ...$arguments );
-	}
-
-	/**
-	 * @return int DB_MASTER when this *requires* the master DB, otherwise DB_REPLICA
-	 * @since 1.33
-	 */
-	public function getReferenceRole() {
-		return $this->role;
 	}
 
 	public function getServerInfo() {
@@ -86,29 +74,11 @@ class DBConnRef implements IDatabase {
 	}
 
 	public function tablePrefix( $prefix = null ) {
-		if ( $this->conn === null && $prefix === null ) {
-			$domain = DatabaseDomain::newFromId( $this->params[self::FLD_DOMAIN] );
-			// Avoid triggering a database connection
-			return $domain->getTablePrefix();
-		} elseif ( $this->conn !== null && $prefix === null ) {
-			// This will just return the prefix
-			return $this->__call( __FUNCTION__, func_get_args() );
-		}
-		// Disallow things that might confuse the LoadBalancer tracking
-		throw new DBUnexpectedError( $this, "Database selection is disallowed to enable reuse." );
+		return $this->__call( __FUNCTION__, func_get_args() );
 	}
 
 	public function dbSchema( $schema = null ) {
-		if ( $this->conn === null && $schema === null ) {
-			$domain = DatabaseDomain::newFromId( $this->params[self::FLD_DOMAIN] );
-			// Avoid triggering a database connection
-			return $domain->getSchema();
-		} elseif ( $this->conn !== null && $schema === null ) {
-			// This will just return the schema
-			return $this->__call( __FUNCTION__, func_get_args() );
-		}
-		// Disallow things that might confuse the LoadBalancer tracking
-		throw new DBUnexpectedError( $this, "Database selection is disallowed to enable reuse." );
+		return $this->__call( __FUNCTION__, func_get_args() );
 	}
 
 	public function getLBInfo( $name = null ) {
@@ -116,13 +86,11 @@ class DBConnRef implements IDatabase {
 	}
 
 	public function setLBInfo( $name, $value = null ) {
-		// Disallow things that might confuse the LoadBalancer tracking
-		throw new DBUnexpectedError( $this, "Changing LB info is disallowed to enable reuse." );
+		return $this->__call( __FUNCTION__, func_get_args() );
 	}
 
 	public function setLazyMasterHandle( IDatabase $conn ) {
-		// Disallow things that might confuse the LoadBalancer tracking
-		throw new DBUnexpectedError( $this, "Database injection is disallowed to enable reuse." );
+		return $this->__call( __FUNCTION__, func_get_args() );
 	}
 
 	public function implicitGroupby() {
@@ -263,15 +231,11 @@ class DBConnRef implements IDatabase {
 	}
 
 	public function close() {
-		throw new DBUnexpectedError( $this->conn, 'Cannot close shared connection.' );
+		return $this->__call( __FUNCTION__, func_get_args() );
 	}
 
-	public function query( $sql, $fname = __METHOD__, $flags = 0 ) {
-		if ( $this->role !== ILoadBalancer::DB_MASTER ) {
-			$flags |= IDatabase::QUERY_REPLICA_ROLE;
-		}
-
-		return $this->__call( __FUNCTION__, [ $sql, $fname, $flags ] );
+	public function query( $sql, $fname = __METHOD__, $tempIgnore = false ) {
+		return $this->__call( __FUNCTION__, func_get_args() );
 	}
 
 	public function freeResult( $res ) {
@@ -326,8 +290,6 @@ class DBConnRef implements IDatabase {
 	public function lockForUpdate(
 		$table, $conds = '', $fname = __METHOD__, $options = [], $join_conds = []
 	) {
-		$this->assertRoleAllowsWrites();
-
 		return $this->__call( __FUNCTION__, func_get_args() );
 	}
 
@@ -344,14 +306,10 @@ class DBConnRef implements IDatabase {
 	}
 
 	public function insert( $table, $a, $fname = __METHOD__, $options = [] ) {
-		$this->assertRoleAllowsWrites();
-
 		return $this->__call( __FUNCTION__, func_get_args() );
 	}
 
 	public function update( $table, $values, $conds, $fname = __METHOD__, $options = [] ) {
-		$this->assertRoleAllowsWrites();
-
 		return $this->__call( __FUNCTION__, func_get_args() );
 	}
 
@@ -423,12 +381,6 @@ class DBConnRef implements IDatabase {
 	}
 
 	public function getDBname() {
-		if ( $this->conn === null ) {
-			$domain = DatabaseDomain::newFromId( $this->params[self::FLD_DOMAIN] );
-			// Avoid triggering a database connection
-			return $domain->getDatabase();
-		}
-
 		return $this->__call( __FUNCTION__, func_get_args() );
 	}
 
@@ -437,10 +389,6 @@ class DBConnRef implements IDatabase {
 	}
 
 	public function addQuotes( $s ) {
-		return $this->__call( __FUNCTION__, func_get_args() );
-	}
-
-	public function addIdentifierQuotes( $s ) {
 		return $this->__call( __FUNCTION__, func_get_args() );
 	}
 
@@ -457,36 +405,26 @@ class DBConnRef implements IDatabase {
 	}
 
 	public function nextSequenceValue( $seqName ) {
-		$this->assertRoleAllowsWrites();
-
 		return $this->__call( __FUNCTION__, func_get_args() );
 	}
 
 	public function replace( $table, $uniqueIndexes, $rows, $fname = __METHOD__ ) {
-		$this->assertRoleAllowsWrites();
-
 		return $this->__call( __FUNCTION__, func_get_args() );
 	}
 
 	public function upsert(
-		$table, array $rows, $uniqueIndexes, array $set, $fname = __METHOD__
+		$table, array $rows, array $uniqueIndexes, array $set, $fname = __METHOD__
 	) {
-		$this->assertRoleAllowsWrites();
-
 		return $this->__call( __FUNCTION__, func_get_args() );
 	}
 
 	public function deleteJoin(
 		$delTable, $joinTable, $delVar, $joinVar, $conds, $fname = __METHOD__
 	) {
-		$this->assertRoleAllowsWrites();
-
 		return $this->__call( __FUNCTION__, func_get_args() );
 	}
 
 	public function delete( $table, $conds, $fname = __METHOD__ ) {
-		$this->assertRoleAllowsWrites();
-
 		return $this->__call( __FUNCTION__, func_get_args() );
 	}
 
@@ -494,8 +432,6 @@ class DBConnRef implements IDatabase {
 		$destTable, $srcTable, $varMap, $conds,
 		$fname = __METHOD__, $insertOptions = [], $selectOptions = [], $selectJoinConds = []
 	) {
-		$this->assertRoleAllowsWrites();
-
 		return $this->__call( __FUNCTION__, func_get_args() );
 	}
 
@@ -563,21 +499,18 @@ class DBConnRef implements IDatabase {
 	}
 
 	public function onTransactionResolution( callable $callback, $fname = __METHOD__ ) {
-		// DB_REPLICA role: caller might want to refresh cache after a REPEATABLE-READ snapshot
 		return $this->__call( __FUNCTION__, func_get_args() );
 	}
 
 	public function onTransactionCommitOrIdle( callable $callback, $fname = __METHOD__ ) {
-		// DB_REPLICA role: caller might want to refresh cache after a REPEATABLE-READ snapshot
 		return $this->__call( __FUNCTION__, func_get_args() );
 	}
 
 	public function onTransactionIdle( callable $callback, $fname = __METHOD__ ) {
-		return $this->onTransactionCommitOrIdle( $callback, $fname );
+		return $this->__call( __FUNCTION__, func_get_args() );
 	}
 
 	public function onTransactionPreCommitOrIdle( callable $callback, $fname = __METHOD__ ) {
-		// DB_REPLICA role: caller might want to refresh cache after a cache mutex is released
 		return $this->__call( __FUNCTION__, func_get_args() );
 	}
 
@@ -588,24 +521,20 @@ class DBConnRef implements IDatabase {
 	public function startAtomic(
 		$fname = __METHOD__, $cancelable = IDatabase::ATOMIC_NOT_CANCELABLE
 	) {
-		// Don't call assertRoleAllowsWrites(); caller might want a REPEATABLE-READ snapshot
 		return $this->__call( __FUNCTION__, func_get_args() );
 	}
 
 	public function endAtomic( $fname = __METHOD__ ) {
-		// Don't call assertRoleAllowsWrites(); caller might want a REPEATABLE-READ snapshot
 		return $this->__call( __FUNCTION__, func_get_args() );
 	}
 
 	public function cancelAtomic( $fname = __METHOD__, AtomicSectionIdentifier $sectionId = null ) {
-		// Don't call assertRoleAllowsWrites(); caller might want a REPEATABLE-READ snapshot
 		return $this->__call( __FUNCTION__, func_get_args() );
 	}
 
 	public function doAtomicSection(
 		$fname, callable $callback, $cancelable = self::ATOMIC_NOT_CANCELABLE
 	) {
-		// Don't call assertRoleAllowsWrites(); caller might want a REPEATABLE-READ snapshot
 		return $this->__call( __FUNCTION__, func_get_args() );
 	}
 
@@ -668,26 +597,18 @@ class DBConnRef implements IDatabase {
 	}
 
 	public function lockIsFree( $lockName, $method ) {
-		$this->assertRoleAllowsWrites();
-
 		return $this->__call( __FUNCTION__, func_get_args() );
 	}
 
 	public function lock( $lockName, $method, $timeout = 5 ) {
-		$this->assertRoleAllowsWrites();
-
 		return $this->__call( __FUNCTION__, func_get_args() );
 	}
 
 	public function unlock( $lockName, $method ) {
-		$this->assertRoleAllowsWrites();
-
 		return $this->__call( __FUNCTION__, func_get_args() );
 	}
 
 	public function getScopedLockAndFlush( $lockKey, $fname, $timeout ) {
-		$this->assertRoleAllowsWrites();
-
 		return $this->__call( __FUNCTION__, func_get_args() );
 	}
 
@@ -721,26 +642,6 @@ class DBConnRef implements IDatabase {
 
 	public function setIndexAliases( array $aliases ) {
 		return $this->__call( __FUNCTION__, func_get_args() );
-	}
-
-	/**
-	 * Error out if the role is not DB_MASTER
-	 *
-	 * Note that the underlying connection may or may not itself be read-only.
-	 * It could even be to a writable master (both server-side and to the application).
-	 * This error is meant for the case when a DB_REPLICA handle was requested but a
-	 * a write was attempted on that handle regardless.
-	 *
-	 * In configurations where the master DB has some generic read load or is the only server,
-	 * DB_MASTER/DB_REPLICA will sometimes (or always) use the same connection to the master DB.
-	 * This does not effect the role of DBConnRef instances.
-	 * @throws DBReadOnlyRoleError
-	 */
-	protected function assertRoleAllowsWrites() {
-		// DB_MASTER is "prima facie" writable
-		if ( $this->role !== ILoadBalancer::DB_MASTER ) {
-			throw new DBReadOnlyRoleError( $this->conn, "Cannot write with role DB_REPLICA" );
-		}
 	}
 
 	/**

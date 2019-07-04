@@ -19,7 +19,6 @@
  *
  * @file
  */
-use MediaWiki\ChangeTags\Taggable;
 
 /**
  * Utility class for creating new RC entries
@@ -66,7 +65,7 @@ use MediaWiki\ChangeTags\Taggable;
  *  we're having to include both rc_comment and rc_comment_text/rc_comment_data
  *  so random crap works right.
  */
-class RecentChange implements Taggable {
+class RecentChange {
 	// Constants for the rc_source field.  Extensions may also have
 	// their own source constants.
 	const SRC_EDIT = 'mw.edit';
@@ -590,13 +589,6 @@ class RecentChange implements Taggable {
 	public function doMarkPatrolled( User $user, $auto = false, $tags = null ) {
 		global $wgUseRCPatrol, $wgUseNPPatrol, $wgUseFilePatrol;
 
-		// Fix up $tags so that the MarkPatrolled hook below always gets an array
-		if ( $tags === null ) {
-			$tags = [];
-		} elseif ( is_string( $tags ) ) {
-			$tags = [ $tags ];
-		}
-
 		$errors = [];
 		// If recentchanges patrol is disabled, only new pages or new file versions
 		// can be patrolled, provided the appropriate config variable is set
@@ -609,7 +601,7 @@ class RecentChange implements Taggable {
 		$right = $auto ? 'autopatrol' : 'patrol';
 		$errors = array_merge( $errors, $this->getTitle()->getUserPermissionsErrors( $right, $user ) );
 		if ( !Hooks::run( 'MarkPatrolled',
-					[ $this->getAttribute( 'rc_id' ), &$user, false, $auto, &$tags ] )
+					[ $this->getAttribute( 'rc_id' ), &$user, false, $auto ] )
 		) {
 			$errors[] = [ 'hookaborted' ];
 		}
@@ -1206,7 +1198,7 @@ class RecentChange implements Taggable {
 	 *
 	 * @since 1.28
 	 *
-	 * @param string|string[] $tags
+	 * @param string|array $tags
 	 */
 	public function addTags( $tags ) {
 		if ( is_string( $tags ) ) {

@@ -45,10 +45,6 @@ class TextContentTest extends MediaWikiLangTestCase {
 		parent::tearDown();
 	}
 
-	/**
-	 * @param string $text
-	 * @return TextContent
-	 */
 	public function newContent( $text ) {
 		return new TextContent( $text );
 	}
@@ -135,7 +131,7 @@ class TextContentTest extends MediaWikiLangTestCase {
 			$options
 		);
 
-		$this->assertEquals( $expected, $content->getText() );
+		$this->assertEquals( $expected, $content->getNativeData() );
 	}
 
 	public static function dataPreloadTransform() {
@@ -158,7 +154,7 @@ class TextContentTest extends MediaWikiLangTestCase {
 		$content = $this->newContent( $text );
 		$content = $content->preloadTransform( $this->context->getTitle(), $options );
 
-		$this->assertEquals( $expected, $content->getText() );
+		$this->assertEquals( $expected, $content->getNativeData() );
 	}
 
 	public static function dataGetRedirectTarget() {
@@ -273,7 +269,7 @@ class TextContentTest extends MediaWikiLangTestCase {
 		$copy = $content->copy();
 
 		$this->assertTrue( $content->equals( $copy ), 'copy must be equal to original' );
-		$this->assertEquals( 'hello world.', $copy->getText() );
+		$this->assertEquals( 'hello world.', $copy->getNativeData() );
 	}
 
 	/**
@@ -286,21 +282,12 @@ class TextContentTest extends MediaWikiLangTestCase {
 	}
 
 	/**
-	 * @covers TextContent::getText
-	 */
-	public function testGetText() {
-		$content = $this->newContent( 'hello world.' );
-
-		$this->assertEquals( 'hello world.', $content->getText() );
-	}
-
-	/**
 	 * @covers TextContent::getNativeData
 	 */
 	public function testGetNativeData() {
 		$content = $this->newContent( 'hello world.' );
 
-		$this->assertEquals( 'hello world.', $content->getText() );
+		$this->assertEquals( 'hello world.', $content->getNativeData() );
 	}
 
 	/**
@@ -451,14 +438,13 @@ class TextContentTest extends MediaWikiLangTestCase {
 	public function testConvert( $text, $model, $lossy, $expectedNative ) {
 		$content = $this->newContent( $text );
 
-		/** @var TextContent $converted */
 		$converted = $content->convert( $model, $lossy );
 
 		if ( $expectedNative === false ) {
 			$this->assertFalse( $converted, "conversion to $model was expected to fail!" );
 		} else {
 			$this->assertInstanceOf( Content::class, $converted );
-			$this->assertEquals( $expectedNative, $converted->getText() );
+			$this->assertEquals( $expectedNative, $converted->getNativeData() );
 		}
 	}
 
@@ -485,16 +471,6 @@ class TextContentTest extends MediaWikiLangTestCase {
 				"Foobar"
 			]
 		];
-	}
-
-	/**
-	 * @covers TextContent::__construct
-	 * @covers TextContentHandler::serializeContent
-	 */
-	public function testSerialize() {
-		$cnt = $this->newContent( 'testing text' );
-
-		$this->assertSame( 'testing text', $cnt->serialize() );
 	}
 
 }

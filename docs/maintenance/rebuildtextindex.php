@@ -93,7 +93,7 @@ class RebuildTextIndex extends Maintenance {
 		$this->output( "Rebuilding index fields for {$count} pages...\n" );
 		$n = 0;
 
-		$revQuery = Revision::getQueryInfo( [ 'page' ] );
+		$revQuery = Revision::getQueryInfo( [ 'page', 'text' ] );
 
 		while ( $n < $count ) {
 			if ( $n ) {
@@ -104,7 +104,7 @@ class RebuildTextIndex extends Maintenance {
 			$res = $this->db->select(
 				$revQuery['tables'],
 				$revQuery['fields'],
-				[ "page_id BETWEEN $n AND $end", 'page_latest = rev_id' ],
+				[ "page_id BETWEEN $n AND $end", 'page_latest = rev_id', 'rev_text_id = old_id' ],
 				__METHOD__,
 				[],
 				$revQuery['joins']

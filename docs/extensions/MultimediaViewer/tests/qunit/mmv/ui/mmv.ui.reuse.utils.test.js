@@ -15,7 +15,7 @@
  * along with MultimediaViewer.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-( function () {
+( function ( mw, $ ) {
 	QUnit.module( 'mw.mmv.ui.reuse.utils', QUnit.newMwEnvironment() );
 
 	QUnit.test( 'Sanity test, object creation and UI construction', function ( assert ) {
@@ -65,7 +65,7 @@
 		mw.message = function ( messageKey ) {
 			assert.ok( messageKey.match( /^multimediaviewer-(small|medium|original|embed-dimensions)/ ), 'messageKey passed correctly.' );
 
-			return { text: function () {} };
+			return { text: $.noop };
 		};
 
 		utils.updateMenuOptions( sizes, options );
@@ -114,4 +114,4 @@
 		}
 	} );
 
-}() );
+}( mediaWiki, jQuery ) );

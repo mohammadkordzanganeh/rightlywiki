@@ -171,19 +171,11 @@ class HTMLDateTimeField extends HTMLTextField {
 			}
 		}
 
-		if ( $this->mType === 'date' ) {
-			return new MediaWiki\Widget\DateInputWidget( $params );
-		} else {
-			return new MediaWiki\Widget\DateTimeInputWidget( $params );
-		}
+		return new MediaWiki\Widget\DateTimeInputWidget( $params );
 	}
 
 	protected function getOOUIModules() {
-		if ( $this->mType === 'date' ) {
-			return [ 'mediawiki.widgets.DateInputWidget' ];
-		} else {
-			return [ 'mediawiki.widgets.datetime' ];
-		}
+		return [ 'mediawiki.widgets.datetime' ];
 	}
 
 	protected function shouldInfuseOOUI() {

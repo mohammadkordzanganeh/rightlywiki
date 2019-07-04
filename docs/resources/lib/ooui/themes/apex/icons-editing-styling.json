@@ -37,8 +37,7 @@
 					"ka": "../wikimediaui/images/icons/bold-geor-man.svg",
 					"ky,ru,uk": "../wikimediaui/images/icons/bold-cyrl-zhe.svg",
 					"nl": "../wikimediaui/images/icons/bold-v.svg",
-					"os": "../wikimediaui/images/icons/bold-cyrl-be.svg",
-					"ur": "../wikimediaui/images/icons/bold-arab-jeem.svg"
+					"os": "../wikimediaui/images/icons/bold-cyrl-be.svg"
 				}
 			}
 		},
@@ -58,8 +57,7 @@
 					"hu": "../wikimediaui/images/icons/italic-d.svg",
 					"hy": "../wikimediaui/images/icons/italic-armn-sha.svg",
 					"ksh": "../wikimediaui/images/icons/italic-s.svg",
-					"ka": "../wikimediaui/images/icons/italic-geor-kan.svg",
-					"ur": "../wikimediaui/images/icons/italic-arab-teh.svg"
+					"ka": "../wikimediaui/images/icons/italic-geor-kan.svg"
 				}
 			}
 		},

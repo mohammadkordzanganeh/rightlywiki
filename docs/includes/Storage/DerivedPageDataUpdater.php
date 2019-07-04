@@ -44,7 +44,6 @@ use MediaWiki\Revision\RevisionRecord;
 use MediaWiki\Revision\RevisionRenderer;
 use MediaWiki\Revision\RevisionSlots;
 use MediaWiki\Revision\RevisionStore;
-use MediaWiki\Revision\SlotRoleRegistry;
 use MediaWiki\Revision\SlotRecord;
 use MediaWiki\User\UserIdentity;
 use MessageCache;
@@ -213,9 +212,6 @@ class DerivedPageDataUpdater implements IDBAccessObject {
 	 */
 	private $revisionRenderer;
 
-	/** @var SlotRoleRegistry */
-	private $slotRoleRegistry;
-
 	/**
 	 * A stage identifier for managing the life cycle of this instance.
 	 * Possible stages are 'new', 'knows-current', 'has-content', 'has-revision', and 'done'.
@@ -262,7 +258,6 @@ class DerivedPageDataUpdater implements IDBAccessObject {
 	 * @param WikiPage $wikiPage ,
 	 * @param RevisionStore $revisionStore
 	 * @param RevisionRenderer $revisionRenderer
-	 * @param SlotRoleRegistry $slotRoleRegistry
 	 * @param ParserCache $parserCache
 	 * @param JobQueueGroup $jobQueueGroup
 	 * @param MessageCache $messageCache
@@ -273,7 +268,6 @@ class DerivedPageDataUpdater implements IDBAccessObject {
 		WikiPage $wikiPage,
 		RevisionStore $revisionStore,
 		RevisionRenderer $revisionRenderer,
-		SlotRoleRegistry $slotRoleRegistry,
 		ParserCache $parserCache,
 		JobQueueGroup $jobQueueGroup,
 		MessageCache $messageCache,
@@ -285,11 +279,10 @@ class DerivedPageDataUpdater implements IDBAccessObject {
 		$this->parserCache = $parserCache;
 		$this->revisionStore = $revisionStore;
 		$this->revisionRenderer = $revisionRenderer;
-		$this->slotRoleRegistry = $slotRoleRegistry;
 		$this->jobQueueGroup = $jobQueueGroup;
 		$this->messageCache = $messageCache;
 		$this->contLang = $contLang;
-		// XXX only needed for waiting for replicas to catch up; there should be a narrower
+		// XXX only needed for waiting for slaves to catch up; there should be a narrower
 		// interface for that.
 		$this->loadbalancerFactory = $loadbalancerFactory;
 	}
@@ -361,9 +354,13 @@ class DerivedPageDataUpdater implements IDBAccessObject {
 			throw new InvalidArgumentException( '$parentId should match the parent of $revision' );
 		}
 
-		// NOTE: For null revisions, $user may be different from $this->revision->getUser
-		// and also from $revision->getUser.
-		// But $user should always match $this->user.
+		if ( $revision
+			&& $user
+			&& $revision->getUser( RevisionRecord::RAW )->getName() !== $user->getName()
+		) {
+			throw new InvalidArgumentException( '$user should match the author of $revision' );
+		}
+
 		if ( $user && $this->user && $user->getName() !== $this->user->getName() ) {
 			return false;
 		}
@@ -372,6 +369,10 @@ class DerivedPageDataUpdater implements IDBAccessObject {
 			&& $this->revision->getId() !== $revision->getId()
 		) {
 			return false;
+		}
+
+		if ( $revision && !$user ) {
+			$user = $revision->getUser( RevisionRecord::RAW );
 		}
 
 		if ( $this->pageState
@@ -385,6 +386,22 @@ class DerivedPageDataUpdater implements IDBAccessObject {
 		if ( $this->pageState
 			&& $parentId !== null
 			&& $this->pageState['oldId'] !== $parentId
+		) {
+			return false;
+		}
+
+		if ( $this->revision
+			&& $user
+			&& $this->revision->getUser( RevisionRecord::RAW )
+			&& $this->revision->getUser( RevisionRecord::RAW )->getName() !== $user->getName()
+		) {
+			return false;
+		}
+
+		if ( $revision
+			&& $this->user
+			&& $this->revision->getUser( RevisionRecord::RAW )
+			&& $revision->getUser( RevisionRecord::RAW )->getName() !== $this->user->getName()
 		) {
 			return false;
 		}
@@ -646,26 +663,12 @@ class DerivedPageDataUpdater implements IDBAccessObject {
 		$hasLinks = null;
 
 		if ( $this->articleCountMethod === 'link' ) {
-			// NOTE: it would be more appropriate to determine for each slot separately
-			// whether it has links, and use that information with that slot's
-			// isCountable() method. However, that would break parity with
-			// WikiPage::isCountable, which uses the pagelinks table to determine
-			// whether the current revision has links.
 			$hasLinks = (bool)count( $this->getCanonicalParserOutput()->getLinks() );
 		}
 
-		foreach ( $this->getModifiedSlotRoles() as $role ) {
-			$roleHandler = $this->slotRoleRegistry->getRoleHandler( $role );
-			if ( $roleHandler->supportsArticleCount() ) {
-				$content = $this->getRawContent( $role );
-
-				if ( $content->isCountable( $hasLinks ) ) {
-					return true;
-				}
-			}
-		}
-
-		return false;
+		// TODO: MCR: ask all slots if they have links [SlotHandler/PageTypeHandler]
+		$mainContent = $this->getRawContent( SlotRecord::MAIN );
+		return $mainContent->isCountable( $hasLinks );
 	}
 
 	/**
@@ -673,7 +676,6 @@ class DerivedPageDataUpdater implements IDBAccessObject {
 	 */
 	public function isRedirect() {
 		// NOTE: main slot determines redirect status
-		// TODO: MCR: this should be controlled by a PageTypeHandler
 		$mainContent = $this->getRawContent( SlotRecord::MAIN );
 
 		return $mainContent->isRedirect();
@@ -763,6 +765,17 @@ class DerivedPageDataUpdater implements IDBAccessObject {
 			$stashedEdit = ApiStashEdit::checkCache( $title, $mainContent, $legacyUser );
 		}
 
+		if ( $stashedEdit ) {
+			/** @var ParserOutput $output */
+			$output = $stashedEdit->output;
+
+			// TODO: this should happen when stashing the ParserOutput, not now!
+			$output->setCacheTime( $stashedEdit->timestamp );
+
+			// TODO: MCR: allow output for all slots to be stashed.
+			$this->canonicalParserOutput = $output;
+		}
+
 		$userPopts = ParserOptions::newFromUserAndLang( $user, $this->contLang );
 		Hooks::run( 'ArticlePrepareTextForEdit', [ $wikiPage, $userPopts ] );
 
@@ -843,27 +856,6 @@ class DerivedPageDataUpdater implements IDBAccessObject {
 		} else {
 			$this->parentRevision = $parentRevision;
 		}
-
-		$renderHints = [ 'use-master' => $this->useMaster(), 'audience' => RevisionRecord::RAW ];
-
-		if ( $stashedEdit ) {
-			/** @var ParserOutput $output */
-			$output = $stashedEdit->output;
-
-			// TODO: this should happen when stashing the ParserOutput, not now!
-			$output->setCacheTime( $stashedEdit->timestamp );
-
-			$renderHints['known-revision-output'] = $output;
-		}
-
-		// NOTE: we want a canonical rendering, so don't pass $this->user or ParserOptions
-		// NOTE: the revision is either new or current, so we can bypass audience checks.
-		$this->renderedRevision = $this->revisionRenderer->getRenderedRevision(
-			$this->revision,
-			null,
-			null,
-			$renderHints
-		);
 	}
 
 	/**
@@ -890,7 +882,18 @@ class DerivedPageDataUpdater implements IDBAccessObject {
 	 * @return RenderedRevision
 	 */
 	public function getRenderedRevision() {
-		$this->assertPrepared( __METHOD__ );
+		if ( !$this->renderedRevision ) {
+			$this->assertPrepared( __METHOD__ );
+
+			// NOTE: we want a canonical rendering, so don't pass $this->user or ParserOptions
+			// NOTE: the revision is either new or current, so we can bypass audience checks.
+			$this->renderedRevision = $this->revisionRenderer->getRenderedRevision(
+				$this->revision,
+				null,
+				null,
+				[ 'use-master' => $this->useMaster(), 'audience' => RevisionRecord::RAW ]
+			);
+		}
 
 		return $this->renderedRevision;
 	}
@@ -1212,19 +1215,6 @@ class DerivedPageDataUpdater implements IDBAccessObject {
 		// Prune any output that depends on the revision ID.
 		if ( $this->renderedRevision ) {
 			$this->renderedRevision->updateRevision( $revision );
-		} else {
-
-			// NOTE: we want a canonical rendering, so don't pass $this->user or ParserOptions
-			// NOTE: the revision is either new or current, so we can bypass audience checks.
-			$this->renderedRevision = $this->revisionRenderer->getRenderedRevision(
-				$this->revision,
-				null,
-				null,
-				[ 'use-master' => $this->useMaster(), 'audience' => RevisionRecord::RAW ]
-			);
-
-			// XXX: Since we presumably are dealing with the current revision,
-			// we could try to get the ParserOutput from the parser cache.
 		}
 
 		// TODO: optionally get ParserOutput from the ParserCache here.
@@ -1422,9 +1412,12 @@ class DerivedPageDataUpdater implements IDBAccessObject {
 			// the recent change entry (also done via deferred updates) and carry over any
 			// bot/deletion/IP flags, ect.
 			$this->jobQueueGroup->lazyPush(
-				CategoryMembershipChangeJob::newSpec(
+				new CategoryMembershipChangeJob(
 					$this->getTitle(),
-					$this->revision->getTimestamp()
+					[
+						'pageId' => $this->getPageId(),
+						'revTimestamp' => $this->revision->getTimestamp(),
+					]
 				)
 			);
 		}
@@ -1590,9 +1583,8 @@ class DerivedPageDataUpdater implements IDBAccessObject {
 				$update->setRevision( $legacyRevision );
 				$update->setTriggeringUser( $triggeringUser );
 			}
-
 			if ( $options['defer'] === false ) {
-				if ( $update instanceof DataUpdate && $options['transactionTicket'] !== null ) {
+				if ( $options['transactionTicket'] !== null ) {
 					$update->setTransactionTicket( $options['transactionTicket'] );
 				}
 				$update->doUpdate();

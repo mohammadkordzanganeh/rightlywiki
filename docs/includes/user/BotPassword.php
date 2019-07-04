@@ -18,7 +18,6 @@
  * http://www.gnu.org/copyleft/gpl.html
  */
 
-use MediaWiki\Auth\AuthenticationResponse;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Session\BotPasswordSessionProvider;
 use Wikimedia\Rdbms\IMaintainableDatabase;
@@ -459,20 +458,21 @@ class BotPassword implements IDBAccessObject {
 		// Split name into name+appId
 		$sep = self::getSeparator();
 		if ( strpos( $username, $sep ) === false ) {
-			return self::loginHook( $username, null, Status::newFatal( 'botpasswords-invalid-name', $sep ) );
+			return Status::newFatal( 'botpasswords-invalid-name', $sep );
 		}
 		list( $name, $appId ) = explode( $sep, $username, 2 );
 
 		// Find the named user
 		$user = User::newFromName( $name );
 		if ( !$user || $user->isAnon() ) {
-			return self::loginHook( $user ?: $name, null, Status::newFatal( 'nosuchuser', $name ) );
+			return Status::newFatal( 'nosuchuser', $name );
 		}
 
 		if ( $user->isLocked() ) {
 			return Status::newFatal( 'botpasswords-locked' );
 		}
 
+		// Throttle
 		$throttle = null;
 		if ( !empty( $wgPasswordAttemptThrottle ) ) {
 			$throttle = new MediaWiki\Auth\Throttler( $wgPasswordAttemptThrottle, [
@@ -482,71 +482,35 @@ class BotPassword implements IDBAccessObject {
 			$result = $throttle->increase( $user->getName(), $request->getIP(), __METHOD__ );
 			if ( $result ) {
 				$msg = wfMessage( 'login-throttled' )->durationParams( $result['wait'] );
-				return self::loginHook( $user, null, Status::newFatal( $msg ) );
+				return Status::newFatal( $msg );
 			}
 		}
 
 		// Get the bot password
 		$bp = self::newFromUser( $user, $appId );
 		if ( !$bp ) {
-			return self::loginHook( $user, $bp,
-				Status::newFatal( 'botpasswords-not-exist', $name, $appId ) );
+			return Status::newFatal( 'botpasswords-not-exist', $name, $appId );
 		}
 
 		// Check restrictions
 		$status = $bp->getRestrictions()->check( $request );
 		if ( !$status->isOK() ) {
-			return self::loginHook( $user, $bp, Status::newFatal( 'botpasswords-restriction-failed' ) );
+			return Status::newFatal( 'botpasswords-restriction-failed' );
 		}
 
 		// Check the password
 		$passwordObj = $bp->getPassword();
 		if ( $passwordObj instanceof InvalidPassword ) {
-			return self::loginHook( $user, $bp,
-				Status::newFatal( 'botpasswords-needs-reset', $name, $appId ) );
+			return Status::newFatal( 'botpasswords-needs-reset', $name, $appId );
 		}
-		if ( !$passwordObj->verify( $password ) ) {
-			return self::loginHook( $user, $bp, Status::newFatal( 'wrongpassword' ) );
+		if ( !$passwordObj->equals( $password ) ) {
+			return Status::newFatal( 'wrongpassword' );
 		}
 
 		// Ok! Create the session.
 		if ( $throttle ) {
 			$throttle->clear( $user->getName(), $request->getIP() );
 		}
-		return self::loginHook( $user, $bp,
-			Status::newGood( $provider->newSessionForRequest( $user, $bp, $request ) ) );
-	}
-
-	/**
-	 * Call AuthManagerLoginAuthenticateAudit
-	 *
-	 * To facilitate logging all authentications, even ones not via
-	 * AuthManager, call the AuthManagerLoginAuthenticateAudit hook.
-	 *
-	 * @param User|string $user User being logged in
-	 * @param BotPassword|null $bp Bot sub-account, if it can be identified
-	 * @param Status $status Login status
-	 * @return Status The passed-in status
-	 */
-	private static function loginHook( $user, $bp, Status $status ) {
-		$extraData = [];
-		if ( $user instanceof User ) {
-			$name = $user->getName();
-			if ( $bp ) {
-				$extraData['appId'] = $name . self::getSeparator() . $bp->getAppId();
-			}
-		} else {
-			$name = $user;
-			$user = null;
-		}
-
-		if ( $status->isGood() ) {
-			$response = AuthenticationResponse::newPass( $name );
-		} else {
-			$response = AuthenticationResponse::newFail( $status->getMessage() );
-		}
-		Hooks::run( 'AuthManagerLoginAuthenticateAudit', [ $response, $user, $name, $extraData ] );
-
-		return $status;
+		return Status::newGood( $provider->newSessionForRequest( $user, $bp, $request ) );
 	}
 }

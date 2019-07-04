@@ -21,13 +21,13 @@
 			$checkboxes.prop( 'checked', check );
 		}
 
-		$( '.mw-checkbox-all' ).on( 'click', function () {
+		$( '.mw-checkbox-all' ).click( function () {
 			selectAll( true );
 		} );
-		$( '.mw-checkbox-none' ).on( 'click', function () {
+		$( '.mw-checkbox-none' ).click( function () {
 			selectAll( false );
 		} );
-		$( '.mw-checkbox-invert' ).on( 'click', function () {
+		$( '.mw-checkbox-invert' ).click( function () {
 			$checkboxes.prop( 'checked', function ( i, val ) {
 				return !val;
 			} );

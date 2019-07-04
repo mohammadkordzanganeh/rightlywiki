@@ -1,8 +1,5 @@
 <?php
 
-use MediaWiki\Block\Restriction\PageRestriction;
-use MediaWiki\Block\Restriction\NamespaceRestriction;
-
 /**
  * @group API
  * @group Database
@@ -65,7 +62,7 @@ class ApiBlockTest extends ApiTestCase {
 		$this->assertTrue( !is_null( $block ), 'Block is valid' );
 
 		$this->assertSame( $this->mUser->getName(), (string)$block->getTarget() );
-		$this->assertSame( 'Some reason', $block->getReason() );
+		$this->assertSame( 'Some reason', $block->mReason );
 
 		return $ret;
 	}
@@ -122,6 +119,24 @@ class ApiBlockTest extends ApiTestCase {
 	}
 
 	public function testBlockWithTag() {
+		$this->setMwGlobals( 'wgChangeTagsSchemaMigrationStage', MIGRATION_WRITE_BOTH );
+		ChangeTags::defineTag( 'custom tag' );
+
+		$this->doBlock( [ 'tags' => 'custom tag' ] );
+
+		$dbw = wfGetDB( DB_MASTER );
+		$this->assertSame( 1, (int)$dbw->selectField(
+			[ 'change_tag', 'logging' ],
+			'COUNT(*)',
+			[ 'log_type' => 'block', 'ct_tag' => 'custom tag' ],
+			__METHOD__,
+			[],
+			[ 'change_tag' => [ 'INNER JOIN', 'ct_log_id = log_id' ] ]
+		) );
+	}
+
+	public function testBlockWithTagNewBackend() {
+		$this->setMwGlobals( 'wgChangeTagsSchemaMigrationStage', MIGRATION_NEW );
 		ChangeTags::defineTag( 'custom tag' );
 
 		$this->doBlock( [ 'tags' => 'custom tag' ] );
@@ -134,8 +149,8 @@ class ApiBlockTest extends ApiTestCase {
 			__METHOD__,
 			[],
 			[
-				'change_tag' => [ 'JOIN', 'ct_log_id = log_id' ],
-				'change_tag_def' => [ 'JOIN', 'ctd_id = ct_tag_id' ],
+				'change_tag' => [ 'INNER JOIN', 'ct_log_id = log_id' ],
+				'change_tag_def' => [ 'INNER JOIN', 'ctd_id = ct_tag_id' ],
 			]
 		) );
 	}
@@ -221,44 +236,6 @@ class ApiBlockTest extends ApiTestCase {
 		$this->doBlock( [ 'expiry' => '' ] );
 	}
 
-	public function testBlockWithoutRestrictions() {
-		$this->setMwGlobals( [
-			'wgEnablePartialBlocks' => true,
-		] );
-
-		$this->doBlock();
-
-		$block = Block::newFromTarget( $this->mUser->getName() );
-
-		$this->assertTrue( $block->isSitewide() );
-		$this->assertCount( 0, $block->getRestrictions() );
-	}
-
-	public function testBlockWithRestrictions() {
-		$this->setMwGlobals( [
-			'wgEnablePartialBlocks' => true,
-		] );
-
-		$title = 'Foo';
-		$page = $this->getExistingTestPage( $title );
-		$namespace = NS_TALK;
-
-		$this->doBlock( [
-			'partial' => true,
-			'pagerestrictions' => $title,
-			'namespacerestrictions' => $namespace,
-		] );
-
-		$block = Block::newFromTarget( $this->mUser->getName() );
-
-		$this->assertFalse( $block->isSitewide() );
-		$this->assertCount( 2, $block->getRestrictions() );
-		$this->assertInstanceOf( PageRestriction::class, $block->getRestrictions()[0] );
-		$this->assertEquals( $title, $block->getRestrictions()[0]->getTitle()->getText() );
-		$this->assertInstanceOf( NamespaceRestriction::class, $block->getRestrictions()[1] );
-		$this->assertEquals( $namespace, $block->getRestrictions()[1]->getValue() );
-	}
-
 	/**
 	 * @expectedException ApiUsageException
 	 * @expectedExceptionMessage The "token" parameter must be set
@@ -269,6 +246,53 @@ class ApiBlockTest extends ApiTestCase {
 				'action' => 'block',
 				'user' => $this->mUser->getName(),
 				'reason' => 'Some reason',
+			],
+			null,
+			false,
+			self::$users['sysop']->getUser()
+		);
+	}
+
+	/**
+	 * @expectedException ApiUsageException
+	 * @expectedExceptionMessage Invalid value "127.0.0.1/64" for user parameter "user".
+	 */
+	public function testBlockWithLargeRange() {
+		$tokens = $this->getTokens();
+
+		$this->doApiRequest(
+			[
+				'action' => 'block',
+				'user' => '127.0.0.1/64',
+				'reason' => 'Some reason',
+				'token' => $tokens['blocktoken'],
+			],
+			null,
+			false,
+			self::$users['sysop']->getUser()
+		);
+	}
+
+	/**
+	 * @expectedException ApiUsageException
+	 * @expectedExceptionMessage Too many values supplied for parameter "pagerestrictions". The
+	 * limit is 10.
+	 */
+	public function testBlockingToManyPageRestrictions() {
+		$this->setMwGlobals( [
+			'wgEnablePartialBlocks' => true,
+		] );
+
+		$tokens = $this->getTokens();
+
+		$this->doApiRequest(
+			[
+				'action' => 'block',
+				'user' => $this->mUser->getName(),
+				'reason' => 'Some reason',
+				'partial' => true,
+				'pagerestrictions' => 'One|Two|Three|Four|Five|Six|Seven|Eight|Nine|Ten|Eleven',
+				'token' => $tokens['blocktoken'],
 			],
 			null,
 			false,

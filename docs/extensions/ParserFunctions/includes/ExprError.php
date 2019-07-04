@@ -16,10 +16,6 @@
  *
  */
 
-namespace MediaWiki\Extensions\ParserFunctions;
-
-use Exception;
-
 class ExprError extends Exception {
 	/**
 	 * @param string $msg

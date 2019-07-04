@@ -61,10 +61,13 @@ class ApiQueryUserContribs extends ApiQueryBase {
 		$this->fld_patrolled = isset( $prop['patrolled'] );
 		$this->fld_tags = isset( $prop['tags'] );
 
-		// The main query may use the 'contributions' group DB, which can map to replica DBs
+		// Most of this code will use the 'contributions' group DB, which can map to replica DBs
 		// with extra user based indexes or partioning by user. The additional metadata
 		// queries should use a regular replica DB since the lookup pattern is not all by user.
 		$dbSecondary = $this->getDB(); // any random replica DB
+
+		// TODO: if the query is going only against the revision table, should this be done?
+		$this->selectNamedDB( 'contributions', DB_REPLICA, 'contributions' );
 
 		$sort = ( $this->params['dir'] == 'newer' ? '' : ' DESC' );
 		$op = ( $this->params['dir'] == 'older' ? '<' : '>' );
@@ -133,7 +136,7 @@ class ApiQueryUserContribs extends ApiQueryBase {
 			// prepareQuery might try to sort by actor and confuse everything.
 			$batchSize = 1;
 		} elseif ( isset( $this->params['userids'] ) ) {
-			if ( $this->params['userids'] === [] ) {
+			if ( !count( $this->params['userids'] ) ) {
 				$encParamName = $this->encodeParamName( 'userids' );
 				$this->dieWithError( [ 'apierror-paramempty', $encParamName ], "paramempty_$encParamName" );
 			}
@@ -266,13 +269,6 @@ class ApiQueryUserContribs extends ApiQueryBase {
 			$this->orderBy = 'actor';
 		}
 
-		// Use the 'contributions' replica, but only if we're querying by user ID (T216656).
-		if ( $this->orderBy === 'id' &&
-			!( $wgActorTableSchemaMigrationStage & SCHEMA_COMPAT_READ_NEW )
-		) {
-			$this->selectNamedDB( 'contributions', DB_REPLICA, 'contributions' );
-		}
-
 		$count = 0;
 		$limit = $this->params['limit'];
 		$userIter->rewind();
@@ -325,7 +321,7 @@ class ApiQueryUserContribs extends ApiQueryBase {
 	 * @param int $limit
 	 */
 	private function prepareQuery( array $users, $limit ) {
-		global $wgActorTableSchemaMigrationStage;
+		global $wgActorTableSchemaMigrationStage, $wgChangeTagsSchemaMigrationStage;
 
 		$this->resetQueryParams();
 		$db = $this->getDB();
@@ -482,20 +478,28 @@ class ApiQueryUserContribs extends ApiQueryBase {
 		$this->addFieldsIf( 'rc_patrolled', $this->fld_patrolled );
 
 		if ( $this->fld_tags ) {
-			$this->addFields( [ 'ts_tags' => ChangeTags::makeTagSummarySubquery( 'revision' ) ] );
+			$this->addTables( 'tag_summary' );
+			$this->addJoinConds(
+				[ 'tag_summary' => [ 'LEFT JOIN', [ $idField . ' = ts_rev_id' ] ] ]
+			);
+			$this->addFields( 'ts_tags' );
 		}
 
 		if ( isset( $this->params['tag'] ) ) {
 			$this->addTables( 'change_tag' );
 			$this->addJoinConds(
-				[ 'change_tag' => [ 'JOIN', [ $idField . ' = ct_rev_id' ] ] ]
+				[ 'change_tag' => [ 'INNER JOIN', [ $idField . ' = ct_rev_id' ] ] ]
 			);
-			$changeTagDefStore = MediaWikiServices::getInstance()->getChangeTagDefStore();
-			try {
-				$this->addWhereFld( 'ct_tag_id', $changeTagDefStore->getId( $this->params['tag'] ) );
-			} catch ( NameTableAccessException $exception ) {
-				// Return nothing.
-				$this->addWhere( '1=0' );
+			if ( $wgChangeTagsSchemaMigrationStage > MIGRATION_WRITE_BOTH ) {
+				$changeTagDefStore = MediaWikiServices::getInstance()->getChangeTagDefStore();
+				try {
+					$this->addWhereFld( 'ct_tag_id', $changeTagDefStore->getId( $this->params['tag'] ) );
+				} catch ( NameTableAccessException $exception ) {
+					// Return nothing.
+					$this->addWhere( '1=0' );
+				}
+			} else {
+				$this->addWhereFld( 'ct_tag', $this->params['tag'] );
 			}
 		}
 	}
@@ -523,11 +527,12 @@ class ApiQueryUserContribs extends ApiQueryBase {
 			$anyHidden = true;
 		}
 		if ( $this->fld_ids ) {
-			$vals['pageid'] = (int)$row->rev_page;
-			$vals['revid'] = (int)$row->rev_id;
+			$vals['pageid'] = intval( $row->rev_page );
+			$vals['revid'] = intval( $row->rev_id );
+			// $vals['textid'] = intval( $row->rev_text_id ); // todo: Should this field be exposed?
 
 			if ( !is_null( $row->rev_parent_id ) ) {
-				$vals['parentid'] = (int)$row->rev_parent_id;
+				$vals['parentid'] = intval( $row->rev_parent_id );
 			}
 		}
 
@@ -576,7 +581,7 @@ class ApiQueryUserContribs extends ApiQueryBase {
 		}
 
 		if ( $this->fld_size && !is_null( $row->rev_len ) ) {
-			$vals['size'] = (int)$row->rev_len;
+			$vals['size'] = intval( $row->rev_len );
 		}
 
 		if ( $this->fld_sizediff
@@ -584,7 +589,7 @@ class ApiQueryUserContribs extends ApiQueryBase {
 			&& !is_null( $row->rev_parent_id )
 		) {
 			$parentLen = $this->parentLens[$row->rev_parent_id] ?? 0;
-			$vals['sizediff'] = (int)$row->rev_len - $parentLen;
+			$vals['sizediff'] = intval( $row->rev_len - $parentLen );
 		}
 
 		if ( $this->fld_tags ) {

@@ -15,7 +15,7 @@
  * along with MultimediaViewer.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-( function () {
+( function ( mw, $, oo ) {
 	var AL;
 
 	/**
@@ -27,7 +27,7 @@
 	 */
 	function AttributionLogger() {}
 
-	OO.inheritClass( AttributionLogger, mw.mmv.logging.Logger );
+	oo.inheritClass( AttributionLogger, mw.mmv.logging.Logger );
 
 	AL = AttributionLogger.prototype;
 
@@ -70,4 +70,4 @@
 
 	mw.mmv.logging.AttributionLogger = AttributionLogger;
 	mw.mmv.attributionLogger = new AttributionLogger();
-}() );
+}( mediaWiki, jQuery, OO ) );

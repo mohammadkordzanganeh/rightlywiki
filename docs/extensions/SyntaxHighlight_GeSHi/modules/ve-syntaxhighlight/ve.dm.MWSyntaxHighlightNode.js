@@ -121,5 +121,5 @@ ve.dm.MWSyntaxHighlightNode.prototype.isLanguageSupported = function () {
 };
 
 ve.dm.MWSyntaxHighlightNode.prototype.getLanguage = function () {
-	return this.getAttribute( 'mw' ).attrs.lang.toLowerCase();
+	return this.getAttribute( 'mw' ).attrs.lang;
 };

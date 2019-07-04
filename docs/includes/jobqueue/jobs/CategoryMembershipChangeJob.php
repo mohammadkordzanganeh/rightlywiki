@@ -41,41 +41,11 @@ class CategoryMembershipChangeJob extends Job {
 
 	const ENQUEUE_FUDGE_SEC = 60;
 
-	/**
-	 * @var ParserCache
-	 */
-	private $parserCache;
-
-	/**
-	 * @param Title $title The title of the page for which to update category membership.
-	 * @param string $revisionTimestamp The timestamp of the new revision that triggered the job.
-	 * @return JobSpecification
-	 */
-	public static function newSpec( Title $title, $revisionTimestamp ) {
-		return new JobSpecification(
-			'categoryMembershipChange',
-			[
-				'pageId' => $title->getArticleID(),
-				'revTimestamp' => $revisionTimestamp,
-			],
-			[],
-			$title
-		);
-	}
-
-	/**
-	 * Constructor for use by the Job Queue infrastructure.
-	 * @note Don't call this when queueing a new instance, use newSpec() instead.
-	 * @param ParserCache $parserCache Cache outputs of PHP parser.
-	 * @param Title $title Title of the categorized page.
-	 * @param array $params Such latest revision instance of the categorized page.
-	 */
-	public function __construct( ParserCache $parserCache, Title $title, array $params ) {
+	public function __construct( Title $title, array $params ) {
 		parent::__construct( 'categoryMembershipChange', $title, $params );
 		// Only need one job per page. Note that ENQUEUE_FUDGE_SEC handles races where an
 		// older revision job gets inserted while the newer revision job is de-duplicated.
 		$this->removeDuplicates = true;
-		$this->parserCache = $parserCache;
 	}
 
 	public function run() {
@@ -195,7 +165,7 @@ class CategoryMembershipChangeJob extends Job {
 		// Get the prior revision (the same for null edits)
 		if ( $newRev->getParentId() ) {
 			$oldRev = Revision::newFromId( $newRev->getParentId(), Revision::READ_LATEST );
-			if ( !$oldRev || !$oldRev->getContent() ) {
+			if ( !$oldRev->getContent() ) {
 				return; // deleted?
 			}
 		} else {
@@ -266,12 +236,10 @@ class CategoryMembershipChangeJob extends Job {
 		$options = $page->makeParserOptions( 'canonical' );
 		$options->setTimestamp( $parseTimestamp );
 
-		$output = $rev->isCurrent() ? $this->parserCache->get( $page, $options ) : null;
-
-		if ( !$output || $output->getCacheRevisionId() !== $rev->getId() ) {
-			$output = $renderer->getRenderedRevision( $rev->getRevisionRecord(), $options )
-				->getRevisionParserOutput();
-		}
+		// This could possibly use the parser cache if it checked the revision ID,
+		// but that's more complicated than it's worth.
+		$output = $renderer->getRenderedRevision( $rev->getRevisionRecord(), $options )
+			->getRevisionParserOutput();
 
 		// array keys will cast numeric category names to ints
 		// so we need to cast them back to strings to avoid breaking things!

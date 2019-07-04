@@ -39,13 +39,14 @@ class WebInstallerUpgrade extends WebInstallerPage {
 			if ( $this->parent->request->wasPosted() && !$this->getVar( '_ExistingDBSettings' ) ) {
 				// Done message acknowledged
 				return 'continue';
-			}
-			// Back button click
-			// Show the done message again
-			// Make them click back again if they want to do the upgrade again
-			$this->showDoneMessage();
+			} else {
+				// Back button click
+				// Show the done message again
+				// Make them click back again if they want to do the upgrade again
+				$this->showDoneMessage();
 
-			return 'output';
+				return 'output';
+			}
 		}
 
 		// wgDBtype is generally valid here because otherwise the previous page
@@ -72,13 +73,9 @@ class WebInstallerUpgrade extends WebInstallerPage {
 				}
 				$this->setVar( '_UpgradeDone', true );
 				$this->showDoneMessage();
-			} else {
-				$this->startForm();
-				$this->parent->showError( 'config-upgrade-error' );
-				$this->endForm();
-			}
 
-			return 'output';
+				return 'output';
+			}
 		}
 
 		$this->startForm();

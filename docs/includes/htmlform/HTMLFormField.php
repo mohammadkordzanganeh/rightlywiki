@@ -137,7 +137,8 @@ abstract class HTMLFormField {
 		for ( $i = count( $thisKeys ) - 1; $i >= 0; $i-- ) {
 			$keys = array_merge( array_slice( $thisKeys, 0, $i ), $nameKeys );
 			$data = $alldata;
-			foreach ( $keys as $key ) {
+			while ( $keys ) {
+				$key = array_shift( $keys );
 				if ( !is_array( $data ) || !array_key_exists( $key, $data ) ) {
 					continue 2;
 				}
@@ -461,6 +462,16 @@ abstract class HTMLFormField {
 		if ( isset( $params['hide-if'] ) ) {
 			$this->mHideIf = $params['hide-if'];
 		}
+
+		if ( isset( $this->mParams['notice-message'] ) ) {
+			wfDeprecated( "'notice-message' parameter in HTMLForm", '1.32' );
+		}
+		if ( isset( $this->mParams['notice-messages'] ) ) {
+			wfDeprecated( "'notice-messages' parameter in HTMLForm", '1.32' );
+		}
+		if ( isset( $this->mParams['notice'] ) ) {
+			wfDeprecated( "'notice' parameter in HTMLForm", '1.32' );
+		}
 	}
 
 	/**
@@ -586,7 +597,7 @@ abstract class HTMLFormField {
 			// It might look weird, but it'll work OK.
 			return $this->getFieldLayoutOOUI(
 				new OOUI\Widget( [ 'content' => new OOUI\HtmlSnippet( $this->getDiv( $value ) ) ] ),
-				[ 'align' => 'top' ]
+				[ 'infusable' => false, 'align' => 'top' ]
 			);
 		}
 
@@ -606,11 +617,17 @@ abstract class HTMLFormField {
 			$error = new OOUI\HtmlSnippet( $error );
 		}
 
+		$notices = $this->getNotices( 'skip deprecation' );
+		foreach ( $notices as &$notice ) {
+			$notice = new OOUI\HtmlSnippet( $notice );
+		}
+
 		$config = [
 			'classes' => [ "mw-htmlform-field-$fieldType", $this->mClass ],
 			'align' => $this->getLabelAlignOOUI(),
 			'help' => ( $help !== null && $help !== '' ) ? new OOUI\HtmlSnippet( $help ) : null,
 			'errors' => $errors,
+			'notices' => $notices,
 			'infusable' => $infusable,
 			'helpInline' => $this->isHelpInline(),
 		];
@@ -907,6 +924,37 @@ abstract class HTMLFormField {
 		}
 
 		return $errors;
+	}
+
+	/**
+	 * Determine notices to display for the field.
+	 *
+	 * @since 1.28
+	 * @deprecated since 1.32
+	 * @param string $skipDeprecation Pass 'skip deprecation' to avoid the deprecation
+	 *   warning (since 1.32)
+	 * @return string[]
+	 */
+	public function getNotices( $skipDeprecation = null ) {
+		if ( $skipDeprecation !== 'skip deprecation' ) {
+			wfDeprecated( __METHOD__, '1.32' );
+		}
+
+		$notices = [];
+
+		if ( isset( $this->mParams['notice-message'] ) ) {
+			$notices[] = $this->getMessage( $this->mParams['notice-message'] )->parse();
+		}
+
+		if ( isset( $this->mParams['notice-messages'] ) ) {
+			foreach ( $this->mParams['notice-messages'] as $msg ) {
+				$notices[] = $this->getMessage( $msg )->parse();
+			}
+		} elseif ( isset( $this->mParams['notice'] ) ) {
+			$notices[] = $this->mParams['notice'];
+		}
+
+		return $notices;
 	}
 
 	/**

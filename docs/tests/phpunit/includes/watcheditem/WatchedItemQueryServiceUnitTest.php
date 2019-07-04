@@ -72,8 +72,7 @@ class WatchedItemQueryServiceUnitTest extends MediaWikiTestCase {
 		return new WatchedItemQueryService(
 			$this->getMockLoadBalancer( $mockDb ),
 			$this->getMockCommentStore(),
-			$this->getMockActorMigration(),
-			$this->getMockWatchedItemStore()
+			$this->getMockActorMigration()
 		);
 	}
 
@@ -137,22 +136,6 @@ class WatchedItemQueryServiceUnitTest extends MediaWikiTestCase {
 			->method( 'getConnectionRef' )
 			->with( DB_REPLICA )
 			->will( $this->returnValue( $mockDb ) );
-		return $mock;
-	}
-
-	/**
-	 * @param PHPUnit_Framework_MockObject_MockObject|Database $mockDb
-	 * @return PHPUnit_Framework_MockObject_MockObject|WatchedItemStore
-	 */
-	private function getMockWatchedItemStore() {
-		$mock = $this->getMockBuilder( WatchedItemStore::class )
-			->disableOriginalConstructor()
-			->getMock();
-		$mock->expects( $this->any() )
-			->method( 'getLatestNotificationTimestamp' )
-			->will( $this->returnCallback( function ( $timestamp ) {
-				return $timestamp;
-			} ) );
 		return $mock;
 	}
 
@@ -280,7 +263,7 @@ class WatchedItemQueryServiceUnitTest extends MediaWikiTestCase {
 				],
 				[
 					'watchlist' => [
-						'JOIN',
+						'INNER JOIN',
 						[
 							'wl_namespace=rc_namespace',
 							'wl_title=rc_title'
@@ -403,7 +386,7 @@ class WatchedItemQueryServiceUnitTest extends MediaWikiTestCase {
 				],
 				[
 					'watchlist' => [
-						'JOIN',
+						'INNER JOIN',
 						[
 							'wl_namespace=rc_namespace',
 							'wl_title=rc_title'
@@ -905,7 +888,7 @@ class WatchedItemQueryServiceUnitTest extends MediaWikiTestCase {
 		$expectedJoinConds = array_merge(
 			[
 				'watchlist' => [
-					'JOIN',
+					'INNER JOIN',
 					[
 						'wl_namespace=rc_namespace',
 						'wl_title=rc_title'
@@ -1138,7 +1121,7 @@ class WatchedItemQueryServiceUnitTest extends MediaWikiTestCase {
 				$this->isType( 'string' ),
 				$this->isType( 'array' ),
 				array_merge( [
-					'watchlist' => [ 'JOIN', [ 'wl_namespace=rc_namespace', 'wl_title=rc_title' ] ],
+					'watchlist' => [ 'INNER JOIN', [ 'wl_namespace=rc_namespace', 'wl_title=rc_title' ] ],
 					'page' => [ 'LEFT JOIN', 'rc_cur_id=page_id' ],
 				], $expectedExtraJoins )
 			)
@@ -1176,7 +1159,7 @@ class WatchedItemQueryServiceUnitTest extends MediaWikiTestCase {
 				[],
 				[
 					'watchlist' => [
-						'JOIN',
+						'INNER JOIN',
 						[
 							'wl_namespace=rc_namespace',
 							'wl_title=rc_title'
@@ -1299,7 +1282,7 @@ class WatchedItemQueryServiceUnitTest extends MediaWikiTestCase {
 				[],
 				[
 					'watchlist' => [
-						'JOIN',
+						'INNER JOIN',
 						[
 							'wl_namespace=rc_namespace',
 							'wl_title=rc_title'
@@ -1345,7 +1328,7 @@ class WatchedItemQueryServiceUnitTest extends MediaWikiTestCase {
 				[],
 				[
 					'watchlist' => [
-						'JOIN',
+						'INNER JOIN',
 						[
 							'wl_namespace=rc_namespace',
 							'wl_title=rc_title'

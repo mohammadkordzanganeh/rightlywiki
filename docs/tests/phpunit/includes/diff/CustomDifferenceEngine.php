@@ -7,7 +7,7 @@ class CustomDifferenceEngine extends DifferenceEngine {
 	}
 
 	public function generateContentDiffBody( Content $old, Content $new ) {
-		return $old->getText() . '|' . $new->getText();
+		return $old->getNativeData() . '|' . $new->getNativeData();
 	}
 
 	public function showDiffStyle() {

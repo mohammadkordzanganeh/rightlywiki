@@ -45,7 +45,7 @@ trait McrSchemaOverride {
 			$overrides['scripts'][] = $this->getSqlPatchPath( $db, 'patch-slot_roles' );
 			$overrides['scripts'][] = $this->getSqlPatchPath( $db, 'patch-content_models' );
 			$overrides['scripts'][] = $this->getSqlPatchPath( $db, 'patch-content' );
-			$overrides['scripts'][] = $this->getSqlPatchPath( $db, 'patch-slots' );
+			$overrides['scripts'][] = $this->getSqlPatchPath( $db, 'patch-slots.sql' );
 		}
 
 		if ( !$this->hasPreMcrFields( $db ) ) {

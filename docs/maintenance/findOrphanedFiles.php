@@ -117,7 +117,7 @@ class FindOrphanedFiles extends Maintenance {
 						$oiWheres ? $dbr->makeList( $oiWheres, LIST_OR ) : '1=0'
 					)
 				],
-				$dbr::UNION_ALL
+				true // UNION ALL (performance)
 			),
 			__METHOD__
 		);

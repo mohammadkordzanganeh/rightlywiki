@@ -31,7 +31,7 @@ class MutableRevisionSlotsTest extends RevisionSlotsTest {
 
 	/**
 	 * @dataProvider provideConstructorFailue
-	 * @param array $slots
+	 * @param $slots
 	 *
 	 * @covers \MediaWiki\Revision\RevisionSlots::__construct
 	 * @covers \MediaWiki\Revision\RevisionSlots::setSlotsInternal

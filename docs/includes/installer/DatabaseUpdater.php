@@ -20,8 +20,8 @@
  * @file
  * @ingroup Deployment
  */
+use Wikimedia\Rdbms\Database;
 use Wikimedia\Rdbms\IDatabase;
-use Wikimedia\Rdbms\IMaintainableDatabase;
 use MediaWiki\MediaWikiServices;
 
 require_once __DIR__ . '/../../maintenance/Maintenance.php';
@@ -59,7 +59,7 @@ abstract class DatabaseUpdater {
 	/**
 	 * Handle to the database subclass
 	 *
-	 * @var IMaintainableDatabase
+	 * @var Database
 	 */
 	protected $db;
 
@@ -87,7 +87,6 @@ abstract class DatabaseUpdater {
 		AddRFCandPMIDInterwiki::class,
 		PopulatePPSortKey::class,
 		PopulateIpChanges::class,
-		RefreshExternallinksIndex::class,
 	];
 
 	/**
@@ -110,15 +109,11 @@ abstract class DatabaseUpdater {
 	protected $holdContentHandlerUseDB = true;
 
 	/**
-	 * @param IMaintainableDatabase &$db To perform updates on
+	 * @param Database &$db To perform updates on
 	 * @param bool $shared Whether to perform updates on shared tables
 	 * @param Maintenance|null $maintenance Maintenance object which created us
 	 */
-	protected function __construct(
-		IMaintainableDatabase &$db,
-		$shared,
-		Maintenance $maintenance = null
-	) {
+	protected function __construct( Database &$db, $shared, Maintenance $maintenance = null ) {
 		$this->db = $db;
 		$this->db->setFlag( DBO_DDLMODE ); // For Oracle's handling of schema files
 		$this->shared = $shared;
@@ -169,7 +164,10 @@ abstract class DatabaseUpdater {
 
 		// This will automatically add "AutoloadClasses" to $wgAutoloadClasses
 		$data = $registry->readFromQueue( $queue );
-		$hooks = $data['globals']['wgHooks']['LoadExtensionSchemaUpdates'] ?? [];
+		$hooks = [];
+		if ( isset( $data['globals']['wgHooks']['LoadExtensionSchemaUpdates'] ) ) {
+			$hooks = $data['globals']['wgHooks']['LoadExtensionSchemaUpdates'];
+		}
 		if ( $vars && isset( $vars['wgHooks']['LoadExtensionSchemaUpdates'] ) ) {
 			$hooks = array_merge_recursive( $hooks, $vars['wgHooks']['LoadExtensionSchemaUpdates'] );
 		}
@@ -181,18 +179,14 @@ abstract class DatabaseUpdater {
 	}
 
 	/**
-	 * @param IMaintainableDatabase $db
+	 * @param Database $db
 	 * @param bool $shared
 	 * @param Maintenance|null $maintenance
 	 *
 	 * @throws MWException
 	 * @return DatabaseUpdater
 	 */
-	public static function newForDB(
-		IMaintainableDatabase $db,
-		$shared = false,
-		Maintenance $maintenance = null
-	) {
+	public static function newForDB( Database $db, $shared = false, Maintenance $maintenance = null ) {
 		$type = $db->getType();
 		if ( in_array( $type, Installer::getDBTypes() ) ) {
 			$class = ucfirst( $type ) . 'Updater';
@@ -206,7 +200,7 @@ abstract class DatabaseUpdater {
 	/**
 	 * Get a database connection to run updates
 	 *
-	 * @return IMaintainableDatabase
+	 * @return Database
 	 */
 	public function getDB() {
 		return $this->db;
@@ -418,7 +412,9 @@ abstract class DatabaseUpdater {
 		$this->updatesSkipped = [];
 
 		foreach ( $updates as $funcList ) {
-			list( $func, $args, $origParams ) = $funcList;
+			$func = $funcList[0];
+			$args = $funcList[1];
+			$origParams = $funcList[2];
 			$func( ...$args );
 			flush();
 			$this->updatesSkipped[] = $origParams;
@@ -1080,9 +1076,7 @@ abstract class DatabaseUpdater {
 		}
 
 		// ResourceLoader: Message cache
-		$blobStore = new MessageBlobStore(
-			MediaWikiServices::getInstance()->getResourceLoader()
-		);
+		$blobStore = new MessageBlobStore();
 		$blobStore->clear();
 
 		// ResourceLoader: File-dependency cache
@@ -1269,7 +1263,10 @@ abstract class DatabaseUpdater {
 	 * @since 1.30
 	 */
 	protected function migrateComments() {
-		if ( !$this->updateRowExists( 'MigrateComments' ) ) {
+		global $wgCommentTableSchemaMigrationStage;
+		if ( $wgCommentTableSchemaMigrationStage >= MIGRATION_WRITE_NEW &&
+			!$this->updateRowExists( 'MigrateComments' )
+		) {
 			$this->output(
 				"Migrating comments to the 'comments' table, printing progress markers. For large\n" .
 				"databases, you may want to hit Ctrl-C and do this manually with\n" .
@@ -1286,14 +1283,20 @@ abstract class DatabaseUpdater {
 	 * @since 1.32
 	 */
 	protected function migrateImageCommentTemp() {
+		global $wgCommentTableSchemaMigrationStage;
+
 		if ( $this->tableExists( 'image_comment_temp' ) ) {
-			$this->output( "Merging image_comment_temp into the image table\n" );
-			$task = $this->maintenance->runChild(
-				MigrateImageCommentTemp::class, 'migrateImageCommentTemp.php'
-			);
-			$task->setForce();
-			$ok = $task->execute();
-			$this->output( $ok ? "done.\n" : "errors were encountered.\n" );
+			if ( $wgCommentTableSchemaMigrationStage > MIGRATION_OLD ) {
+				$this->output( "Merging image_comment_temp into the image table\n" );
+				$task = $this->maintenance->runChild(
+					MigrateImageCommentTemp::class, 'migrateImageCommentTemp.php'
+				);
+				$task->setForce();
+				$ok = $task->execute();
+				$this->output( $ok ? "done.\n" : "errors were encountered.\n" );
+			} else {
+				$ok = true;
+			}
 			if ( $ok ) {
 				$this->dropTable( 'image_comment_temp' );
 			}

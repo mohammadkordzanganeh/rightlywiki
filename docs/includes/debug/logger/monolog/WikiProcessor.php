@@ -20,8 +20,6 @@
 
 namespace MediaWiki\Logger\Monolog;
 
-use WikiMap;
-
 /**
  * Annotate log records with request-global metadata, such as the hostname,
  * wiki / request ID, and MediaWiki version.
@@ -38,7 +36,7 @@ class WikiProcessor {
 	public function __invoke( array $record ) {
 		global $wgVersion;
 		$record['extra']['host'] = wfHostname();
-		$record['extra']['wiki'] = WikiMap::getWikiIdFromDbDomain( WikiMap::getCurrentWikiDbDomain() );
+		$record['extra']['wiki'] = wfWikiID();
 		$record['extra']['mwversion'] = $wgVersion;
 		$record['extra']['reqId'] = \WebRequest::getRequestId();
 		if ( wfIsCLI() && isset( $_SERVER['argv'] ) ) {

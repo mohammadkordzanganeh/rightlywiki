@@ -156,15 +156,14 @@ class RCCacheEntryFactoryTest extends MediaWikiLangTestCase {
 
 		$this->assertValidHTML( $cacheEntry->usertalklink );
 		$this->assertRegExp(
-			'#^ <span class="mw-usertoollinks mw-changeslist-links">.*<span><a .+>talk</a></span>.*</span>#',
+			'#^ <span class="mw-usertoollinks">\(.*<a .+>talk</a>.*\)</span>#',
 			$cacheEntry->usertalklink,
 			'verify user talk link'
 		);
 
 		$this->assertValidHTML( $cacheEntry->usertalklink );
 		$this->assertRegExp(
-			'#^ <span class="mw-usertoollinks mw-changeslist-links">.*<span><a .+>' .
-				'contribs</a></span>.*</span>$#',
+			'#^ <span class="mw-usertoollinks">\(.*<a .+>contribs</a>.*\)</span>$#',
 			$cacheEntry->usertalklink,
 			'verify user tool links'
 		);

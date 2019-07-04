@@ -140,9 +140,9 @@ class WebInstaller extends Installer {
 		$this->request = $request;
 
 		// Add parser hooks
-		$parser = MediaWikiServices::getInstance()->getParser();
-		$parser->setHook( 'downloadlink', [ $this, 'downloadLinkHook' ] );
-		$parser->setHook( 'doclink', [ $this, 'docLink' ] );
+		global $wgParser;
+		$wgParser->setHook( 'downloadlink', [ $this, 'downloadLinkHook' ] );
+		$wgParser->setHook( 'doclink', [ $this, 'docLink' ] );
 	}
 
 	/**
@@ -178,9 +178,17 @@ class WebInstaller extends Installer {
 			return $this->session;
 		}
 
-		$this->happyPages = $session['happyPages'] ?? [];
+		if ( isset( $session['happyPages'] ) ) {
+			$this->happyPages = $session['happyPages'];
+		} else {
+			$this->happyPages = [];
+		}
 
-		$this->skippedPages = $session['skippedPages'] ?? [];
+		if ( isset( $session['skippedPages'] ) ) {
+			$this->skippedPages = $session['skippedPages'];
+		} else {
+			$this->skippedPages = [];
+		}
 
 		$lowestUnhappy = $this->getLowestUnhappy();
 
@@ -460,7 +468,11 @@ class WebInstaller extends Installer {
 	 * @return array
 	 */
 	public function getSession( $name, $default = null ) {
-		return $this->session[$name] ?? $default;
+		if ( !isset( $this->session[$name] ) ) {
+			return $default;
+		} else {
+			return $this->session[$name];
+		}
 	}
 
 	/**
@@ -920,7 +932,11 @@ class WebInstaller extends Installer {
 		if ( !isset( $params['labelAttribs'] ) ) {
 			$params['labelAttribs'] = [];
 		}
-		$labelText = $params['rawtext'] ?? $this->parse( wfMessage( $params['label'] )->plain() );
+		if ( isset( $params['rawtext'] ) ) {
+			$labelText = $params['rawtext'];
+		} else {
+			$labelText = $this->parse( wfMessage( $params['label'] )->text() );
+		}
 
 		return "<div class=\"config-input-check\">\n" .
 			$params['help'] .
@@ -962,7 +978,11 @@ class WebInstaller extends Installer {
 	public function getRadioSet( $params ) {
 		$items = $this->getRadioElements( $params );
 
-		$label = $params['label'] ?? '';
+		if ( !isset( $params['label'] ) ) {
+			$label = '';
+		} else {
+			$label = $params['label'];
+		}
 
 		if ( !isset( $params['controlName'] ) ) {
 			$params['controlName'] = 'config_' . $params['var'];
@@ -1072,10 +1092,12 @@ class WebInstaller extends Installer {
 			if ( $value === null ) {
 				// Checkbox?
 				$this->setVar( $name, false );
-			} elseif ( stripos( $name, 'password' ) !== false ) {
-				$this->setPassword( $name, $value );
 			} else {
-				$this->setVar( $name, $value );
+				if ( stripos( $name, 'password' ) !== false ) {
+					$this->setPassword( $name, $value );
+				} else {
+					$this->setVar( $name, $value );
+				}
 			}
 		}
 

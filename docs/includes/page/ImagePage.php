@@ -20,7 +20,6 @@
  * @file
  */
 
-use MediaWiki\MediaWikiServices;
 use Wikimedia\Rdbms\ResultWrapper;
 
 /**
@@ -87,14 +86,17 @@ class ImagePage extends Article {
 		$this->repo = $img->getRepo();
 	}
 
+	/**
+	 * Handler for action=render
+	 * Include body text only; none of the image extras
+	 */
+	public function render() {
+		$this->getContext()->getOutput()->setArticleBodyOnly( true );
+		parent::view();
+	}
+
 	public function view() {
 		global $wgShowEXIF;
-
-		// For action=render, include body text only; none of the image extras
-		if ( $this->viewIsRenderAction ) {
-			parent::view();
-			return;
-		}
 
 		$out = $this->getContext()->getOutput();
 		$request = $this->getContext()->getRequest();
@@ -159,7 +161,7 @@ class ImagePage extends Article {
 		if ( $this->mExtraDescription ) {
 			$fol = $this->getContext()->msg( 'shareddescriptionfollows' );
 			if ( !$fol->isDisabled() ) {
-				$out->addWikiTextAsInterface( $fol->plain() );
+				$out->addWikiText( $fol->plain() );
 			}
 			$out->addHTML( '<div id="shared-image-desc">' . $this->mExtraDescription . "</div>\n" );
 		}
@@ -188,10 +190,7 @@ class ImagePage extends Article {
 				'h2',
 				[ 'id' => 'metadata' ],
 					$this->getContext()->msg( 'metadata' )->text() ) . "\n" );
-			$out->wrapWikiTextAsInterface(
-				'mw-imagepage-section-metadata',
-				$this->makeMetadataTable( $formattedMetadata )
-			);
+			$out->addWikiText( $this->makeMetadataTable( $formattedMetadata ) );
 			$out->addModules( [ 'mediawiki.action.view.metadata' ] );
 		}
 
@@ -250,7 +249,8 @@ class ImagePage extends Article {
 	 * @return string The metadata table. This is treated as Wikitext (!)
 	 */
 	protected function makeMetadataTable( $metadata ) {
-		$r = $this->getContext()->msg( 'metadata-help' )->plain();
+		$r = "<div class=\"mw-imagepage-section-metadata\">";
+		$r .= $this->getContext()->msg( 'metadata-help' )->plain();
 		// Intial state is collapsed
 		// see filepage.css and mediawiki.action.view.metadata module.
 		$r .= "<table id=\"mw_metadata\" class=\"mw_metadata collapsed\">\n";
@@ -267,7 +267,7 @@ class ImagePage extends Article {
 				);
 			}
 		}
-		$r .= "</table>\n";
+		$r .= "</table>\n</div>\n";
 		return $r;
 	}
 
@@ -282,33 +282,26 @@ class ImagePage extends Article {
 	 */
 	public function getEmptyPageParserOutput( ParserOptions $options ) {
 		$this->loadFile();
-		if ( $this->mPage->getFile() && !$this->mPage->getFile()->isLocal() && $this->getId() == 0 ) {
+		if ( $this->mPage->getFile() && !$this->mPage->getFile()->isLocal() && 0 == $this->getId() ) {
 			return new ParserOutput();
 		}
 		return parent::getEmptyPageParserOutput( $options );
 	}
 
-	/**
-	 * Returns language code to be used for dispaying the image, based on request context and
-	 * languages available in the file.
-	 *
-	 * @param WebRequest $request
-	 * @param File $file
-	 * @return string|null
-	 */
 	private function getLanguageForRendering( WebRequest $request, File $file ) {
-		$handler = $file->getHandler();
+		$handler = $this->displayImg->getHandler();
 		if ( !$handler ) {
 			return null;
 		}
 
-		$config = MediaWikiServices::getInstance()->getMainConfig();
-		$requestLanguage = $request->getVal( 'lang', $config->get( 'LanguageCode' ) );
-		if ( $handler->validateParam( 'lang', $requestLanguage ) ) {
-			return $file->getMatchedLanguage( $requestLanguage );
+		$requestLanguage = $request->getVal( 'lang' );
+		if ( !is_null( $requestLanguage ) ) {
+			if ( $handler->validateParam( 'lang', $requestLanguage ) ) {
+				return $requestLanguage;
+			}
 		}
 
-		return $handler->getDefaultRenderLanguage( $file );
+		return $handler->getDefaultRenderLanguage( $this->displayImg );
 	}
 
 	protected function openShowImage() {
@@ -321,7 +314,9 @@ class ImagePage extends Article {
 		$dirmark = $lang->getDirMarkEntity();
 		$request = $this->getContext()->getRequest();
 
-		list( $maxWidth, $maxHeight ) = $this->getImageLimitsFromOption( $user, 'imagesize' );
+		$max = $this->getImageLimitsFromOption( $user, 'imagesize' );
+		$maxWidth = $max[0];
+		$maxHeight = $max[1];
 
 		if ( $this->displayImg->exists() ) {
 			# image
@@ -355,7 +350,7 @@ class ImagePage extends Article {
 				# image
 				# "Download high res version" link below the image
 				# $msgsize = $this->getContext()->msg( 'file-info-size', $width_orig, $height_orig,
-				#   Language::formatSize( $this->displayImg->getSize() ), $mime )->escaped();
+				#   Linker::formatSize( $this->displayImg->getSize() ), $mime )->escaped();
 				# We'll show a thumbnail of this image
 				if ( $width > $maxWidth || $height > $maxHeight || $this->displayImg->isVectorized() ) {
 					list( $width, $height ) = $this->getDisplayWidthHeight(
@@ -547,15 +542,16 @@ class ImagePage extends Article {
 				// to the filename, because it can get copied with it.
 				// See T27277.
 				// phpcs:disable Generic.Files.LineLength
-				$out->wrapWikiTextAsInterface( 'fullMedia', <<<EOT
-<span class="dangerousLink">{$medialink}</span> $dirmark<span class="fileInfo">$longDesc</span>
+				$out->addWikiText( <<<EOT
+<div class="fullMedia"><span class="dangerousLink">{$medialink}</span> $dirmark<span class="fileInfo">$longDesc</span></div>
+<div class="mediaWarning">$warning</div>
 EOT
 				);
 				// phpcs:enable
-				$out->wrapWikiTextAsInterface( 'mediaWarning', $warning );
 			} else {
-				$out->wrapWikiTextAsInterface( 'fullMedia', <<<EOT
-{$medialink} {$dirmark}<span class="fileInfo">$longDesc</span>
+				$out->addWikiText( <<<EOT
+<div class="fullMedia">{$medialink} {$dirmark}<span class="fileInfo">$longDesc</span>
+</div>
 EOT
 				);
 			}
@@ -578,7 +574,10 @@ EOT
 					'file-no-thumb-animation'
 				)->plain();
 
-				$out->wrapWikiTextAsInterface( 'mw-noanimatethumb', $noAnimMesg );
+				$out->addWikiText( <<<EOT
+<div class="mw-noanimatethumb">{$noAnimMesg}</div>
+EOT
+				);
 			}
 
 			if ( !$this->displayImg->isLocal() ) {
@@ -1006,7 +1005,7 @@ EOT
 		$out->setRobotPolicy( 'noindex,nofollow' );
 		$out->setArticleRelated( false );
 		$out->enableClientCache( false );
-		$out->addWikiTextAsInterface( $description );
+		$out->addWikiText( $description );
 	}
 
 	/**
@@ -1027,7 +1026,7 @@ EOT
 	 *
 	 * @param User $user
 	 * @param string $optionName Name of a option to check, typically imagesize or thumbsize
-	 * @return int[]
+	 * @return array
 	 * @since 1.21
 	 */
 	public function getImageLimitsFromOption( $user, $optionName ) {
@@ -1097,8 +1096,8 @@ EOT
 	}
 
 	/**
-	 * @param string $lang
-	 * @param bool $selected
+	 * @param $lang string
+	 * @param $selected bool
 	 * @return string
 	 */
 	private function createXmlOptionStringForLanguage( $lang, $selected ) {
@@ -1222,7 +1221,7 @@ EOT
 	 * @return TitleArray|Title[]
 	 */
 	public function getForeignCategories() {
-		return $this->mPage->getForeignCategories();
+		$this->mPage->getForeignCategories();
 	}
 
 }

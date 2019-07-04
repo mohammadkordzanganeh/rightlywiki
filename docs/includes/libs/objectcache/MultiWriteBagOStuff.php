@@ -27,9 +27,6 @@ use Wikimedia\ObjectFactory;
  * are implemented by reading from the caches in the order they are given in
  * the configuration until a cache gives a positive result.
  *
- * Note that cache key construction will use the first cache backend in the list,
- * so make sure that the other backends can handle such keys (e.g. via encoding).
- *
  * @ingroup Cache
  */
 class MultiWriteBagOStuff extends BagOStuff {
@@ -103,11 +100,11 @@ class MultiWriteBagOStuff extends BagOStuff {
 		}
 	}
 
-	public function get( $key, $flags = 0 ) {
+	protected function doGet( $key, $flags = 0 ) {
 		if ( ( $flags & self::READ_LATEST ) == self::READ_LATEST ) {
 			// If the latest write was a delete(), we do NOT want to fallback
 			// to the other tiers and possibly see the old value. Also, this
-			// is used by merge(), which only needs to hit the primary.
+			// is used by mergeViaLock(), which only needs to hit the primary.
 			return $this->caches[0]->get( $key, $flags );
 		}
 
@@ -127,72 +124,67 @@ class MultiWriteBagOStuff extends BagOStuff {
 		) {
 			// Backfill the value to the higher (and often faster/smaller) cache tiers
 			$this->doWrite(
-				$missIndexes,
-				$this->asyncWrites,
-				'set',
-				[ $key, $value, self::UPGRADE_TTL ]
+				$missIndexes, $this->asyncWrites, 'set', $key, $value, self::UPGRADE_TTL
 			);
 		}
 
 		return $value;
 	}
+
 	public function set( $key, $value, $exptime = 0, $flags = 0 ) {
-		return $this->doWrite(
-			$this->cacheIndexes,
-			$this->usesAsyncWritesGivenFlags( $flags ),
-			__FUNCTION__,
-			func_get_args()
-		);
+		$asyncWrites = ( ( $flags & self::WRITE_SYNC ) == self::WRITE_SYNC )
+			? false
+			: $this->asyncWrites;
+
+		return $this->doWrite( $this->cacheIndexes, $asyncWrites, 'set', $key, $value, $exptime );
 	}
 
-	public function delete( $key, $flags = 0 ) {
-		return $this->doWrite(
-			$this->cacheIndexes,
-			$this->usesAsyncWritesGivenFlags( $flags ),
-			__FUNCTION__,
-			func_get_args()
-		);
+	public function delete( $key ) {
+		return $this->doWrite( $this->cacheIndexes, $this->asyncWrites, 'delete', $key );
 	}
 
-	public function add( $key, $value, $exptime = 0, $flags = 0 ) {
+	public function add( $key, $value, $exptime = 0 ) {
 		// Try the write to the top-tier cache
-		$ok = $this->doWrite(
-			[ 0 ],
-			$this->usesAsyncWritesGivenFlags( $flags ),
-			__FUNCTION__,
-			func_get_args()
-		);
-
+		$ok = $this->doWrite( [ 0 ], $this->asyncWrites, 'add', $key, $value, $exptime );
 		if ( $ok ) {
 			// Relay the add() using set() if it succeeded. This is meant to handle certain
 			// migration scenarios where the same store might get written to twice for certain
 			// keys. In that case, it does not make sense to return false due to "self-conflicts".
 			return $this->doWrite(
 				array_slice( $this->cacheIndexes, 1 ),
-				$this->usesAsyncWritesGivenFlags( $flags ),
+				$this->asyncWrites,
 				'set',
-				[ $key, $value, $exptime, $flags ]
+				$key,
+				$value,
+				$exptime
 			);
 		}
 
 		return false;
 	}
 
-	public function merge( $key, callable $callback, $exptime = 0, $attempts = 10, $flags = 0 ) {
-		return $this->doWrite(
-			$this->cacheIndexes,
-			$this->usesAsyncWritesGivenFlags( $flags ),
-			__FUNCTION__,
-			func_get_args()
-		);
+	public function incr( $key, $value = 1 ) {
+		return $this->doWrite( $this->cacheIndexes, $this->asyncWrites, 'incr', $key, $value );
 	}
 
-	public function changeTTL( $key, $exptime = 0, $flags = 0 ) {
+	public function decr( $key, $value = 1 ) {
+		return $this->doWrite( $this->cacheIndexes, $this->asyncWrites, 'decr', $key, $value );
+	}
+
+	public function merge( $key, callable $callback, $exptime = 0, $attempts = 10, $flags = 0 ) {
+		$asyncWrites = ( ( $flags & self::WRITE_SYNC ) == self::WRITE_SYNC )
+			? false
+			: $this->asyncWrites;
+
 		return $this->doWrite(
 			$this->cacheIndexes,
-			$this->usesAsyncWritesGivenFlags( $flags ),
-			__FUNCTION__,
-			func_get_args()
+			$asyncWrites,
+			'merge',
+			$key,
+			$callback,
+			$exptime,
+			$attempts,
+			$flags
 		);
 	}
 
@@ -205,82 +197,6 @@ class MultiWriteBagOStuff extends BagOStuff {
 		// Only the first cache is locked
 		return $this->caches[0]->unlock( $key );
 	}
-	/**
-	 * Delete objects expiring before a certain date.
-	 *
-	 * Succeed if any of the child caches succeed.
-	 * @param string $date
-	 * @param bool|callable $progressCallback
-	 * @return bool
-	 */
-	public function deleteObjectsExpiringBefore( $date, $progressCallback = false ) {
-		$ret = false;
-		foreach ( $this->caches as $cache ) {
-			if ( $cache->deleteObjectsExpiringBefore( $date, $progressCallback ) ) {
-				$ret = true;
-			}
-		}
-
-		return $ret;
-	}
-
-	public function getMulti( array $keys, $flags = 0 ) {
-		// Just iterate over each key in order to handle all the backfill logic
-		$res = [];
-		foreach ( $keys as $key ) {
-			$val = $this->get( $key, $flags );
-			if ( $val !== false ) {
-				$res[$key] = $val;
-			}
-		}
-
-		return $res;
-	}
-
-	public function setMulti( array $data, $exptime = 0, $flags = 0 ) {
-		return $this->doWrite(
-			$this->cacheIndexes,
-			$this->usesAsyncWritesGivenFlags( $flags ),
-			__FUNCTION__,
-			func_get_args()
-		);
-	}
-
-	public function deleteMulti( array $data, $flags = 0 ) {
-		return $this->doWrite(
-			$this->cacheIndexes,
-			$this->usesAsyncWritesGivenFlags( $flags ),
-			__FUNCTION__,
-			func_get_args()
-		);
-	}
-
-	public function incr( $key, $value = 1 ) {
-		return $this->doWrite(
-			$this->cacheIndexes,
-			$this->asyncWrites,
-			__FUNCTION__,
-			func_get_args()
-		);
-	}
-
-	public function decr( $key, $value = 1 ) {
-		return $this->doWrite(
-			$this->cacheIndexes,
-			$this->asyncWrites,
-			__FUNCTION__,
-			func_get_args()
-		);
-	}
-
-	public function incrWithInit( $key, $ttl, $value = 1, $init = 1 ) {
-		return $this->doWrite(
-			$this->cacheIndexes,
-			$this->asyncWrites,
-			__FUNCTION__,
-			func_get_args()
-		);
-	}
 
 	public function getLastError() {
 		return $this->caches[0]->getLastError();
@@ -289,17 +205,19 @@ class MultiWriteBagOStuff extends BagOStuff {
 	public function clearLastError() {
 		$this->caches[0]->clearLastError();
 	}
+
 	/**
 	 * Apply a write method to the backing caches specified by $indexes (in order)
 	 *
 	 * @param int[] $indexes List of backing cache indexes
 	 * @param bool $asyncWrites
-	 * @param string $method Method name of backing caches
-	 * @param array[] $args Arguments to the method of backing caches
+	 * @param string $method
+	 * @param mixed $args,...
 	 * @return bool
 	 */
-	protected function doWrite( $indexes, $asyncWrites, $method, array $args ) {
+	protected function doWrite( $indexes, $asyncWrites, $method /*, ... */ ) {
 		$ret = true;
+		$args = array_slice( func_get_args(), 3 );
 
 		if ( array_diff( $indexes, [ 0 ] ) && $asyncWrites && $method !== 'merge' ) {
 			// Deep-clone $args to prevent misbehavior when something writes an
@@ -331,11 +249,22 @@ class MultiWriteBagOStuff extends BagOStuff {
 	}
 
 	/**
-	 * @param int $flags
+	 * Delete objects expiring before a certain date.
+	 *
+	 * Succeed if any of the child caches succeed.
+	 * @param string $date
+	 * @param bool|callable $progressCallback
 	 * @return bool
 	 */
-	protected function usesAsyncWritesGivenFlags( $flags ) {
-		return ( ( $flags & self::WRITE_SYNC ) == self::WRITE_SYNC ) ? false : $this->asyncWrites;
+	public function deleteObjectsExpiringBefore( $date, $progressCallback = false ) {
+		$ret = false;
+		foreach ( $this->caches as $cache ) {
+			if ( $cache->deleteObjectsExpiringBefore( $date, $progressCallback ) ) {
+				$ret = true;
+			}
+		}
+
+		return $ret;
 	}
 
 	public function makeKeyInternal( $keyspace, $args ) {
@@ -348,9 +277,5 @@ class MultiWriteBagOStuff extends BagOStuff {
 
 	public function makeGlobalKey( $class, $component = null ) {
 		return $this->caches[0]->makeGlobalKey( ...func_get_args() );
-	}
-
-	protected function doGet( $key, $flags = 0, &$casToken = null ) {
-		throw new LogicException( __METHOD__ . ': proxy class does not need this method.' );
 	}
 }

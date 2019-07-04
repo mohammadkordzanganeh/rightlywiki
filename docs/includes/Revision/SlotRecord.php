@@ -219,6 +219,8 @@ class SlotRecord {
 	}
 
 	/**
+	 * SlotRecord constructor.
+	 *
 	 * The following fields are supported by the $row parameter:
 	 *
 	 *   $row->blob_data

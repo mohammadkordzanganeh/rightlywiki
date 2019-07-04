@@ -15,7 +15,7 @@
  * along with MediaViewer.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-( function () {
+( function ( mw, $, oo ) {
 	var MPSP;
 
 	/**
@@ -55,7 +55,7 @@
 
 		this.initialize();
 	}
-	OO.inheritClass( MetadataPanelScroller, mw.mmv.ui.Element );
+	oo.inheritClass( MetadataPanelScroller, mw.mmv.ui.Element );
 	MPSP = MetadataPanelScroller.prototype;
 
 	MPSP.attach = function () {
@@ -189,7 +189,6 @@
 				this.$container.trigger( 'mmv-metadata-reveal-truncated-text' );
 				scrollTopTarget = this.getScrollTopWhenOpen();
 			}
-			// eslint-disable-next-line no-jquery/no-global-selector
 			return $( 'html, body' ).animate( { scrollTop: scrollTopTarget }, 'fast' ).promise();
 		}
 	};
@@ -245,4 +244,4 @@
 	};
 
 	mw.mmv.ui.MetadataPanelScroller = MetadataPanelScroller;
-}() );
+}( mediaWiki, jQuery, OO ) );

@@ -7,7 +7,7 @@
  * @ingroup Extensions
  *
  * Documentation
- * @link https://www.mediawiki.org/wiki/Extension:Cite/Cite.php
+ * @link http://www.mediawiki.org/wiki/Extension:Cite/Cite.php
  *
  * <cite> definition in HTML
  * @link http://www.w3.org/TR/html4/struct/text.html#edef-CITE
@@ -128,7 +128,7 @@ class Cite {
 	/**
 	 * The links to use per group, in order.
 	 *
-	 * @var (string[]|false)[]
+	 * @var array
 	 */
 	private $mLinkLabels = [];
 
@@ -180,7 +180,7 @@ class Cite {
 	 * Used to cleanup out of sequence ref calls created by #tag
 	 * See description of function rollbackRef.
 	 *
-	 * @var (array|false)[]
+	 * @var array
 	 */
 	private $mRefCallStack = [];
 
@@ -218,7 +218,7 @@ class Cite {
 		$this->mInCite = false;
 
 		$parserOutput = $parser->getOutput();
-		$parserOutput->addModules( 'ext.cite.ux-enhancements' );
+		$parserOutput->addModules( 'ext.cite.a11y' );
 		$parserOutput->addModuleStyles( 'ext.cite.styles' );
 
 		$frame->setVolatile();
@@ -234,6 +234,7 @@ class Cite {
 	 * @param string|null $str Raw content of the <ref> tag.
 	 * @param string[] $argv Arguments
 	 * @param Parser $parser
+	 * @param string $default_group
 	 *
 	 * @throws Exception
 	 * @return string
@@ -241,7 +242,8 @@ class Cite {
 	private function guardedRef(
 		$str,
 		array $argv,
-		Parser $parser
+		Parser $parser,
+		$default_group = self::DEFAULT_GROUP
 	) {
 		$this->mParser = $parser;
 
@@ -256,7 +258,7 @@ class Cite {
 			if ( $this->mInReferences ) {
 				$group = $this->mReferencesGroup;
 			} else {
-				$group = self::DEFAULT_GROUP;
+				$group = $default_group;
 			}
 		}
 
@@ -340,8 +342,8 @@ class Cite {
 			return $this->error( 'cite_error_ref_no_key' );
 		}
 
-		if ( is_string( $key ) && preg_match( '/^\d+$/', $key ) ||
-			is_string( $follow ) && preg_match( '/^\d+$/', $follow )
+		if ( is_string( $key ) && preg_match( '/^[0-9]+$/', $key ) ||
+			is_string( $follow ) && preg_match( '/^[0-9]+$/', $follow )
 		) {
 			# Numeric names mess up the resulting id's, potentially produ-
 			# cing duplicate id's in the XHTML.  The Right Thing To Do
@@ -395,16 +397,16 @@ class Cite {
 	 *  "dir" : set direction of text (ltr/rtl)
 	 *
 	 * @param string[] $argv The argument vector
-	 * @return (string|false|null)[] An array with exactly four elements, where each is a string on
-	 *  valid input, false on invalid input, or null on no input.
+	 * @return mixed false on invalid input, a string on valid
+	 *               input and null on no input
 	 * @return-taint tainted
 	 */
 	private function refArg( array $argv ) {
+		$cnt = count( $argv );
 		$group = null;
 		$key = null;
 		$follow = null;
 		$dir = null;
-
 		if ( isset( $argv['dir'] ) ) {
 			// compare the dir attribute value against an explicit whitelist.
 			$dir = '';
@@ -414,39 +416,45 @@ class Cite {
 			}
 
 			unset( $argv['dir'] );
+			--$cnt;
 		}
+		if ( $cnt > 2 ) {
+			// There should only be one key or follow parameter, and one group parameter
+			// FIXME : this looks inconsistent, it should probably return a tuple
+			return false;
+		} elseif ( $cnt >= 1 ) {
+			if ( isset( $argv['name'] ) && isset( $argv['follow'] ) ) {
+				return [ false, false, false, false ];
+			}
+			if ( isset( $argv['name'] ) ) {
+				// Key given.
+				$key = trim( $argv['name'] );
+				unset( $argv['name'] );
+				--$cnt;
+			}
+			if ( isset( $argv['follow'] ) ) {
+				// Follow given.
+				$follow = trim( $argv['follow'] );
+				unset( $argv['follow'] );
+				--$cnt;
+			}
+			if ( isset( $argv['group'] ) ) {
+				// Group given.
+				$group = $argv['group'];
+				unset( $argv['group'] );
+				--$cnt;
+			}
 
-		if ( $argv === [] ) {
+			if ( $cnt === 0 ) {
+				return [ $key, $group, $follow, $dir ];
+			} else {
+				// Invalid key
+				return [ false, false, false, false ];
+			}
+		} else {
 			// No key
-			return [ null, null, false, $dir ];
+			return [ null, $group, false, $dir ];
 		}
-
-		if ( isset( $argv['name'] ) && isset( $argv['follow'] ) ) {
-			return [ false, false, false, false ];
-		}
-
-		if ( isset( $argv['name'] ) ) {
-			// Key given.
-			$key = trim( $argv['name'] );
-			unset( $argv['name'] );
-		}
-		if ( isset( $argv['follow'] ) ) {
-			// Follow given.
-			$follow = trim( $argv['follow'] );
-			unset( $argv['follow'] );
-		}
-		if ( isset( $argv['group'] ) ) {
-			// Group given.
-			$group = $argv['group'];
-			unset( $argv['group'] );
-		}
-
-		if ( $argv !== [] ) {
-			// Invalid key
-			return [ false, false, false, false ];
-		}
-
-		return [ $key, $group, $follow, $dir ];
 	}
 
 	/**
@@ -645,7 +653,7 @@ class Cite {
 	 */
 	public function references( $str, array $argv, Parser $parser, PPFrame $frame ) {
 		if ( $this->mInCite || $this->mInReferences ) {
-			if ( $str === null ) {
+			if ( is_null( $str ) ) {
 				return htmlspecialchars( "<references/>" );
 			}
 			return htmlspecialchars( "<references>$str</references>" );
@@ -664,13 +672,14 @@ class Cite {
 	 * @param string|null $str Raw content of the <references> tag.
 	 * @param string[] $argv
 	 * @param Parser $parser
-	 *
+	 * @param string $group
 	 * @return string
 	 */
 	private function guardedReferences(
 		$str,
 		array $argv,
-		Parser $parser
+		Parser $parser,
+		$group = self::DEFAULT_GROUP
 	) {
 		global $wgCiteResponsiveReferences;
 
@@ -679,8 +688,6 @@ class Cite {
 		if ( isset( $argv['group'] ) ) {
 			$group = $argv['group'];
 			unset( $argv['group'] );
-		} else {
-			$group = self::DEFAULT_GROUP;
 		}
 
 		if ( strval( $str ) !== '' ) {
@@ -840,7 +847,7 @@ class Cite {
 			// this handles the case of section preview for list-defined references
 			return wfMessage( 'cite_references_link_many',
 					$this->normalizeKey(
-						self::getReferencesKey( $key . "-" . ( $val['key'] ?? '' ) )
+						self::getReferencesKey( $key . "-" . ( isset( $val['key'] ) ? $val['key'] : '' ) )
 					),
 					'',
 					$text
@@ -906,12 +913,12 @@ class Cite {
 
 	/**
 	 * Returns formatted reference text
-	 * @param string $key
-	 * @param string|null $text
-	 * @return string
+	 * @param String $key
+	 * @param String $text
+	 * @return String
 	 */
 	private function referenceText( $key, $text ) {
-		if ( $text === null || $text === '' ) {
+		if ( !isset( $text ) || $text === '' ) {
 			if ( $this->mParser->getOptions()->getIsSectionPreview() ) {
 				return $this->warning( 'cite_warning_sectionpreview_no_text', $key, 'noparse' );
 			}
@@ -997,13 +1004,13 @@ class Cite {
 	 * (since otherwise it would link to itself)
 	 *
 	 * @param string $key
-	 * @param int|null $num The number of the key
+	 * @param int $num The number of the key
 	 * @return string A key for use in wikitext
 	 */
 	private function refKey( $key, $num = null ) {
 		$prefix = wfMessage( 'cite_reference_link_prefix' )->inContentLanguage()->text();
 		$suffix = wfMessage( 'cite_reference_link_suffix' )->inContentLanguage()->text();
-		if ( $num !== null ) {
+		if ( isset( $num ) ) {
 			$key = wfMessage( 'cite_reference_link_key_with_num', $key, $num )
 				->inContentLanguage()->plain();
 		}
@@ -1033,9 +1040,9 @@ class Cite {
 	 * @suppress SecurityCheck-DoubleEscaped
 	 * @param string $group
 	 * @param string $key The key for the link
-	 * @param int|null $count The index of the key, used for distinguishing
+	 * @param int $count The index of the key, used for distinguishing
 	 *                   multiple occurrences of the same key
-	 * @param int|null $label The label to use for the link, I want to
+	 * @param int $label The label to use for the link, I want to
 	 *                   use the same label for all occourances of
 	 *                   the same named reference.
 	 * @param string $subkey
@@ -1044,10 +1051,7 @@ class Cite {
 	 */
 	private function linkRef( $group, $key, $count = null, $label = null, $subkey = '' ) {
 		global $wgContLang;
-
-		if ( $label === null ) {
-			$label = ++$this->mGroupCnt[$group];
-		}
+		$label = is_null( $label ) ? ++$this->mGroupCnt[$group] : $label;
 
 		return $this->mParser->recursiveTagParse(
 				wfMessage(
@@ -1074,7 +1078,6 @@ class Cite {
 	 */
 	private function normalizeKey( $key ) {
 		$key = Sanitizer::escapeIdForAttribute( $key );
-		$key = preg_replace( '/__+/', '_', $key );
 		$key = Sanitizer::safeEncodeAttribute( $key );
 
 		return $key;
@@ -1087,37 +1090,39 @@ class Cite {
 	 * first separator and not 'and' as the second, and this has to
 	 * use messages from the content language) I'm rolling my own.
 	 *
-	 * @param string[] $arr The array to format
+	 * @param array $arr The array to format
 	 * @return string
 	 */
 	private function listToText( $arr ) {
 		$cnt = count( $arr );
-		if ( $cnt === 1 ) {
-			// Enforce always returning a string
-			return (string)$arr[0];
-		}
 
 		$sep = wfMessage( 'cite_references_link_many_sep' )->inContentLanguage()->plain();
 		$and = wfMessage( 'cite_references_link_many_and' )->inContentLanguage()->plain();
-		$t = array_slice( $arr, 0, $cnt - 1 );
-		return implode( $sep, $t ) . $and . $arr[$cnt - 1];
+
+		if ( $cnt === 1 ) {
+			// Enforce always returning a string
+			return (string)$arr[0];
+		} else {
+			$t = array_slice( $arr, 0, $cnt - 1 );
+			return implode( $sep, $t ) . $and . $arr[$cnt - 1];
+		}
 	}
 
 	/**
 	 * Generate the labels to pass to the
 	 * 'cite_references_link_many_format' message, the format is an
-	 * arbitrary number of tokens separated by whitespace.
+	 * arbitrary number of tokens separated by [\t\n ]
 	 */
 	private function genBacklinkLabels() {
 		$text = wfMessage( 'cite_references_link_many_format_backlink_labels' )
 			->inContentLanguage()->plain();
-		$this->mBacklinkLabels = preg_split( '/\s+/', $text );
+		$this->mBacklinkLabels = preg_split( '#[\n\t ]#', $text );
 	}
 
 	/**
 	 * Generate the labels to pass to the
 	 * 'cite_reference_link' message instead of numbers, the format is an
-	 * arbitrary number of tokens separated by whitespace.
+	 * arbitrary number of tokens separated by [\t\n ]
 	 *
 	 * @param string $group
 	 * @param string $message
@@ -1128,7 +1133,7 @@ class Cite {
 		if ( $msg->exists() ) {
 			$text = $msg->plain();
 		}
-		$this->mLinkLabels[$group] = $text ? preg_split( '/\s+/', $text ) : false;
+		$this->mLinkLabels[$group] = ( !$text ) ? false : preg_split( '#[\n\t ]#', $text );
 	}
 
 	/**
@@ -1192,7 +1197,7 @@ class Cite {
 	 */
 	public function checkRefsNoReferences( $afterParse, $parser, &$text ) {
 		global $wgCiteResponsiveReferences;
-		if ( $parser->extCite === null ) {
+		if ( is_null( $parser->extCite ) ) {
 			return;
 		}
 		if ( $parser->extCite !== $this ) {

@@ -1,6 +1,5 @@
 <?php
 
-use Wikimedia\Rdbms\Database;
 use Wikimedia\Rdbms\DatabaseMssql;
 
 class DatabaseMssqlTest extends PHPUnit\Framework\TestCase {
@@ -53,10 +52,4 @@ class DatabaseMssqlTest extends PHPUnit\Framework\TestCase {
 		$mockDb->buildSubstring( 'foo', $start, $length );
 	}
 
-	/**
-	 * @covers \Wikimedia\Rdbms\DatabaseMssql::getAttributes
-	 */
-	public function testAttributes() {
-		$this->assertTrue( DatabaseMssql::getAttributes()[Database::ATTR_SCHEMAS_AS_TABLE_GROUPS] );
-	}
 }

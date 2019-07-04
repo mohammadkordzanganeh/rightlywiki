@@ -117,8 +117,6 @@ class SpecialExpandTemplates extends SpecialPage {
 			$config = $this->getConfig();
 			if ( MWTidy::isEnabled() && $options->getTidy() ) {
 				$tmp = MWTidy::tidy( $tmp );
-			} else {
-				wfDeprecated( 'disabling tidy', '1.33' );
 			}
 
 			$out->addHTML( $tmp );
@@ -154,6 +152,7 @@ class SpecialExpandTemplates extends SpecialPage {
 	 *
 	 * @param string $title Value for context title field
 	 * @param string $input Value for input textbox
+	 * @return string
 	 */
 	private function makeForm( $title, $input ) {
 		$fields = [

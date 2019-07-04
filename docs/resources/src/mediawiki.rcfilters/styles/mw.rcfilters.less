@@ -24,6 +24,7 @@
 	// On the watchlist, reserve a bit more
 	.mw-special-Watchlist .rcfilters-head {
 		min-height: @rcfilters-wl-head-min-height;
+
 	}
 
 	.mw-rcfilters-collapsed {
@@ -78,6 +79,7 @@
 			.cloptions {
 				display: none;
 			}
+
 		}
 	}
 
@@ -137,13 +139,11 @@
 			.animation-delay( 0s );
 		}
 	}
-
 	body:not( .mw-rcfilters-ui-initialized ) .rcfilters-spinner {
 		display: block;
 		// When initializing, display the spinner on top of the area where the UI will appear
 		margin-top: -( @rcfilters-head-min-height + @rcfilters-head-margin-bottom ) / 1.5;
 	}
-
 	body.mw-rcfilters-ui-loading .rcfilters-spinner {
 		display: block;
 		// When loading new results, display the spinner on top of the results area
@@ -183,7 +183,6 @@
 	100% {
 		-webkit-transform: scale( 0.625 );
 	}
-
 	20% { // equals 320ms
 		opacity: 0.87;
 		-webkit-transform: scale( 1 );
@@ -196,7 +195,6 @@
 	100% {
 		-moz-transform: scale( 0.625 );
 	}
-
 	20% {
 		opacity: 0.87;
 		-moz-transform: scale( 1 );
@@ -209,7 +207,6 @@
 	100% {
 		transform: scale( 0.625 );
 	}
-
 	20% { // equals 320ms
 		opacity: 0.87;
 		transform: scale( 1 );

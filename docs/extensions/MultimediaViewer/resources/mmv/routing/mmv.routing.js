@@ -15,6 +15,6 @@
  * along with MediaViewer.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-( function () {
+( function ( mw ) {
 	mw.mmv.routing = {};
-}() );
+}( mediaWiki ) );

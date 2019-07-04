@@ -79,7 +79,6 @@ class GenerateJsonI18n extends Maintenance {
 			$dir_iterator = new RecursiveDirectoryIterator( dirname( $phpfile ) );
 			$iterator = new RecursiveIteratorIterator(
 				$dir_iterator, RecursiveIteratorIterator::LEAVES_ONLY );
-			/** @var SplFileInfo $fileObject */
 			foreach ( $iterator as $path => $fileObject ) {
 				if ( fnmatch( "*.i18n.php", $fileObject->getFilename() ) ) {
 					$this->output( "Converting $path.\n" );
@@ -183,7 +182,7 @@ class GenerateJsonI18n extends Maintenance {
 	/**
 	 * Get an array of author names from a documentation comment containing @author declarations.
 	 * @param string $comment Documentation comment
-	 * @return string[] Array of author names
+	 * @return array Array of author names (strings)
 	 */
 	protected function getAuthorsFromComment( $comment ) {
 		$matches = null;

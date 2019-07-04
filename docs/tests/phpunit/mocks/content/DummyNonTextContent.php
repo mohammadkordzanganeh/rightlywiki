@@ -102,7 +102,7 @@ class DummyNonTextContent extends AbstractContent {
 	public function getParserOutput( Title $title, $revId = null,
 		ParserOptions $options = null, $generateHtml = true
 	) {
-		return new ParserOutput( $this->serialize() );
+		return new ParserOutput( $this->getNativeData() );
 	}
 
 	/**
@@ -116,6 +116,6 @@ class DummyNonTextContent extends AbstractContent {
 	 */
 	protected function fillParserOutput( Title $title, $revId,
 			ParserOptions $options, $generateHtml, ParserOutput &$output ) {
-		$output = new ParserOutput( $this->serialize() );
+		$output = new ParserOutput( $this->getNativeData() );
 	}
 }

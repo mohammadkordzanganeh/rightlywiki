@@ -47,12 +47,12 @@ class ApiQueryExtLinksUsage extends ApiQueryGeneratorBase {
 	 */
 	private function run( $resultPageSet = null ) {
 		$params = $this->extractRequestParams();
-		$db = $this->getDB();
 
 		$query = $params['query'];
 		$protocol = self::getProtocolPrefix( $params['protocol'] );
 
-		$this->addTables( [ 'page', 'externallinks' ] );
+		$this->addTables( [ 'page', 'externallinks' ] ); // must be in this order for 'USE INDEX'
+		$this->addOption( 'USE INDEX', 'el_index' );
 		$this->addWhere( 'page_id=el_from' );
 
 		$miser_ns = [];
@@ -62,45 +62,14 @@ class ApiQueryExtLinksUsage extends ApiQueryGeneratorBase {
 			$this->addWhereFld( 'page_namespace', $params['namespace'] );
 		}
 
-		$orderBy = [];
+		// Normalize query to match the normalization applied for the externallinks table
+		$query = Parser::normalizeLinkUrl( $query );
 
-		if ( $query !== null && $query !== '' ) {
-			if ( $protocol === null ) {
-				$protocol = 'http://';
-			}
+		$whereQuery = $this->prepareUrlQuerySearchString( $query, $protocol );
 
-			// Normalize query to match the normalization applied for the externallinks table
-			$query = Parser::normalizeLinkUrl( $protocol . $query );
-
-			$conds = LinkFilter::getQueryConditions( $query, [
-				'protocol' => '',
-				'oneWildcard' => true,
-				'db' => $db
-			] );
-			if ( !$conds ) {
-				$this->dieWithError( 'apierror-badquery' );
-			}
-			$this->addWhere( $conds );
-			if ( !isset( $conds['el_index_60'] ) ) {
-				$orderBy[] = 'el_index_60';
-			}
-		} else {
-			$orderBy[] = 'el_index_60';
-
-			if ( $protocol !== null ) {
-				$this->addWhere( 'el_index_60' . $db->buildLike( "$protocol", $db->anyString() ) );
-			} else {
-				// We're querying all protocols, filter out duplicate protocol-relative links
-				$this->addWhere( $db->makeList( [
-					'el_to NOT' . $db->buildLike( '//', $db->anyString() ),
-					'el_index_60 ' . $db->buildLike( 'http://', $db->anyString() ),
-				], LIST_OR ) );
-			}
+		if ( $whereQuery !== null ) {
+			$this->addWhere( $whereQuery );
 		}
-
-		$orderBy[] = 'el_id';
-		$this->addOption( 'ORDER BY', $orderBy );
-		$this->addFields( $orderBy ); // Make sure
 
 		$prop = array_flip( $params['prop'] );
 		$fld_ids = isset( $prop['ids'] );
@@ -119,19 +88,10 @@ class ApiQueryExtLinksUsage extends ApiQueryGeneratorBase {
 		}
 
 		$limit = $params['limit'];
+		$offset = $params['offset'];
 		$this->addOption( 'LIMIT', $limit + 1 );
-
-		if ( $params['continue'] !== null ) {
-			$cont = explode( '|', $params['continue'] );
-			$this->dieContinueUsageIf( count( $cont ) !== count( $orderBy ) );
-			$i = count( $cont ) - 1;
-			$cond = $orderBy[$i] . ' >= ' . $db->addQuotes( rawurldecode( $cont[$i] ) );
-			while ( $i-- > 0 ) {
-				$field = $orderBy[$i];
-				$v = $db->addQuotes( rawurldecode( $cont[$i] ) );
-				$cond = "($field > $v OR ($field = $v AND $cond))";
-			}
-			$this->addWhere( $cond );
+		if ( isset( $offset ) ) {
+			$this->addOption( 'OFFSET', $offset );
 		}
 
 		$res = $this->select( __METHOD__ );
@@ -142,7 +102,7 @@ class ApiQueryExtLinksUsage extends ApiQueryGeneratorBase {
 			if ( ++$count > $limit ) {
 				// We've reached the one extra which shows that there are
 				// additional pages to be had. Stop here...
-				$this->setContinue( $orderBy, $row );
+				$this->setContinueEnumParameter( 'offset', $offset + $limit );
 				break;
 			}
 
@@ -155,7 +115,7 @@ class ApiQueryExtLinksUsage extends ApiQueryGeneratorBase {
 					ApiResult::META_TYPE => 'assoc',
 				];
 				if ( $fld_ids ) {
-					$vals['pageid'] = (int)$row->page_id;
+					$vals['pageid'] = intval( $row->page_id );
 				}
 				if ( $fld_title ) {
 					$title = Title::makeTitle( $row->page_namespace, $row->page_title );
@@ -171,7 +131,7 @@ class ApiQueryExtLinksUsage extends ApiQueryGeneratorBase {
 				}
 				$fit = $result->addValue( [ 'query', $this->getModuleName() ], null, $vals );
 				if ( !$fit ) {
-					$this->setContinue( $orderBy, $row );
+					$this->setContinueEnumParameter( 'offset', $offset + $count - 1 );
 					break;
 				}
 			} else {
@@ -183,14 +143,6 @@ class ApiQueryExtLinksUsage extends ApiQueryGeneratorBase {
 			$result->addIndexedTagName( [ 'query', $this->getModuleName() ],
 				$this->getModulePrefix() );
 		}
-	}
-
-	private function setContinue( $orderBy, $row ) {
-		$fields = [];
-		foreach ( $orderBy as $field ) {
-			$fields[] = strtr( $row->$field, [ '%' => '%25', '|' => '%7C' ] );
-		}
-		$this->setContinueEnumParameter( 'continue', implode( '|', $fields ) );
 	}
 
 	public function getAllowedParams() {
@@ -205,7 +157,8 @@ class ApiQueryExtLinksUsage extends ApiQueryGeneratorBase {
 				],
 				ApiBase::PARAM_HELP_MSG_PER_VALUE => [],
 			],
-			'continue' => [
+			'offset' => [
+				ApiBase::PARAM_TYPE => 'integer',
 				ApiBase::PARAM_HELP_MSG => 'api-help-param-continue',
 			],
 			'protocol' => [

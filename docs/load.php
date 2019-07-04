@@ -22,6 +22,7 @@
  * @author Trevor Parscal
  */
 
+use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\MediaWikiServices;
 
 // This endpoint is supposed to be independent of request cookies and other
@@ -39,7 +40,11 @@ if ( !$wgRequest->checkUrlExtension() ) {
 // writes when getting database connections for ResourceLoader. (T192611)
 MediaWikiServices::getInstance()->getDBLoadBalancerFactory()->disableChronologyProtection();
 
-$resourceLoader = MediaWikiServices::getInstance()->getResourceLoader();
+// Set up ResourceLoader
+$resourceLoader = new ResourceLoader(
+	ConfigFactory::getDefaultInstance()->makeConfig( 'main' ),
+	LoggerFactory::getInstance( 'resourceloader' )
+);
 $context = new ResourceLoaderContext( $resourceLoader, $wgRequest );
 
 // Respond to ResourceLoader request

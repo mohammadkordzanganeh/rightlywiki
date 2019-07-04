@@ -88,17 +88,20 @@ abstract class MWHttpRequest implements LoggerAwareInterface {
 	 * @param array $options (optional) extra params to pass (see Http::request())
 	 * @param string $caller The method making this request, for profiling
 	 * @param Profiler|null $profiler An instance of the profiler for profiling, or null
-	 * @throws Exception
 	 */
 	public function __construct(
-		$url, array $options = [], $caller = __METHOD__, Profiler $profiler = null
+		$url, array $options = [], $caller = __METHOD__, $profiler = null
 	) {
 		global $wgHTTPTimeout, $wgHTTPConnectTimeout;
 
 		$this->url = wfExpandUrl( $url, PROTO_HTTP );
 		$this->parsedUrl = wfParseUrl( $this->url );
 
-		$this->logger = $options['logger'] ?? new NullLogger();
+		if ( isset( $options['logger'] ) ) {
+			$this->logger = $options['logger'];
+		} else {
+			$this->logger = new NullLogger();
+		}
 
 		if ( !$this->parsedUrl || !Http::isValidURI( $this->url ) ) {
 			$this->status = StatusValue::newFatal( 'http-invalid-url', $url );
@@ -128,8 +131,6 @@ abstract class MWHttpRequest implements LoggerAwareInterface {
 		if ( isset( $options['originalRequest'] ) ) {
 			$this->setOriginalRequest( $options['originalRequest'] );
 		}
-
-		$this->setHeader( 'X-Request-Id', WebRequest::getRequestId() );
 
 		$members = [ "postData", "proxy", "noProxy", "sslVerifyHost", "caInfo",
 				"method", "followRedirects", "maxRedirects", "sslVerifyCert", "callback" ];
@@ -204,7 +205,7 @@ abstract class MWHttpRequest implements LoggerAwareInterface {
 	 * @param array $args
 	 * @todo overload the args param
 	 */
-	public function setData( array $args ) {
+	public function setData( $args ) {
 		$this->postData = $args;
 	}
 
@@ -328,17 +329,6 @@ abstract class MWHttpRequest implements LoggerAwareInterface {
 	 * @throws InvalidArgumentException
 	 */
 	public function setCallback( $callback ) {
-		return $this->doSetCallback( $callback );
-	}
-
-	/**
-	 * Worker function for setting callbacks.  Calls can originate both internally and externally
-	 * via setCallback).  Defaults to the internal read callback if $callback is null.
-	 *
-	 * @param callable|null $callback
-	 * @throws InvalidArgumentException
-	 */
-	protected function doSetCallback( $callback ) {
 		if ( is_null( $callback ) ) {
 			$callback = [ $this, 'read' ];
 		} elseif ( !is_callable( $callback ) ) {
@@ -382,7 +372,7 @@ abstract class MWHttpRequest implements LoggerAwareInterface {
 		$this->proxySetup(); // set up any proxy as needed
 
 		if ( !$this->callback ) {
-			$this->doSetCallback( null );
+			$this->setCallback( null );
 		}
 
 		if ( !isset( $this->reqHeaders['User-Agent'] ) ) {
@@ -400,7 +390,7 @@ abstract class MWHttpRequest implements LoggerAwareInterface {
 
 		// Failure without (valid) headers gets a response status of zero
 		if ( !$this->status->isOK() ) {
-			$this->respStatus = '0 Error';
+			$this->respStatus = '0';
 		}
 
 		foreach ( $this->headerList as $header ) {
@@ -422,20 +412,18 @@ abstract class MWHttpRequest implements LoggerAwareInterface {
 	/**
 	 * Sets HTTPRequest status member to a fatal value with the error
 	 * message if the returned integer value of the status code was
-	 * not successful (1-299) or a redirect (300-399).
-	 * See RFC2616, section 10, http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html
-	 * for a list of status codes.
+	 * not successful (< 300) or a redirect (>=300 and < 400).  (see
+	 * RFC2616, section 10,
+	 * http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html for a
+	 * list of status codes.)
 	 */
 	protected function setStatus() {
 		if ( !$this->respHeaders ) {
 			$this->parseHeader();
 		}
 
-		if ( ( (int)$this->respStatus > 0 && (int)$this->respStatus < 400 ) ) {
-			$this->status->setResult( true, (int)$this->respStatus );
-		} else {
+		if ( (int)$this->respStatus > 399 ) {
 			list( $code, $message ) = explode( " ", $this->respStatus, 2 );
-			$this->status->setResult( false, (int)$this->respStatus );
 			$this->status->fatal( "http-bad-status", $code, $message );
 		}
 	}
@@ -479,7 +467,6 @@ abstract class MWHttpRequest implements LoggerAwareInterface {
 	 * request has been executed.  Because some headers
 	 * (e.g. Set-Cookie) can appear more than once the, each value of
 	 * the associative array is an array of the values given.
-	 * Header names are always in lowercase.
 	 *
 	 * @return array
 	 */
@@ -494,7 +481,7 @@ abstract class MWHttpRequest implements LoggerAwareInterface {
 	/**
 	 * Returns the value of the given response header.
 	 *
-	 * @param string $header case-insensitive
+	 * @param string $header
 	 * @return string|null
 	 */
 	public function getResponseHeader( $header ) {
@@ -517,7 +504,7 @@ abstract class MWHttpRequest implements LoggerAwareInterface {
 	 *
 	 * @param CookieJar $jar
 	 */
-	public function setCookieJar( CookieJar $jar ) {
+	public function setCookieJar( $jar ) {
 		$this->cookieJar = $jar;
 	}
 
@@ -543,7 +530,7 @@ abstract class MWHttpRequest implements LoggerAwareInterface {
 	 * @param string $value
 	 * @param array $attr
 	 */
-	public function setCookie( $name, $value, array $attr = [] ) {
+	public function setCookie( $name, $value, $attr = [] ) {
 		if ( !$this->cookieJar ) {
 			$this->cookieJar = new CookieJar;
 		}

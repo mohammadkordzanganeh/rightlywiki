@@ -73,7 +73,12 @@ class MathCaptcha extends SimpleCaptcha {
 	 * @return string
 	 */
 	private function fetchMath( $sum ) {
-		$math = MathRenderer::getRenderer( $sum, [], 'png' );
+		if ( class_exists( 'MathRenderer' ) ) {
+			$math = MathRenderer::getRenderer( $sum, [], 'png' );
+		} else {
+			throw new LogicException(
+				'MathCaptcha requires the Math extension for MediaWiki versions 1.18 and above.' );
+		}
 		$math->render();
 		$html = $math->getHtmlOutput();
 		return preg_replace( '/alt=".*?"/', '', $html );

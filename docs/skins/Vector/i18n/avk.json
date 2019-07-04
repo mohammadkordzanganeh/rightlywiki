@@ -1,8 +1,7 @@
 {
 	"@metadata": {
 		"authors": [
-			"Wikimistusik",
-			"Axel xadolik"
+			"Wikimistusik"
 		]
 	},
 	"vector-action-addsection": "Loplekura va detce",
@@ -13,6 +12,5 @@
 	"vector-view-edit": "Betara",
 	"vector-view-history": "Wira va izvot",
 	"vector-view-view": "Belira",
-	"vector-view-viewsource": "klitawira",
-	"vector-more-actions": "Loon"
+	"vector-view-viewsource": "klitawira"
 }

@@ -257,12 +257,6 @@ $specialPageAliases['mt'] = [
 	'Gadgets' => [ 'Aġġeġġi', 'Aċċessorji' ],
 ];
 
-/** Neapolitan (napulitano) */
-$specialPageAliases['nap'] = [
-	'Gadgets' => [ 'Pazzielle' ],
-	'GadgetUsage' => [ 'PazziellaAuso' ],
-];
-
 /** Norwegian Bokmål (norsk bokmål) */
 $specialPageAliases['nb'] = [
 	'Gadgets' => [ 'Tilleggsfunksjoner' ],
@@ -306,7 +300,6 @@ $specialPageAliases['ro'] = [
 /** Russian (русский) */
 $specialPageAliases['ru'] = [
 	'Gadgets' => [ 'Гаджеты' ],
-	'GadgetUsage' => [ 'Использование_гаджетов' ],
 ];
 
 /** Sanskrit (संस्कृतम्) */
@@ -349,7 +342,6 @@ $specialPageAliases['sl'] = [
 /** Serbian (Cyrillic script) (српски (ћирилица)‎) */
 $specialPageAliases['sr-ec'] = [
 	'Gadgets' => [ 'Гаџети', 'Геџети' ],
-	'GadgetUsage' => [ 'УпотребаГаџета', 'УпотребаГеџета' ],
 ];
 
 /** Swedish (svenska) */

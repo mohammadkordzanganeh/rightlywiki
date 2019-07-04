@@ -28,11 +28,11 @@
 
 		assert.strictEqual( $tocList.is( ':hidden' ), false, 'The table of contents is now visible' );
 
-		$toggleLink.trigger( 'click' );
+		$toggleLink.click();
 		return $tocList.promise().then( function () {
 			assert.strictEqual( $tocList.is( ':hidden' ), true, 'The table of contents is now hidden' );
 
-			$toggleLink.trigger( 'click' );
+			$toggleLink.click();
 			return $tocList.promise();
 		} );
 	} );

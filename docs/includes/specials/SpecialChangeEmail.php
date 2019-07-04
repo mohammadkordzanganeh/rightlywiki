@@ -61,9 +61,9 @@ class SpecialChangeEmail extends FormSpecialPage {
 		parent::execute( $par );
 	}
 
-	protected function getLoginSecurityLevel() {
-		return $this->getName();
-	}
+        protected function getLoginSecurityLevel() {
+                return $this->getName();
+        }
 
 	protected function checkExecutePermissions( User $user ) {
 		if ( !AuthManager::singleton()->allowsPropertyChange( 'emailaddress' ) ) {
@@ -189,6 +189,7 @@ class SpecialChangeEmail extends FormSpecialPage {
 		Hooks::run( 'PrefsEmailAudit', [ $user, $oldaddr, $newaddr ] );
 
 		$user->saveSettings();
+		MediaWiki\Auth\AuthManager::callLegacyAuthPlugin( 'updateExternalDB', [ $user ] );
 
 		return $status;
 	}

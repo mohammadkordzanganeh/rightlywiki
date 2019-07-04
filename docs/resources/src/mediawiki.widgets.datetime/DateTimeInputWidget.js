@@ -19,7 +19,6 @@
 	 * @mixins OO.ui.mixin.IconElement
 	 * @mixins OO.ui.mixin.IndicatorElement
 	 * @mixins OO.ui.mixin.PendingElement
-	 * @mixins OO.ui.mixin.FlaggedElement
 	 *
 	 * @constructor
 	 * @param {Object} [config] Configuration options
@@ -65,13 +64,12 @@
 		this.type = config.type;
 
 		// Parent constructor
-		mw.widgets.datetime.DateTimeInputWidget.super.call( this, config );
+		mw.widgets.datetime.DateTimeInputWidget[ 'super' ].call( this, config );
 
 		// Mixin constructors
 		OO.ui.mixin.IconElement.call( this, config );
 		OO.ui.mixin.IndicatorElement.call( this, config );
 		OO.ui.mixin.PendingElement.call( this, config );
-		OO.ui.mixin.FlaggedElement.call( this, config );
 
 		// Properties
 		this.$handle = $( '<span>' );
@@ -176,7 +174,6 @@
 	OO.mixinClass( mw.widgets.datetime.DateTimeInputWidget, OO.ui.mixin.IconElement );
 	OO.mixinClass( mw.widgets.datetime.DateTimeInputWidget, OO.ui.mixin.IndicatorElement );
 	OO.mixinClass( mw.widgets.datetime.DateTimeInputWidget, OO.ui.mixin.PendingElement );
-	OO.mixinClass( mw.widgets.datetime.DateTimeInputWidget, OO.ui.mixin.FlaggedElement );
 
 	/* Static properties */
 
@@ -376,7 +373,7 @@
 				} else {
 					maxlength = spec.size;
 					if ( spec.intercalarySize ) {
-						// eslint-disable-next-line no-jquery/no-each-util
+						// eslint-disable-next-line no-restricted-properties
 						$.each( spec.intercalarySize, reduceFunc );
 					}
 					$field = $( '<input>' ).attr( 'type', 'text' )
@@ -426,7 +423,7 @@
 			this.clearButton = new OO.ui.ButtonWidget( {
 				classes: [ 'mw-widgets-datetime-dateTimeInputWidget-field', 'mw-widgets-datetime-dateTimeInputWidget-clearButton' ],
 				framed: false,
-				icon: 'clear',
+				icon: 'trash',
 				disabled: disabled
 			} ).connect( this, {
 				click: 'onClearClick'
@@ -631,7 +628,7 @@
 						);
 					}
 					if ( $field.is( ':input' ) ) {
-						$field.trigger( 'select' );
+						$field.select();
 					}
 					return false;
 			}
@@ -653,7 +650,7 @@
 				this.setValue( this.formatter.getDefaultDate() );
 			}
 			if ( $field.is( ':input' ) ) {
-				$field.trigger( 'select' );
+				$field.select();
 			}
 
 			if ( this.calendar ) {
@@ -798,7 +795,7 @@
 	 * @inheritdoc
 	 */
 	mw.widgets.datetime.DateTimeInputWidget.prototype.setDisabled = function ( disabled ) {
-		mw.widgets.datetime.DateTimeInputWidget.super.prototype.setDisabled.call( this, disabled );
+		mw.widgets.datetime.DateTimeInputWidget[ 'super' ].prototype.setDisabled.call( this, disabled );
 
 		// Flag all our fields as disabled
 		if ( this.$fields ) {
@@ -818,7 +815,7 @@
 	 */
 	mw.widgets.datetime.DateTimeInputWidget.prototype.focus = function () {
 		if ( !this.getFocusedField().length ) {
-			this.$fields.find( '.mw-widgets-datetime-dateTimeInputWidget-editField' ).first().trigger( 'focus' );
+			this.$fields.find( '.mw-widgets-datetime-dateTimeInputWidget-editField' ).first().focus();
 		}
 		return this;
 	};

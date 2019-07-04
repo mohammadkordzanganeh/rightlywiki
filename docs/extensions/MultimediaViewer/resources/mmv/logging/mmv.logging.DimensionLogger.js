@@ -15,7 +15,7 @@
  * along with MultimediaViewer.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-( function () {
+( function ( mw, $, oo ) {
 	var DL;
 
 	/**
@@ -28,7 +28,7 @@
 	 */
 	function DimensionLogger() {}
 
-	OO.inheritClass( DimensionLogger, mw.mmv.logging.Logger );
+	oo.inheritClass( DimensionLogger, mw.mmv.logging.Logger );
 
 	DL = DimensionLogger.prototype;
 
@@ -78,4 +78,4 @@
 
 	mw.mmv.logging.DimensionLogger = DimensionLogger;
 	mw.mmv.dimensionLogger = new DimensionLogger();
-}() );
+}( mediaWiki, jQuery, OO ) );

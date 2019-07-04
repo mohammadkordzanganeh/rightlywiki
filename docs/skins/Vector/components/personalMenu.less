@@ -11,7 +11,8 @@
 	}
 
 	ul {
-		list-style: none none;
+		list-style-type: none;
+		list-style-image: none;
 		margin: 0;
 		padding-left: 10em; /* Keep from overlapping logo */
 	}
@@ -19,38 +20,26 @@
 	li {
 		float: left;
 		margin-left: 0.75em;
-		// `padding-top` instead of `margin-top` necessary for
-		// anonymous user icon position below
-		padding-top: 0.5em;
-		font-size: @font-size-menu-personal;
+		margin-top: 0.5em;
+		font-size: @menu-personal-font-size;
 		line-height: @line-height-menu-personal;
 		white-space: nowrap;
 	}
 }
 
-/* Icon for registered user names & anonymous message */
-#pt-anonuserpage,
-#pt-userpage a {
+/* Icon for Usernames */
+#pt-userpage a,
+#pt-anonuserpage {
 	// SVG support using a transparent gradient to guarantee cross-browser
 	// compatibility (browsers able to understand gradient syntax support also SVG)
 	.background-image-svg( 'images/user-avatar.svg', 'images/user-avatar.png' );
-	background-position: @background-position-menu-personal-icon;
+	background-position: left top;
 	background-repeat: no-repeat;
 	background-size: @line-height-menu-personal @line-height-menu-personal;
-	// Same as `#p-personal li` above
-	padding-top: 0.5em !important; // stylelint-disable-line declaration-no-important
 	padding-left: 16px !important; // stylelint-disable-line declaration-no-important
 }
 
-#pt-userpage {
-	padding-top: 0 !important; // stylelint-disable-line declaration-no-important
-
-	a {
-		display: inline-block;
-	}
-}
-
-/* Show anonymous "Not logged in" text in gray */
+/* Show "Not logged in" text in gray */
 #pt-anonuserpage {
 	color: #54595d;
 }

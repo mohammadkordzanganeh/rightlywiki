@@ -136,7 +136,11 @@ class ActorMigration {
 	 * @return string[] [ $text, $actor ]
 	 */
 	private static function getFieldNames( $key ) {
-		return self::$specialFields[$key] ?? [ $key . '_text', substr( $key, 0, -5 ) . '_actor' ];
+		if ( isset( self::$specialFields[$key] ) ) {
+			return self::$specialFields[$key];
+		}
+
+		return [ $key . '_text', substr( $key, 0, -5 ) . '_actor' ];
 	}
 
 	/**

@@ -80,7 +80,6 @@
 		},
 		teardown: function () {
 			$.fn.updateTooltipAccessKeys.setTestMode( false );
-			mw.util.resetOptionsForTest();
 		},
 		messages: {
 			// Used by accessKeyLabel in test for addPortletLink
@@ -115,7 +114,7 @@
 			// Distant future: no legacy fallbacks
 			[ allNew, text, html5Encoded ]
 		].forEach( function ( testCase ) {
-			mw.util.setOptionsForTest( { FragmentMode: testCase[ 0 ] } );
+			mw.config.set( 'wgFragmentMode', testCase[ 0 ] );
 
 			assert.strictEqual( util.escapeIdForAttribute( testCase[ 1 ] ), testCase[ 2 ] );
 		} );
@@ -142,7 +141,7 @@
 			// Distant future: no legacy fallbacks
 			[ allNew, text, html5Encoded ]
 		].forEach( function ( testCase ) {
-			mw.util.setOptionsForTest( { FragmentMode: testCase[ 0 ] } );
+			mw.config.set( 'wgFragmentMode', testCase[ 0 ] );
 
 			assert.strictEqual( util.escapeIdForLink( testCase[ 1 ] ), testCase[ 2 ] );
 		} );
@@ -151,7 +150,7 @@
 	QUnit.test( 'wikiUrlencode', function ( assert ) {
 		assert.strictEqual( util.wikiUrlencode( 'Test:A & B/Here' ), 'Test:A_%26_B/Here' );
 		// See also wfUrlencodeTest.php#provideURLS
-		// eslint-disable-next-line no-jquery/no-each-util
+		// eslint-disable-next-line no-restricted-properties
 		$.each( {
 			'+': '%2B',
 			'&': '%26',
@@ -211,22 +210,22 @@
 		href = util.getUrl( '#Fragment', { action: 'edit' } );
 		assert.strictEqual( href, '/w/index.php?action=edit#Fragment', 'empty title with query string and fragment' );
 
-		mw.util.setOptionsForTest( { FragmentMode: [ 'legacy' ] } );
+		mw.config.set( 'wgFragmentMode', [ 'legacy' ] );
 		href = util.getUrl( 'Foo:Sandbox \xC4#Fragment \xC4', { action: 'edit' } );
 		assert.strictEqual( href, '/w/index.php?title=Foo:Sandbox_%C3%84&action=edit#Fragment_.C3.84', 'title with query string, fragment, and special characters' );
 
-		mw.util.setOptionsForTest( { FragmentMode: [ 'html5' ] } );
+		mw.config.set( 'wgFragmentMode', [ 'html5' ] );
 		href = util.getUrl( 'Foo:Sandbox \xC4#Fragment \xC4', { action: 'edit' } );
 		assert.strictEqual( href, '/w/index.php?title=Foo:Sandbox_%C3%84&action=edit#Fragment_Ä', 'title with query string, fragment, and special characters' );
 
 		href = util.getUrl( 'Foo:%23#Fragment', { action: 'edit' } );
 		assert.strictEqual( href, '/w/index.php?title=Foo:%2523&action=edit#Fragment', 'title containing %23 (#), fragment, and a query string' );
 
-		mw.util.setOptionsForTest( { FragmentMode: [ 'legacy' ] } );
+		mw.config.set( 'wgFragmentMode', [ 'legacy' ] );
 		href = util.getUrl( '#+&=:;@$-_.!*/[]<>\'§', { action: 'edit' } );
 		assert.strictEqual( href, '/w/index.php?action=edit#.2B.26.3D:.3B.40.24-_..21.2A.2F.5B.5D.3C.3E.27.C2.A7', 'fragment with various characters' );
 
-		mw.util.setOptionsForTest( { FragmentMode: [ 'html5' ] } );
+		mw.config.set( 'wgFragmentMode', [ 'html5' ] );
 		href = util.getUrl( '#+&=:;@$-_.!*/[]<>\'§', { action: 'edit' } );
 		assert.strictEqual( href, '/w/index.php?action=edit#+&=:;@$-_.!*/[]<>\'§', 'fragment with various characters' );
 	} );

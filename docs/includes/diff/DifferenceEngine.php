@@ -21,10 +21,8 @@
  * @ingroup DifferenceEngine
  */
 
-use MediaWiki\MediaWikiServices;
 use MediaWiki\Revision\RevisionRecord;
 use MediaWiki\Revision\SlotRecord;
-use MediaWiki\Storage\NameTableAccessException;
 
 /**
  * DifferenceEngine is responsible for rendering the difference between two revisions as HTML.
@@ -755,14 +753,14 @@ class DifferenceEngine extends ContextSource {
 	 *  or false if no link is needed
 	 */
 	protected function getMarkPatrolledLinkInfo() {
+		global $wgUseRCPatrol;
+
 		$user = $this->getUser();
-		$config = $this->getConfig();
 
 		// Prepare a change patrol link, if applicable
 		if (
 			// Is patrolling enabled and the user allowed to?
-			$config->get( 'UseRCPatrol' ) &&
-			$this->mNewPage && $this->mNewPage->quickUserCan( 'patrol', $user ) &&
+			$wgUseRCPatrol && $this->mNewPage && $this->mNewPage->quickUserCan( 'patrol', $user ) &&
 			// Only do this if the revision isn't more than 6 hours older
 			// than the Max RC age (6h because the RC might not be cleaned out regularly)
 			RecentChange::isInRCLifespan( $this->mNewRev->getTimestamp(), 21600 )
@@ -956,10 +954,7 @@ class DifferenceEngine extends ContextSource {
 	 */
 	public function showDiffStyle() {
 		if ( !$this->isSlotDiffRenderer ) {
-			$this->getOutput()->addModuleStyles( [
-				'mediawiki.interface.helpers.styles',
-				'mediawiki.diff.styles'
-			] );
+			$this->getOutput()->addModuleStyles( 'mediawiki.diff.styles' );
 			foreach ( $this->getSlotDiffRenderers() as $slotDiffRenderer ) {
 				$slotDiffRenderer->addModules( $this->getOutput() );
 			}
@@ -1024,7 +1019,7 @@ class DifferenceEngine extends ContextSource {
 
 		// Cacheable?
 		$key = false;
-		$cache = MediaWikiServices::getInstance()->getMainWANObjectCache();
+		$cache = ObjectCache::getMainWANInstance();
 		if ( $this->mOldid && $this->mNewid ) {
 			// Check if subclass is still using the old way
 			// for backwards-compatibility
@@ -1036,7 +1031,7 @@ class DifferenceEngine extends ContextSource {
 			// Try cache
 			if ( !$this->mRefreshCache ) {
 				$difftext = $cache->get( $key );
-				if ( is_string( $difftext ) ) {
+				if ( $difftext ) {
 					wfIncrStats( 'diff_cache.hit' );
 					$difftext = $this->localiseDiff( $difftext );
 					$difftext .= "\n<!-- diff cache key $key -->\n";
@@ -1060,7 +1055,7 @@ class DifferenceEngine extends ContextSource {
 			$slotDiff = $slotDiffRenderer->getDiff( $slotContents[$role]['old'],
 				$slotContents[$role]['new'] );
 			if ( $slotDiff && $role !== SlotRecord::MAIN ) {
-				// FIXME: ask SlotRoleHandler::getSlotNameMessage
+				// TODO use human-readable role name at least
 				$slotTitle = $role;
 				$difftext .= $this->getSlotHeader( $slotTitle );
 			}
@@ -1339,11 +1334,12 @@ class DifferenceEngine extends ContextSource {
 	 * @return string
 	 */
 	protected function debug( $generator = "internal" ) {
+		global $wgShowHostnames;
 		if ( !$this->enableDebugComment ) {
 			return '';
 		}
 		$data = [ $generator ];
-		if ( $this->getConfig()->get( 'ShowHostnames' ) ) {
+		if ( $wgShowHostnames ) {
 			$data[] = wfHostname();
 		}
 		$data[] = wfTimestamp( TS_DB );
@@ -1466,7 +1462,7 @@ class DifferenceEngine extends ContextSource {
 			return self::intermediateEditsMsg( $nEdits, $numUsers, $limit );
 		}
 
-		return '';
+		return ''; // nothing
 	}
 
 	/**
@@ -1645,8 +1641,8 @@ class DifferenceEngine extends ContextSource {
 			$this->mOldPage = Title::newFromLinkTarget( $oldRevision->getPageAsLinkTarget() );
 			// This method is meant for edit diffs and such so there is no reason to provide a
 			// revision that's not readable to the user, but check it just in case.
-			$this->mOldContent = $oldRevision->getContent( SlotRecord::MAIN,
-				RevisionRecord::FOR_THIS_USER, $this->getUser() );
+			$this->mOldContent = $oldRevision ? $oldRevision->getContent( SlotRecord::MAIN,
+				RevisionRecord::FOR_THIS_USER, $this->getUser() ) : null;
 		} else {
 			$this->mOldPage = null;
 			$this->mOldRev = $this->mOldid = false;
@@ -1658,7 +1654,7 @@ class DifferenceEngine extends ContextSource {
 			RevisionRecord::FOR_THIS_USER, $this->getUser() );
 
 		$this->mRevisionsIdsLoaded = $this->mRevisionsLoaded = true;
-		$this->mTextLoaded = $oldRevision ? 2 : 1;
+		$this->mTextLoaded = !!$oldRevision + 1;
 		$this->isContentOverridden = false;
 		$this->slotDiffRenderers = null;
 	}
@@ -1669,8 +1665,11 @@ class DifferenceEngine extends ContextSource {
 	 * @param Language $lang
 	 * @since 1.19
 	 */
-	public function setTextLanguage( Language $lang ) {
-		$this->mDiffLang = $lang;
+	public function setTextLanguage( $lang ) {
+		if ( !$lang instanceof Language ) {
+			wfDeprecated( __METHOD__ . ' with other type than Language for $lang', '1.32' );
+		}
+		$this->mDiffLang = wfGetLangObj( $lang );
 	}
 
 	/**
@@ -1801,42 +1800,22 @@ class DifferenceEngine extends ContextSource {
 
 		// Load tags information for both revisions
 		$dbr = wfGetDB( DB_REPLICA );
-		$changeTagDefStore = MediaWikiServices::getInstance()->getChangeTagDefStore();
 		if ( $this->mOldid !== false ) {
-			$tagIds = $dbr->selectFieldValues(
-				'change_tag',
-				'ct_tag_id',
-				[ 'ct_rev_id' => $this->mOldid ],
+			$this->mOldTags = $dbr->selectField(
+				'tag_summary',
+				'ts_tags',
+				[ 'ts_rev_id' => $this->mOldid ],
 				__METHOD__
 			);
-			$tags = [];
-			foreach ( $tagIds as $tagId ) {
-				try {
-					$tags[] = $changeTagDefStore->getName( (int)$tagId );
-				} catch ( NameTableAccessException $exception ) {
-					continue;
-				}
-			}
-			$this->mOldTags = implode( ',', $tags );
 		} else {
 			$this->mOldTags = false;
 		}
-
-		$tagIds = $dbr->selectFieldValues(
-			'change_tag',
-			'ct_tag_id',
-			[ 'ct_rev_id' => $this->mNewid ],
+		$this->mNewTags = $dbr->selectField(
+			'tag_summary',
+			'ts_tags',
+			[ 'ts_rev_id' => $this->mNewid ],
 			__METHOD__
 		);
-		$tags = [];
-		foreach ( $tagIds as $tagId ) {
-			try {
-				$tags[] = $changeTagDefStore->getName( (int)$tagId );
-			} catch ( NameTableAccessException $exception ) {
-				continue;
-			}
-		}
-		$this->mNewTags = implode( ',', $tags );
 
 		return true;
 	}

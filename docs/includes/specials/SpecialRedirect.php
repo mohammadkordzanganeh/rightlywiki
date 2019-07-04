@@ -119,9 +119,7 @@ class SpecialRedirect extends FormSpecialPage {
 			// ... and we can
 			if ( $mto && !$mto->isError() ) {
 				// ... change the URL to point to a thumbnail.
-				// Note: This url is more temporary as can change
-				// if file is reuploaded and has different aspect ratio.
-				$url = [ $mto->getUrl(), $height === -1 ? 301 : 302 ];
+				$url = $mto->getUrl();
 			}
 		}
 
@@ -226,21 +224,7 @@ class SpecialRedirect extends FormSpecialPage {
 				break;
 		}
 		if ( $status && $status->isGood() ) {
-			// These urls can sometimes be linked from prominent places,
-			// so varnish cache.
-			$value = $status->getValue();
-			if ( is_array( $value ) ) {
-				list( $url, $code ) = $value;
-			} else {
-				$url = $value;
-				$code = 301;
-			}
-			if ( $code === 301 ) {
-				$this->getOutput()->setCdnMaxage( 60 * 60 );
-			} else {
-				$this->getOutput()->setCdnMaxage( 10 );
-			}
-			$this->getOutput()->redirect( $url, $code );
+			$this->getOutput()->redirect( $status->getValue() );
 
 			return true;
 		}

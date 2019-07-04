@@ -82,7 +82,7 @@ By default, outputs relative paths against the parent directory of $wgUploadDire
 
 		$sql = "SELECT DISTINCT il_to, img_name
 			FROM $imagelinks
-			LEFT JOIN $image
+			LEFT OUTER JOIN $image
 			ON il_to=img_name";
 		$result = $dbr->query( $sql );
 

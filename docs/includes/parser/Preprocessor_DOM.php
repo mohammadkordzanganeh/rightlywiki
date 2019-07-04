@@ -858,9 +858,6 @@ class PPDStack {
 		return $this->accum;
 	}
 
-	/**
-	 * @return bool|PPDPart
-	 */
 	public function getCurrentPart() {
 		if ( $this->top === false ) {
 			return false;
@@ -881,7 +878,7 @@ class PPDStack {
 	}
 
 	public function pop() {
-		if ( $this->stack === [] ) {
+		if ( !count( $this->stack ) ) {
 			throw new MWException( __METHOD__ . ': no elements remaining' );
 		}
 		$temp = array_pop( $this->stack );
@@ -905,7 +902,7 @@ class PPDStack {
 	 * @return array
 	 */
 	public function getFlags() {
-		if ( $this->stack === [] ) {
+		if ( !count( $this->stack ) ) {
 			return [
 				'findEquals' => false,
 				'findPipe' => false,
@@ -973,9 +970,6 @@ class PPDStackElement {
 		$this->parts[] = new $class( $s );
 	}
 
-	/**
-	 * @return PPDPart
-	 */
 	public function getCurrentPart() {
 		return $this->parts[count( $this->parts ) - 1];
 	}
@@ -1882,7 +1876,10 @@ class PPCustomFrame_DOM extends PPFrame_DOM {
 	 * @return string|bool
 	 */
 	public function getArgument( $index ) {
-		return $this->args[$index] ?? false;
+		if ( !isset( $this->args[$index] ) ) {
+			return false;
+		}
+		return $this->args[$index];
 	}
 
 	public function getArguments() {

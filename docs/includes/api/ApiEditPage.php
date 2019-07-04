@@ -116,8 +116,7 @@ class ApiEditPage extends ApiBase {
 		// Now let's check whether we're even allowed to do this
 		$this->checkTitleUserPermissions(
 			$titleObj,
-			$titleObj->exists() ? 'edit' : [ 'edit', 'create' ],
-			[ 'autoblock' => true ]
+			$titleObj->exists() ? 'edit' : [ 'edit', 'create' ]
 		);
 
 		$toMD5 = $params['text'];
@@ -415,7 +414,11 @@ class ApiEditPage extends ApiBase {
 			// obvious that this is even possible.
 			// @codeCoverageIgnoreStart
 			case EditPage::AS_BLOCKED_PAGE_FOR_USER:
-				$this->dieBlocked( $user->getBlock() );
+				$this->dieWithError(
+					'apierror-blocked',
+					'blocked',
+					[ 'blockinfo' => ApiQueryUserInfo::getBlockInfo( $user->getBlock() ) ]
+				);
 
 			case EditPage::AS_READ_ONLY_PAGE:
 				$this->dieReadOnly();
@@ -427,15 +430,15 @@ class ApiEditPage extends ApiBase {
 
 			case EditPage::AS_SUCCESS_UPDATE:
 				$r['result'] = 'Success';
-				$r['pageid'] = (int)$titleObj->getArticleID();
+				$r['pageid'] = intval( $titleObj->getArticleID() );
 				$r['title'] = $titleObj->getPrefixedText();
 				$r['contentmodel'] = $articleObject->getContentModel();
 				$newRevId = $articleObject->getLatest();
 				if ( $newRevId == $oldRevId ) {
 					$r['nochange'] = true;
 				} else {
-					$r['oldrevid'] = (int)$oldRevId;
-					$r['newrevid'] = (int)$newRevId;
+					$r['oldrevid'] = intval( $oldRevId );
+					$r['newrevid'] = intval( $newRevId );
 					$r['newtimestamp'] = wfTimestamp( TS_ISO_8601,
 						$pageObj->getTimestamp() );
 				}

@@ -1,4 +1,4 @@
-( function () {
+( function ( mw, $ ) {
 	var MTH = {};
 
 	MTH.enterFullscreenMock = function () {
@@ -89,9 +89,9 @@
 	 */
 	MTH.getMultimediaViewer = function () {
 		return new mw.mmv.MultimediaViewer( {
-			imageQueryParameter: function () {},
-			language: function () {},
-			recordVirtualViewBeaconURI: function () {},
+			imageQueryParameter: $.noop,
+			language: $.noop,
+			recordVirtualViewBeaconURI: $.noop,
 			extensions: function () {
 				return { jpg: 'default' };
 			}
@@ -171,4 +171,4 @@
 	};
 
 	mw.mmv.testHelpers = MTH;
-}() );
+}( mediaWiki, jQuery ) );

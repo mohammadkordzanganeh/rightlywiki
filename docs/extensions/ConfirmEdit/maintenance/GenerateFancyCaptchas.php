@@ -259,5 +259,5 @@ class GenerateFancyCaptchas extends Maintenance {
 	}
 }
 
-$maintClass = GenerateFancyCaptchas::class;
+$maintClass = "GenerateFancyCaptchas";
 require_once RUN_MAINTENANCE_IF_MAIN;

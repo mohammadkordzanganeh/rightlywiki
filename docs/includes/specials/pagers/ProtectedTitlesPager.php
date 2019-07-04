@@ -24,26 +24,9 @@
  */
 class ProtectedTitlesPager extends AlphabeticPager {
 
-	/**
-	 * @var SpecialProtectedtitles
-	 */
-	public $mForm;
+	public $mForm, $mConds;
 
-	/**
-	 * @var array
-	 */
-	public $mConds;
-
-	/**
-	 * @param SpecialProtectedtitles $form
-	 * @param array $conds
-	 * @param string|null $type
-	 * @param string|null $level
-	 * @param int|null $namespace
-	 * @param string|null $sizetype
-	 * @param int|null $size
-	 */
-	public function __construct( $form, $conds, $type, $level, $namespace,
+	function __construct( $form, $conds, $type, $level, $namespace,
 		$sizetype = '', $size = 0
 	) {
 		$this->mForm = $form;
@@ -54,7 +37,7 @@ class ProtectedTitlesPager extends AlphabeticPager {
 		parent::__construct( $form->getContext() );
 	}
 
-	protected function getStartBody() {
+	function getStartBody() {
 		# Do a link batch query
 		$this->mResult->seek( 0 );
 		$lb = new LinkBatch;
@@ -72,7 +55,7 @@ class ProtectedTitlesPager extends AlphabeticPager {
 	 * @return Title
 	 */
 	function getTitle() {
-		return $this->mForm->getPageTitle();
+		return $this->mForm->getTitle();
 	}
 
 	function formatRow( $row ) {

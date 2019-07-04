@@ -36,9 +36,6 @@ $wgShowExceptionDetails = true;
 $wgShowHostnames = true;
 $wgDebugRawPage = true; // T49960
 
-// Enable MariaDB/MySQL strict mode
-$wgSQLMode = 'TRADITIONAL';
-
 // Enable log files
 $logDir = getenv( 'MW_LOG_DIR' );
 if ( $logDir ) {
@@ -53,6 +50,3 @@ if ( $logDir ) {
 	$wgDebugLogGroups['error'] = "$logDir/mw-error.log";
 }
 unset( $logDir );
-
-// Disable rate-limiting
-$wgRateLimits = [];

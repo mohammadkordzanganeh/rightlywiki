@@ -173,7 +173,6 @@ class MagicWordFactory {
 		'newsectionlink',
 		'nonewsectionlink',
 		'hiddencat',
-		'expectunusedcategory',
 		'index',
 		'noindex',
 		'staticredirect',

@@ -72,9 +72,11 @@ class TraditionalImageGallery extends ImageGalleryBase {
 		$lang = $this->getRenderLang();
 		# Output each image...
 		foreach ( $this->mImages as $pair ) {
-			// "text" means "caption" here
 			/** @var Title $nt */
-			list( $nt, $text, $alt, $link ) = $pair;
+			$nt = $pair[0];
+			$text = $pair[1]; # "text" means "caption" here
+			$alt = $pair[2];
+			$link = $pair[3];
 
 			$descQuery = false;
 			if ( $nt->getNamespace() === NS_FILE ) {

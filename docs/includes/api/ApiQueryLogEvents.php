@@ -42,6 +42,8 @@ class ApiQueryLogEvents extends ApiQueryBase {
 		$fld_details = false, $fld_tags = false;
 
 	public function execute() {
+		global $wgChangeTagsSchemaMigrationStage;
+
 		$params = $this->extractRequestParams();
 		$db = $this->getDB();
 		$this->commentStore = CommentStore::getStore();
@@ -107,19 +109,25 @@ class ApiQueryLogEvents extends ApiQueryBase {
 		}
 
 		if ( $this->fld_tags ) {
-			$this->addFields( [ 'ts_tags' => ChangeTags::makeTagSummarySubquery( 'logging' ) ] );
+			$this->addTables( 'tag_summary' );
+			$this->addJoinConds( [ 'tag_summary' => [ 'LEFT JOIN', 'log_id=ts_log_id' ] ] );
+			$this->addFields( 'ts_tags' );
 		}
 
 		if ( !is_null( $params['tag'] ) ) {
 			$this->addTables( 'change_tag' );
-			$this->addJoinConds( [ 'change_tag' => [ 'JOIN',
+			$this->addJoinConds( [ 'change_tag' => [ 'INNER JOIN',
 				[ 'log_id=ct_log_id' ] ] ] );
-			$changeTagDefStore = MediaWikiServices::getInstance()->getChangeTagDefStore();
-			try {
-				$this->addWhereFld( 'ct_tag_id', $changeTagDefStore->getId( $params['tag'] ) );
-			} catch ( NameTableAccessException $exception ) {
-				// Return nothing.
-				$this->addWhere( '1=0' );
+			if ( $wgChangeTagsSchemaMigrationStage > MIGRATION_WRITE_BOTH ) {
+				$changeTagDefStore = MediaWikiServices::getInstance()->getChangeTagDefStore();
+				try {
+					$this->addWhereFld( 'ct_tag_id', $changeTagDefStore->getId( $params['tag'] ) );
+				} catch ( NameTableAccessException $exception ) {
+					// Return nothing.
+					$this->addWhere( '1=0' );
+				}
+			} else {
+				$this->addWhereFld( 'ct_tag', $params['tag'] );
 			}
 		}
 
@@ -183,10 +191,6 @@ class ApiQueryLogEvents extends ApiQueryBase {
 				$db, 'log_user', User::newFromName( $params['user'], false )
 			);
 			$this->addWhere( $q['conds'] );
-
-			// T71222: MariaDB's optimizer, at least 10.1.37 and .38, likes to choose a wildly bad plan for
-			// some reason for this code path. Tell it not to use the wrong index it wants to pick.
-			$this->addOption( 'IGNORE INDEX', [ 'logging' => [ 'times' ] ] );
 		}
 
 		$title = $params['title'];
@@ -268,7 +272,7 @@ class ApiQueryLogEvents extends ApiQueryBase {
 		$user = $this->getUser();
 
 		if ( $this->fld_ids ) {
-			$vals['logid'] = (int)$row->log_id;
+			$vals['logid'] = intval( $row->log_id );
 		}
 
 		if ( $this->fld_title || $this->fld_parsedcomment ) {
@@ -285,8 +289,8 @@ class ApiQueryLogEvents extends ApiQueryBase {
 					ApiQueryBase::addTitleInfo( $vals, $title );
 				}
 				if ( $this->fld_ids ) {
-					$vals['pageid'] = (int)$row->page_id;
-					$vals['logpage'] = (int)$row->log_page;
+					$vals['pageid'] = intval( $row->page_id );
+					$vals['logpage'] = intval( $row->log_page );
 				}
 				if ( $this->fld_details ) {
 					$vals['params'] = LogFormatter::newFromEntry( $logEntry )->formatParametersForApi();
@@ -309,7 +313,7 @@ class ApiQueryLogEvents extends ApiQueryBase {
 					$vals['user'] = $row->user_name ?? $row->log_user_text;
 				}
 				if ( $this->fld_userid ) {
-					$vals['userid'] = (int)$row->log_user;
+					$vals['userid'] = intval( $row->log_user );
 				}
 
 				if ( !$row->log_user ) {
@@ -384,12 +388,6 @@ class ApiQueryLogEvents extends ApiQueryBase {
 
 	public function getAllowedParams( $flags = 0 ) {
 		$config = $this->getConfig();
-		if ( $flags & ApiBase::GET_VALUES_FOR_HELP ) {
-			$logActions = $this->getAllowedLogActions();
-			sort( $logActions );
-		} else {
-			$logActions = null;
-		}
 		$ret = [
 			'prop' => [
 				ApiBase::PARAM_ISMULTI => true,
@@ -413,7 +411,9 @@ class ApiQueryLogEvents extends ApiQueryBase {
 			],
 			'action' => [
 				// validation on request is done in execute()
-				ApiBase::PARAM_TYPE => $logActions
+				ApiBase::PARAM_TYPE => ( $flags & ApiBase::GET_VALUES_FOR_HELP )
+					? $this->getAllowedLogActions()
+					: null
 			],
 			'start' => [
 				ApiBase::PARAM_TYPE => 'timestamp'

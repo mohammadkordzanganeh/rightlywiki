@@ -54,14 +54,13 @@ class ImageHistoryList extends ContextSource {
 	 * @param ImagePage $imagePage
 	 */
 	public function __construct( $imagePage ) {
-		$context = $imagePage->getContext();
+		global $wgShowArchiveThumbnails;
 		$this->current = $imagePage->getPage()->getFile();
 		$this->img = $imagePage->getDisplayedFile();
 		$this->title = $imagePage->getTitle();
 		$this->imagePage = $imagePage;
-		$this->showThumb = $context->getConfig()->get( 'ShowArchiveThumbnails' ) &&
-			$this->img->canRender();
-		$this->setContext( $context );
+		$this->showThumb = $wgShowArchiveThumbnails && $this->img->canRender();
+		$this->setContext( $imagePage->getContext() );
 	}
 
 	/**
@@ -194,18 +193,16 @@ class ImageHistoryList extends ContextSource {
 		$row .= "<td $selected style='white-space: nowrap;'>";
 		if ( !$file->userCan( File::DELETED_FILE, $user ) ) {
 			# Don't link to unviewable files
-			$row .= Html::element( 'span', [ 'class' => 'history-deleted' ],
-				$lang->userTimeAndDate( $timestamp, $user )
-			);
+			$row .= '<span class="history-deleted">'
+				. $lang->userTimeAndDate( $timestamp, $user ) . '</span>';
 		} elseif ( $file->isDeleted( File::DELETED_FILE ) ) {
-			$timeAndDate = htmlspecialchars( $lang->userTimeAndDate( $timestamp, $user ) );
 			if ( $local ) {
 				$this->preventClickjacking();
 				$revdel = SpecialPage::getTitleFor( 'Revisiondelete' );
 				# Make a link to review the image
 				$url = Linker::linkKnown(
 					$revdel,
-					$timeAndDate,
+					$lang->userTimeAndDate( $timestamp, $user ),
 					[],
 					[
 						'target' => $this->title->getPrefixedText(),
@@ -214,13 +211,12 @@ class ImageHistoryList extends ContextSource {
 					]
 				);
 			} else {
-				$url = $timeAndDate;
+				$url = $lang->userTimeAndDate( $timestamp, $user );
 			}
 			$row .= '<span class="history-deleted">' . $url . '</span>';
 		} elseif ( !$file->exists() ) {
-			$row .= Html::element( 'span', [ 'class' => 'mw-file-missing' ],
-				$lang->userTimeAndDate( $timestamp, $user )
-			);
+			$row .= '<span class="mw-file-missing">'
+				. $lang->userTimeAndDate( $timestamp, $user ) . '</span>';
 		} else {
 			$url = $iscur ? $this->current->getUrl() : $this->current->getArchiveUrl( $img );
 			$row .= Xml::element(
@@ -268,12 +264,9 @@ class ImageHistoryList extends ContextSource {
 			$row .= '<td><span class="history-deleted">' .
 				$this->msg( 'rev-deleted-comment' )->escaped() . '</span></td>';
 		} else {
-			$contLang = MediaWikiServices::getInstance()->getContentLanguage();
-			$row .= Html::rawElement(
-				'td',
-				[ 'dir' => $contLang->getDir() ],
-				Linker::formatComment( $description, $this->title )
-			);
+			$row .=
+				'<td dir="' . MediaWikiServices::getInstance()->getContentLanguage()->getDir() .
+				'">' . Linker::formatComment( $description, $this->title ) . '</td>';
 		}
 
 		$rowClass = null;

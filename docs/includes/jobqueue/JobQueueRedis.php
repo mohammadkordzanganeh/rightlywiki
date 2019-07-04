@@ -203,7 +203,7 @@ class JobQueueRedis extends JobQueue {
 			}
 		}
 
-		if ( $items === [] ) {
+		if ( !count( $items ) ) {
 			return; // nothing to do
 		}
 
@@ -225,9 +225,9 @@ class JobQueueRedis extends JobQueue {
 					$failed += count( $itemBatch );
 				}
 			}
-			$this->incrStats( 'inserts', $this->type, count( $items ) );
-			$this->incrStats( 'inserts_actual', $this->type, $pushed );
-			$this->incrStats( 'dupe_inserts', $this->type,
+			JobQueue::incrStats( 'inserts', $this->type, count( $items ) );
+			JobQueue::incrStats( 'inserts_actual', $this->type, $pushed );
+			JobQueue::incrStats( 'dupe_inserts', $this->type,
 				count( $items ) - $failed - $pushed );
 			if ( $failed > 0 ) {
 				$err = "Could not insert {$failed} {$this->type} job(s).";
@@ -321,7 +321,7 @@ LUA;
 					break; // no jobs; nothing to do
 				}
 
-				$this->incrStats( 'pops', $this->type );
+				JobQueue::incrStats( 'pops', $this->type );
 				$item = $this->unserialize( $blob );
 				if ( $item === false ) {
 					wfDebugLog( 'JobQueueRedis', "Could not unserialize {$this->type} job." );
@@ -385,11 +385,11 @@ LUA;
 	 * @throws JobQueueError
 	 */
 	protected function doAck( Job $job ) {
-		$uuid = $job->getMetadata( 'uuid' );
-		if ( $uuid === null ) {
+		if ( !isset( $job->metadata['uuid'] ) ) {
 			throw new UnexpectedValueException( "Job of type '{$job->getType()}' has no UUID." );
 		}
 
+		$uuid = $job->metadata['uuid'];
 		$conn = $this->getConnection();
 		try {
 			static $script =
@@ -424,7 +424,7 @@ LUA;
 				return false;
 			}
 
-			$this->incrStats( 'acks', $this->type );
+			JobQueue::incrStats( 'acks', $this->type );
 		} catch ( RedisException $e ) {
 			$this->throwRedisException( $conn, $e );
 		}
@@ -643,11 +643,10 @@ LUA;
 			}
 			$title = Title::makeTitle( $item['namespace'], $item['title'] );
 			$job = Job::factory( $item['type'], $title, $item['params'] );
-			$job->setMetadata( 'uuid', $item['uuid'] );
-			$job->setMetadata( 'timestamp', $item['timestamp'] );
+			$job->metadata['uuid'] = $item['uuid'];
+			$job->metadata['timestamp'] = $item['timestamp'];
 			// Add in attempt count for debugging at showJobs.php
-			$job->setMetadata( 'attempts',
-				$conn->hGet( $this->getQueueKey( 'h-attempts' ), $uid ) );
+			$job->metadata['attempts'] = $conn->hGet( $this->getQueueKey( 'h-attempts' ), $uid );
 
 			return $job;
 		} catch ( RedisException $e ) {
@@ -705,8 +704,8 @@ LUA;
 	protected function getJobFromFields( array $fields ) {
 		$title = Title::makeTitle( $fields['namespace'], $fields['title'] );
 		$job = Job::factory( $fields['type'], $title, $fields['params'] );
-		$job->setMetadata( 'uuid', $fields['uuid'] );
-		$job->setMetadata( 'timestamp', $fields['timestamp'] );
+		$job->metadata['uuid'] = $fields['uuid'];
+		$job->metadata['timestamp'] = $fields['timestamp'];
 
 		return $job;
 	}
@@ -777,7 +776,7 @@ LUA;
 	 * @return string JSON
 	 */
 	private function encodeQueueName() {
-		return json_encode( [ $this->type, $this->domain ] );
+		return json_encode( [ $this->type, $this->wiki ] );
 	}
 
 	/**
@@ -810,9 +809,8 @@ LUA;
 	 */
 	private function getQueueKey( $prop, $type = null ) {
 		$type = is_string( $type ) ? $type : $this->type;
-
-		// Use wiki ID for b/c
-		$keyspace = WikiMap::getWikiIdFromDbDomain( $this->domain );
+		list( $db, $prefix ) = wfSplitWikiID( $this->wiki );
+		$keyspace = $prefix ? "$db-$prefix" : $db;
 
 		$parts = [ $keyspace, 'jobqueue', $type, $prop ];
 

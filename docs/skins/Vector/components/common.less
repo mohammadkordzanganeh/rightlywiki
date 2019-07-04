@@ -9,7 +9,6 @@
 html {
 	font-size: @html-font-size;
 }
-
 html,
 body {
 	height: 100%;
@@ -17,7 +16,6 @@ body {
 	padding: 0;
 	font-family: @content-font-family;
 }
-
 body {
 	background-color: @menu-background-color;
 }
@@ -154,7 +152,8 @@ div.emptyPortlet {
 }
 
 ul {
-	.list-style-image( 'images/bullet-icon.svg' );
+	list-style-type: disc;
+	.list-style-image-svg('images/bullet-icon.svg', 'images/bullet-icon.png');
 }
 
 pre,

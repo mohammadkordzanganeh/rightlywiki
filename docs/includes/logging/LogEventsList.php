@@ -148,7 +148,7 @@ class LogEventsList extends ContextSource {
 		$formDescriptor['date'] = [
 			'type' => 'date',
 			'label-message' => 'date',
-			'default' => $year && $month && $day ? sprintf( "%04d-%02d-%02d", $year, $month, $day ) : '',
+			'default' => sprintf( "%04d-%02d-%02d", $year, $month, $day ),
 		];
 
 		// Tag filter
@@ -174,7 +174,7 @@ class LogEventsList extends ContextSource {
 
 		$context = new DerivativeContext( $this->getContext() );
 		$context->setTitle( SpecialPage::getTitleFor( 'Log' ) ); // Remove subpage
-		$htmlForm = HTMLForm::factory( 'ooui', $formDescriptor, $context );
+		$htmlForm = new HTMLForm( $formDescriptor, $context );
 		$htmlForm
 			->setSubmitText( $this->msg( 'logeventslist-submit' )->text() )
 			->setMethod( 'get' )
@@ -574,12 +574,12 @@ class LogEventsList extends ContextSource {
 	 * Determine if the current user is allowed to view a particular
 	 * field of this log row, if it's marked as restricted log type.
 	 *
-	 * @param stdClass $type
+	 * @param stdClass $row
 	 * @param User|null $user User to check, or null to use $wgUser
 	 * @return bool
 	 */
 	public static function userCanViewLogType( $type, User $user = null ) {
-		if ( $user === null ) {
+		if ( $user === null ){
 			global $wgUser;
 			$user = $wgUser;
 		}
@@ -713,8 +713,6 @@ class LogEventsList extends ContextSource {
 			$s .= $loglist->beginLogEventsList() .
 				$logBody .
 				$loglist->endLogEventsList();
-			// add styles for change tags
-			$context->getOutput()->addModuleStyles( 'mediawiki.interface.helpers.styles' );
 		} elseif ( $showIfEmpty ) {
 			$s = Html::rawElement( 'div', [ 'class' => 'mw-warning-logempty' ],
 				$context->msg( 'logempty' )->parse() );

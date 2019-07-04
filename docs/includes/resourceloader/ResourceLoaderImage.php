@@ -20,8 +20,6 @@
  * @file
  */
 
-use MediaWiki\Shell\Shell;
-
 /**
  * Class encapsulating an image used in a ResourceLoaderImageModule.
  *
@@ -75,7 +73,7 @@ class ResourceLoaderImage {
 		}
 		// Remove 'deprecated' key
 		if ( is_array( $this->descriptor ) ) {
-			unset( $this->descriptor['deprecated'] );
+			unset( $this->descriptor[ 'deprecated' ] );
 		}
 
 		// Ensure that all files have common extension.
@@ -294,23 +292,12 @@ class ResourceLoaderImage {
 	 * @return string New SVG file data
 	 */
 	protected function variantize( $variantConf, ResourceLoaderContext $context ) {
-		$dom = new DOMDocument;
+		$dom = new DomDocument;
 		$dom->loadXML( file_get_contents( $this->getPath( $context ) ) );
 		$root = $dom->documentElement;
-		$titleNode = null;
-		$wrapper = $dom->createElementNS( 'http://www.w3.org/2000/svg', 'g' );
-		// Reattach all direct children of the `<svg>` root node to the `<g>` wrapper
+		$wrapper = $dom->createElement( 'g' );
 		while ( $root->firstChild ) {
-			$node = $root->firstChild;
-			if ( !$titleNode && $node->nodeType === XML_ELEMENT_NODE && $node->tagName === 'title' ) {
-				// Remember the first encountered `<title>` node
-				$titleNode = $node;
-			}
-			$wrapper->appendChild( $node );
-		}
-		if ( $titleNode ) {
-			// Reattach the `<title>` node to the `<svg>` root node rather than the `<g>` wrapper
-			$root->appendChild( $titleNode );
+			$wrapper->appendChild( $root->firstChild );
 		}
 		$root->appendChild( $wrapper );
 		$wrapper->setAttribute( 'fill', $variantConf['color'] );
@@ -328,7 +315,7 @@ class ResourceLoaderImage {
 	 * @return string Massaged SVG image data
 	 */
 	protected function massageSvgPathdata( $svg ) {
-		$dom = new DOMDocument;
+		$dom = new DomDocument;
 		$dom->loadXML( $svg );
 		foreach ( $dom->getElementsByTagName( 'path' ) as $node ) {
 			$pathData = $node->getAttribute( 'd' );
@@ -375,7 +362,7 @@ class ResourceLoaderImage {
 		if ( strpos( $wgSVGConverter, 'rsvg' ) === 0 ) {
 			$command = 'rsvg-convert';
 			if ( $wgSVGConverterPath ) {
-				$command = Shell::escape( "$wgSVGConverterPath/" ) . $command;
+				$command = wfEscapeShellArg( "$wgSVGConverterPath/" ) . $command;
 			}
 
 			$process = proc_open(

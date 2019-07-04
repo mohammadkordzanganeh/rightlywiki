@@ -31,7 +31,7 @@ class RevisionSlotsTest extends MediaWikiTestCase {
 
 	/**
 	 * @dataProvider provideConstructorFailue
-	 * @param array $slots
+	 * @param $slots
 	 *
 	 * @covers \MediaWiki\Revision\RevisionSlots::__construct
 	 * @covers \MediaWiki\Revision\RevisionSlots::setSlotsInternal

@@ -50,7 +50,7 @@ class ImageListPager extends TablePager {
 
 	protected $mTableName = 'image';
 
-	public function __construct( IContextSource $context, $userName = null, $search = '',
+	function __construct( IContextSource $context, $userName = null, $search = '',
 		$including = false, $showAll = false
 	) {
 		$this->setContext( $context );
@@ -139,9 +139,7 @@ class ImageListPager extends TablePager {
 			$actorWhere = ActorMigration::newMigration()->getWhere(
 				$dbr,
 				$prefix . '_user',
-				User::newFromName( $this->mUserName, false ),
-				// oldimage doesn't have an index on oi_user, while image does. Set $useId accordingly.
-				$prefix === 'img'
+				User::newFromName( $this->mUserName, false )
 			);
 			$conds[] = $actorWhere['conds'];
 		}
@@ -253,26 +251,28 @@ class ImageListPager extends TablePager {
 	 * @return array Query info
 	 */
 	protected function getQueryInfoReal( $table ) {
-		$dbr = wfGetDB( DB_REPLICA );
 		$prefix = $table === 'oldimage' ? 'oi' : 'img';
 
 		$tables = [ $table ];
-		$fields = array_keys( $this->getFieldNames() );
-		$fields = array_combine( $fields, $fields );
+		$fields = $this->getFieldNames();
 		unset( $fields['img_description'] );
 		unset( $fields['img_user_text'] );
+		$fields = array_keys( $fields );
 
 		if ( $table === 'oldimage' ) {
-			foreach ( $fields as $id => $field ) {
-				if ( substr( $id, 0, 4 ) === 'img_' ) {
-					$fields[$id] = $prefix . substr( $field, 3 );
+			foreach ( $fields as $id => &$field ) {
+				if ( substr( $field, 0, 4 ) !== 'img_' ) {
+					continue;
 				}
+				$field = $prefix . substr( $field, 3 ) . ' AS ' . $field;
 			}
-			$fields['top'] = $dbr->addQuotes( 'no' );
-		} elseif ( $this->mShowAll ) {
-			$fields['top'] = $dbr->addQuotes( 'yes' );
+			$fields[array_search( 'top', $fields )] = "'no' AS top";
+		} else {
+			if ( $this->mShowAll ) {
+				$fields[array_search( 'top', $fields )] = "'yes' AS top";
+			}
 		}
-		$fields['thumb'] = $prefix . '_name';
+		$fields[array_search( 'thumb', $fields )] = $prefix . '_name AS thumb';
 
 		$options = $join_conds = [];
 
@@ -281,7 +281,7 @@ class ImageListPager extends TablePager {
 		$tables += $commentQuery['tables'];
 		$fields += $commentQuery['fields'];
 		$join_conds += $commentQuery['joins'];
-		$fields['description_field'] = $dbr->addQuotes( "{$prefix}_description" );
+		$fields['description_field'] = "'{$prefix}_description'";
 
 		# User fields
 		$actorQuery = ActorMigration::newMigration()->getJoin( $prefix . '_user' );
@@ -293,13 +293,20 @@ class ImageListPager extends TablePager {
 
 		# Depends on $wgMiserMode
 		# Will also not happen if mShowAll is true.
-		if ( isset( $fields['count'] ) ) {
-			$fields['count'] = $dbr->buildSelectSubquery(
-				'oldimage',
-				'COUNT(oi_archive_name)',
-				'oi_name = img_name',
-				__METHOD__
-			);
+		if ( isset( $this->mFieldNames['count'] ) ) {
+			$tables[] = 'oldimage';
+
+			# Need to rewrite this one
+			foreach ( $fields as &$field ) {
+				if ( $field == 'count' ) {
+					$field = 'COUNT(oi_archive_name) AS count';
+				}
+			}
+			unset( $field );
+
+			$columnlist = preg_grep( '/^img/', array_keys( $this->getFieldNames() ) );
+			$options = [ 'GROUP BY' => array_merge( [ $fields['img_user'] ], $columnlist ) ];
+			$join_conds['oldimage'] = [ 'LEFT JOIN', 'oi_name = img_name' ];
 		}
 
 		return [
@@ -319,15 +326,15 @@ class ImageListPager extends TablePager {
 	 *   is descending, so I renamed it to $asc here.
 	 * @param int $offset
 	 * @param int $limit
-	 * @param bool $order IndexPager::QUERY_ASCENDING or IndexPager::QUERY_DESCENDING
-	 * @return FakeResultWrapper
+	 * @param bool $asc
+	 * @return array
 	 * @throws MWException
 	 */
-	function reallyDoQuery( $offset, $limit, $order ) {
+	function reallyDoQuery( $offset, $limit, $asc ) {
 		$prevTableName = $this->mTableName;
 		$this->mTableName = 'image';
 		list( $tables, $fields, $conds, $fname, $options, $join_conds ) =
-			$this->buildQueryInfo( $offset, $limit, $order );
+			$this->buildQueryInfo( $offset, $limit, $asc );
 		$imageRes = $this->mDb->select( $tables, $fields, $conds, $fname, $options, $join_conds );
 		$this->mTableName = $prevTableName;
 
@@ -345,13 +352,13 @@ class ImageListPager extends TablePager {
 		$this->mIndexField = 'oi_' . substr( $this->mIndexField, 4 );
 
 		list( $tables, $fields, $conds, $fname, $options, $join_conds ) =
-			$this->buildQueryInfo( $offset, $limit, $order );
+			$this->buildQueryInfo( $offset, $limit, $asc );
 		$oldimageRes = $this->mDb->select( $tables, $fields, $conds, $fname, $options, $join_conds );
 
 		$this->mTableName = $prevTableName;
 		$this->mIndexField = $oldIndex;
 
-		return $this->combineResult( $imageRes, $oldimageRes, $limit, $order );
+		return $this->combineResult( $imageRes, $oldimageRes, $limit, $asc );
 	}
 
 	/**
@@ -380,12 +387,14 @@ class ImageListPager extends TablePager {
 					$resultArray[] = $topRes2;
 					$topRes2 = $res2->next();
 				}
-			} elseif ( !$ascending ) {
-				$resultArray[] = $topRes2;
-				$topRes2 = $res2->next();
 			} else {
-				$resultArray[] = $topRes1;
-				$topRes1 = $res1->next();
+				if ( !$ascending ) {
+					$resultArray[] = $topRes2;
+					$topRes2 = $res2->next();
+				} else {
+					$resultArray[] = $topRes1;
+					$topRes1 = $res1->next();
+				}
 			}
 		}
 
@@ -411,7 +420,7 @@ class ImageListPager extends TablePager {
 		}
 	}
 
-	protected function doBatchLookups() {
+	function doBatchLookups() {
 		$userIds = [];
 		$this->mResult->seek( 0 );
 		foreach ( $this->mResult as $row ) {

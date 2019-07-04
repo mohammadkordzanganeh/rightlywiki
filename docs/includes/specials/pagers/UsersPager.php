@@ -43,7 +43,7 @@ class UsersPager extends AlphabeticPager {
 	 * @param bool|null $including Whether this page is being transcluded in
 	 * another page
 	 */
-	public function __construct( IContextSource $context = null, $par = null, $including = null ) {
+	function __construct( IContextSource $context = null, $par = null, $including = null ) {
 		if ( $context ) {
 			$this->setContext( $context );
 		}
@@ -142,8 +142,7 @@ class UsersPager extends AlphabeticPager {
 				'user_id' => $this->creationSort ? 'user_id' : 'MAX(user_id)',
 				'edits' => 'MAX(user_editcount)',
 				'creation' => 'MIN(user_registration)',
-				'ipb_deleted' => 'MAX(ipb_deleted)', // block/hide status
-				'ipb_sitewide' => 'MAX(ipb_sitewide)'
+				'ipb_deleted' => 'MAX(ipb_deleted)' // block/hide status
 			],
 			'options' => $options,
 			'join_conds' => [
@@ -215,8 +214,7 @@ class UsersPager extends AlphabeticPager {
 			$created = $this->msg( 'usercreated', $d, $t, $row->user_name )->escaped();
 			$created = ' ' . $this->msg( 'parentheses' )->rawParams( $created )->escaped();
 		}
-
-		$blocked = !is_null( $row->ipb_deleted ) && $row->ipb_sitewide === '1' ?
+		$blocked = !is_null( $row->ipb_deleted ) ?
 			' ' . $this->msg( 'listusers-blocked', $userName )->escaped() :
 			'';
 
@@ -225,7 +223,7 @@ class UsersPager extends AlphabeticPager {
 		return Html::rawElement( 'li', [], "{$item}{$edits}{$created}{$blocked}" );
 	}
 
-	protected function doBatchLookups() {
+	function doBatchLookups() {
 		$batch = new LinkBatch();
 		$userIds = [];
 		# Give some pointers to make user links

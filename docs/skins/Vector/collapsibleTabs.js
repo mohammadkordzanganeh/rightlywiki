@@ -3,7 +3,7 @@
  *
  * @class jQuery.plugin.collapsibleTabs
  */
-( function () {
+( function ( $ ) {
 	var isRTL = document.documentElement.dir === 'rtl',
 		boundEvent = false,
 		rAF = window.requestAnimationFrame || setTimeout;
@@ -95,7 +95,7 @@
 			return settings;
 		},
 		handleResize: function () {
-			$.collapsibleTabs.instances.forEach( function ( $el ) {
+			$.each( $.collapsibleTabs.instances, function ( i, $el ) {
 				var data = $.collapsibleTabs.getSettings( $el );
 				if ( data.shifting ) {
 					return;
@@ -143,13 +143,12 @@
 
 			// Remove the element from where it's at and put it in the dropdown menu
 			target = outerData.collapsedContainer;
-			// eslint-disable-next-line no-jquery/no-animate
 			$moving.css( 'position', 'relative' )
 				.css( ( isRTL ? 'left' : 'right' ), 0 )
 				.animate( { width: '1px' }, 'normal', function () {
 					$( this ).hide();
 					// add the placeholder
-					$( '<span>' ).addClass( 'placeholder' ).css( 'display', 'none' ).insertAfter( this );
+					$( '<span class="placeholder" style="display: none;"></span>' ).insertAfter( this );
 					$( this ).detach().prependTo( target ).data( 'collapsibleTabsSettings', outerData );
 					$( this ).attr( 'style', 'display: list-item;' );
 					expContainerSettings.shifting = false;
@@ -175,7 +174,6 @@
 			expandedWidth = data.expandedWidth;
 			$moving.css( 'position', 'relative' ).css( ( isRTL ? 'right' : 'left' ), 0 ).css( 'width', '1px' );
 			$target.replaceWith(
-				// eslint-disable-next-line no-jquery/no-animate
 				$moving
 					.detach()
 					.css( 'width', '1px' )
@@ -230,4 +228,4 @@
 	 * @mixins jQuery.plugin.collapsibleTabs
 	 */
 
-}() );
+}( jQuery ) );

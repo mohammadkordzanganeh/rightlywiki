@@ -128,8 +128,10 @@ class HTMLFileCache extends FileCacheBase {
 			return false;
 		}
 
-		if ( ( $mode === self::MODE_NORMAL ) && $user->getNewtalk() ) {
-			return false;
+		if ( $mode === self::MODE_NORMAL ) {
+			if ( $user->getNewtalk() ) {
+				return false;
+			}
 		}
 
 		// Allow extensions to disable caching
@@ -209,14 +211,18 @@ class HTMLFileCache extends FileCacheBase {
 		}
 
 		// gzip output to buffer as needed and set headers...
-		// @todo Ugly wfClientAcceptsGzip() function - use context!
-		if ( $this->useGzip() && wfClientAcceptsGzip() ) {
-			header( 'Content-Encoding: gzip' );
+		if ( $this->useGzip() ) {
+			// @todo Ugly wfClientAcceptsGzip() function - use context!
+			if ( wfClientAcceptsGzip() ) {
+				header( 'Content-Encoding: gzip' );
 
-			return $compressed;
+				return $compressed;
+			} else {
+				return $text;
+			}
+		} else {
+			return $text;
 		}
-
-		return $text;
 	}
 
 	/**

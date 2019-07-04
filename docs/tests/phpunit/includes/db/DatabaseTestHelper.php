@@ -45,7 +45,7 @@ class DatabaseTestHelper extends Database {
 	public function __construct( $testName, array $opts = [] ) {
 		$this->testName = $testName;
 
-		$this->profiler = null;
+		$this->profiler = new ProfilerStub( [] );
 		$this->trxProfiler = new TransactionProfiler();
 		$this->cliMode = $opts['cliMode'] ?? true;
 		$this->connLogger = new \Psr\Log\NullLogger();
@@ -108,11 +108,7 @@ class DatabaseTestHelper extends Database {
 
 		// Handle some internal calls from the Database class
 		$check = $fname;
-		if ( preg_match(
-			'/^Wikimedia\\\\Rdbms\\\\Database::(?:query|beginIfImplied) \((.+)\)$/',
-			$fname,
-			$m
-		) ) {
+		if ( preg_match( '/^Wikimedia\\\\Rdbms\\\\Database::query \((.+)\)$/', $fname, $m ) ) {
 			$check = $m[1];
 		}
 
@@ -133,10 +129,10 @@ class DatabaseTestHelper extends Database {
 		return $s;
 	}
 
-	public function query( $sql, $fname = '', $flags = 0 ) {
+	public function query( $sql, $fname = '', $tempIgnore = false ) {
 		$this->checkFunctionName( $fname );
 
-		return parent::query( $sql, $fname, $flags );
+		return parent::query( $sql, $fname, $tempIgnore );
 	}
 
 	public function tableExists( $table, $fname = __METHOD__ ) {
@@ -152,7 +148,7 @@ class DatabaseTestHelper extends Database {
 
 	// Redeclare parent method to make it public
 	public function nativeReplace( $table, $rows, $fname ) {
-		parent::nativeReplace( $table, $rows, $fname );
+		return parent::nativeReplace( $table, $rows, $fname );
 	}
 
 	function getType() {

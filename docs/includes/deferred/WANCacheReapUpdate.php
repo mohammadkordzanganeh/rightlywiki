@@ -1,6 +1,5 @@
 <?php
 
-use MediaWiki\MediaWikiServices;
 use MediaWiki\Linker\LinkTarget;
 use Psr\Log\LoggerInterface;
 use Wikimedia\Rdbms\IDatabase;
@@ -40,7 +39,7 @@ class WANCacheReapUpdate implements DeferrableUpdate {
 
 	function doUpdate() {
 		$reaper = new WANObjectCacheReaper(
-			MediaWikiServices::getInstance()->getMainWANObjectCache(),
+			ObjectCache::getMainWANInstance(),
 			ObjectCache::getLocalClusterInstance(),
 			[ $this, 'getTitleChangeEvents' ],
 			[ $this, 'getEventAffectedKeys' ],

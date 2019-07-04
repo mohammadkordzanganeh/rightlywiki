@@ -10,7 +10,7 @@
 	 */
 	rc = {
 		/**
-		 * Handler to hide/show the namespace selector checkboxes when the
+		 * Handler to disable/enable the namespace selector checkboxes when the
 		 * special 'all' namespace is selected/unselected respectively.
 		 */
 		updateCheckboxes: function () {
@@ -18,16 +18,16 @@
 			var isAllNS = $select.val() === '';
 
 			// Iterates over checkboxes and propagate the selected option
-			$checkboxes.toggleClass( 'mw-input-hidden', isAllNS );
+			$checkboxes.prop( 'disabled', isAllNS );
 		},
 
 		init: function () {
 			$select = $( '#namespace' );
-			$checkboxes = $( '#nsassociated, #nsinvert' ).closest( '.mw-input-with-label' );
+			$checkboxes = $( '#nsassociated, #nsinvert' );
 
-			// Bind to change event of the checkboxes.
-			// The initial state is already set in HTML.
-			$select.on( 'change', rc.updateCheckboxes );
+			// Bind to change event, and trigger once to set the initial state of the checkboxes.
+			rc.updateCheckboxes();
+			$select.change( rc.updateCheckboxes );
 		}
 	};
 

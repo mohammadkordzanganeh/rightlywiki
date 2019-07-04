@@ -113,7 +113,7 @@ class RebuildFileCache extends Maintenance {
 				$rebuilt = false;
 
 				$title = Title::makeTitleSafe( $row->page_namespace, $row->page_title );
-				if ( $title === null ) {
+				if ( null == $title ) {
 					$this->output( "Page {$row->page_id} has bad title\n" );
 					continue; // broken title?
 				}

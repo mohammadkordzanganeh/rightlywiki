@@ -80,11 +80,8 @@ class MediaWikiGadgetsDefinitionRepo extends GadgetRepo {
 
 		// (a) Check the tier 1 cache
 		$value = $t1Cache->get( $key );
-		// Randomize logical APC expiry to avoid stampedes
-		// somewhere between 7.0 and 15.0 (seconds)
-		$cutoffAge = mt_rand( 7 * 1e6, 15 * 1e6 ) / 1e6;
 		// Check if it passes a blind TTL check (avoids I/O)
-		if ( $value && ( microtime( true ) - $value['time'] ) < $cutoffAge ) {
+		if ( $value && ( microtime( true ) - $value['time'] ) < 10 ) {
 			$this->definitionCache = $value['gadgets']; // process cache
 			return $this->definitionCache;
 		}
@@ -250,7 +247,7 @@ class MediaWikiGadgetsDefinitionRepo extends GadgetRepo {
 					break;
 				case 'type':
 					// Single value, not a list
-					$info['type'] = $params[0] ?? '';
+					$info['type'] = isset( $params[0] ) ? $params[0] : '';
 					break;
 			}
 		}

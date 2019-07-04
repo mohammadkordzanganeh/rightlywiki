@@ -148,7 +148,6 @@ function wfArrayDiff2_cmp( $a, $b ) {
  * @return array
  */
 function wfArrayFilter( array $arr, callable $callback ) {
-	wfDeprecated( __FUNCTION__, '1.32' );
 	return array_filter( $arr, $callback, ARRAY_FILTER_USE_BOTH );
 }
 
@@ -161,7 +160,6 @@ function wfArrayFilter( array $arr, callable $callback ) {
  * @return array
  */
 function wfArrayFilterByKey( array $arr, callable $callback ) {
-	wfDeprecated( __FUNCTION__, '1.32' );
 	return array_filter( $arr, $callback, ARRAY_FILTER_USE_KEY );
 }
 
@@ -225,7 +223,7 @@ function wfMergeErrorArrays( ...$args ) {
  *
  * @param array $array The array.
  * @param array $insert The array to insert.
- * @param mixed $after The key to insert after. Callers need to make sure the key is set.
+ * @param mixed $after The key to insert after
  * @return array
  */
 function wfArrayInsertAfter( array $array, array $insert, $after ) {
@@ -268,7 +266,7 @@ function wfObjectToArray( $objOrArray, $recursive = true ) {
 }
 
 /**
- * Get a random decimal value in the domain of [0, 1), in a way
+ * Get a random decimal value between 0 and 1, in a way
  * not likely to give duplicate values for any realistic
  * number of articles.
  *
@@ -334,7 +332,6 @@ function wfUrlencode( $s ) {
 	static $needle;
 
 	if ( is_null( $s ) ) {
-		// Reset $needle for testing.
 		$needle = null;
 		return '';
 	}
@@ -474,7 +471,7 @@ function wfAppendQuery( $url, $query ) {
 		}
 
 		// Add parameter
-		if ( strpos( $url, '?' ) === false ) {
+		if ( false === strpos( $url, '?' ) ) {
 			$url .= '?';
 		} else {
 			$url .= '&';
@@ -897,13 +894,55 @@ function wfExpandIRI( $url ) {
 /**
  * Make URL indexes, appropriate for the el_index field of externallinks.
  *
- * @deprecated since 1.33, use LinkFilter::makeIndexes() instead
  * @param string $url
  * @return array
  */
 function wfMakeUrlIndexes( $url ) {
-	wfDeprecated( __FUNCTION__, '1.33' );
-	return LinkFilter::makeIndexes( $url );
+	$bits = wfParseUrl( $url );
+
+	// Reverse the labels in the hostname, convert to lower case
+	// For emails reverse domainpart only
+	if ( $bits['scheme'] == 'mailto' ) {
+		$mailparts = explode( '@', $bits['host'], 2 );
+		if ( count( $mailparts ) === 2 ) {
+			$domainpart = strtolower( implode( '.', array_reverse( explode( '.', $mailparts[1] ) ) ) );
+		} else {
+			// No domain specified, don't mangle it
+			$domainpart = '';
+		}
+		$reversedHost = $domainpart . '@' . $mailparts[0];
+	} else {
+		$reversedHost = strtolower( implode( '.', array_reverse( explode( '.', $bits['host'] ) ) ) );
+	}
+	// Add an extra dot to the end
+	// Why? Is it in wrong place in mailto links?
+	if ( substr( $reversedHost, -1, 1 ) !== '.' ) {
+		$reversedHost .= '.';
+	}
+	// Reconstruct the pseudo-URL
+	$prot = $bits['scheme'];
+	$index = $prot . $bits['delimiter'] . $reversedHost;
+	// Leave out user and password. Add the port, path, query and fragment
+	if ( isset( $bits['port'] ) ) {
+		$index .= ':' . $bits['port'];
+	}
+	if ( isset( $bits['path'] ) ) {
+		$index .= $bits['path'];
+	} else {
+		$index .= '/';
+	}
+	if ( isset( $bits['query'] ) ) {
+		$index .= '?' . $bits['query'];
+	}
+	if ( isset( $bits['fragment'] ) ) {
+		$index .= '#' . $bits['fragment'];
+	}
+
+	if ( $prot == '' ) {
+		return [ "http:$index", "https:$index" ];
+	} else {
+		return [ $index ];
+	}
 }
 
 /**
@@ -1066,14 +1105,15 @@ function wfLogDBError( $text, array $context = [] ) {
 /**
  * Throws a warning that $function is deprecated
  *
- * @param string $function Function that is deprecated.
+ * @param string $function
  * @param string|bool $version Version of MediaWiki that the function
  *    was deprecated in (Added in 1.19).
- * @param string|bool $component Component to which the function belongs.
- *    If false, it is assumed the function is in MediaWiki core (Added in 1.19).
+ * @param string|bool $component Added in 1.19.
  * @param int $callerOffset How far up the call stack is the original
  *    caller. 2 = function that called the function that called
- *    wfDeprecated (Added in 1.20).
+ *    wfDeprecated (Added in 1.20)
+ *
+ * @return null
  */
 function wfDeprecated( $function, $version = false, $component = false, $callerOffset = 2 ) {
 	MWDebug::deprecated( $function, $version, $component, $callerOffset + 1 );
@@ -1750,11 +1790,13 @@ function wfResetOutputBuffers( $resetGzipEncoding = true ) {
 			// to avoid getting in some kind of infinite loop.
 			break;
 		}
-		if ( $resetGzipEncoding && $status['name'] == 'ob_gzhandler' ) {
-			// Reset the 'Content-Encoding' field set by this handler
-			// so we can start fresh.
-			header_remove( 'Content-Encoding' );
-			break;
+		if ( $resetGzipEncoding ) {
+			if ( $status['name'] == 'ob_gzhandler' ) {
+				// Reset the 'Content-Encoding' field set by this handler
+				// so we can start fresh.
+				header_remove( 'Content-Encoding' );
+				break;
+			}
 		}
 	}
 }
@@ -2136,7 +2178,7 @@ function wfStringToBool( $val ) {
  * @param string|string[] ...$args strings to escape and glue together,
  *  or a single array of strings parameter
  * @return string
- * @deprecated since 1.30 use MediaWiki\Shell\Shell::escape()
+ * @deprecated since 1.30 use MediaWiki\Shell::escape()
  */
 function wfEscapeShellArg( ...$args ) {
 	return Shell::escape( ...$args );
@@ -2609,6 +2651,21 @@ function wfWikiID() {
 }
 
 /**
+ * Split a wiki ID into DB name and table prefix
+ *
+ * @param string $wiki
+ *
+ * @return array
+ */
+function wfSplitWikiID( $wiki ) {
+	$bits = explode( '-', $wiki, 2 );
+	if ( count( $bits ) < 2 ) {
+		$bits[] = '';
+	}
+	return $bits;
+}
+
+/**
  * Get a Database object.
  *
  * @param int $db Index of the connection to get. May be DB_MASTER for the
@@ -2640,8 +2697,8 @@ function wfGetDB( $db, $groups = [], $wiki = false ) {
 /**
  * Get a load balancer object.
  *
- * @deprecated since 1.27, use MediaWikiServices::getInstance()->getDBLoadBalancer()
- *              or MediaWikiServices::getInstance()->getDBLoadBalancerFactory() instead.
+ * @deprecated since 1.27, use MediaWikiServices::getDBLoadBalancer()
+ *              or MediaWikiServices::getDBLoadBalancerFactory() instead.
  *
  * @param string|bool $wiki Wiki ID, or false for the current wiki
  * @return \Wikimedia\Rdbms\LoadBalancer
@@ -2658,7 +2715,7 @@ function wfGetLB( $wiki = false ) {
 /**
  * Get the load balancer factory object
  *
- * @deprecated since 1.27, use MediaWikiServices::getInstance()->getDBLoadBalancerFactory() instead.
+ * @deprecated since 1.27, use MediaWikiServices::getDBLoadBalancerFactory() instead.
  *
  * @return \Wikimedia\Rdbms\LBFactory
  */
@@ -3106,7 +3163,7 @@ function wfIsBadImage( $name, $contextTitle = false, $blacklist = null ) {
 function wfCanIPUseHTTPS( $ip ) {
 	$canDo = true;
 	Hooks::run( 'CanIPUseHTTPS', [ $ip, &$canDo ] );
-	return (bool)$canDo;
+	return !!$canDo;
 }
 
 /**

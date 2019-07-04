@@ -400,9 +400,6 @@ class MessageTest extends MediaWikiLangTestCase {
 		$this->assertSame( 'example &amp;', $msg->escaped() );
 	}
 
-	/**
-	 * @covers CoreTagHooks::html
-	 */
 	public function testRawHtmlInMsg() {
 		$this->setMwGlobals( 'wgRawHtml', true );
 		// We have to reset the core hook registration.

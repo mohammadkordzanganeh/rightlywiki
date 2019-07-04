@@ -15,7 +15,7 @@
  * along with MultimediaViewer.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-( function () {
+( function ( mw, $, oo ) {
 	var L;
 
 	/**
@@ -30,7 +30,7 @@
 		this.stops = {};
 	}
 
-	OO.inheritClass( DurationLogger, mw.mmv.logging.Logger );
+	oo.inheritClass( DurationLogger, mw.mmv.logging.Logger );
 
 	L = DurationLogger.prototype;
 
@@ -60,7 +60,7 @@
 	 */
 	L.start = function ( typeOrTypes ) {
 		var i,
-			start = ( new Date() ).getTime();
+			start = $.now();
 
 		if ( !typeOrTypes ) {
 			throw new Error( 'Must specify type' );
@@ -89,7 +89,7 @@
 	 * @chainable
 	 */
 	L.stop = function ( type, start ) {
-		var stop = ( new Date() ).getTime();
+		var stop = $.now();
 
 		if ( !type ) {
 			throw new Error( 'Must specify type' );
@@ -159,4 +159,4 @@
 	};
 
 	mw.mmv.durationLogger = new DurationLogger();
-}() );
+}( mediaWiki, jQuery, OO ) );

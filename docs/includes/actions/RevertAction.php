@@ -136,10 +136,7 @@ class RevertAction extends FormAction {
 			0,
 			false,
 			false,
-			$this->getUser(),
-			[],
-			true,
-			true
+			$this->getUser()
 		);
 	}
 

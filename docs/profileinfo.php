@@ -338,7 +338,11 @@ $res = $dbr->select(
 	[ 'ORDER BY' => 'pf_name ASC' ]
 );
 
-$filter = $_REQUEST['filter'] ?? '';
+if ( isset( $_REQUEST['filter'] ) ) {
+	$filter = $_REQUEST['filter'];
+} else {
+	$filter = '';
+}
 
 ?>
 <form method="get" action="profileinfo.php">
@@ -412,7 +416,6 @@ $filter = $_REQUEST['filter'] ?? '';
 	$queries = [];
 	$sqltotal = 0.0;
 
-	/** @var profile_point|false $last */
 	$last = false;
 	foreach ( $res as $o ) {
 		$next = new profile_point( $o->pf_name, $o->pf_count, $o->pf_time, $o->pf_memory );
@@ -436,7 +439,7 @@ $filter = $_REQUEST['filter'] ?? '';
 		}
 	}
 
-	$s = new profile_point( 'SQL Queries', 0, $sqltotal, 0 );
+	$s = new profile_point( 'SQL Queries', 0, $sqltotal, 0, 0 );
 	foreach ( $queries as $q ) {
 		$s->add_child( $q );
 	}

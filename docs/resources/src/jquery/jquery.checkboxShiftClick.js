@@ -14,7 +14,7 @@
 		var prevCheckbox = null,
 			$box = this;
 		// When our boxes are clicked..
-		$box.on( 'click', function ( e ) {
+		$box.click( function ( e ) {
 			// And one has been clicked before...
 			if ( prevCheckbox !== null && e.shiftKey ) {
 				// Check or uncheck this one and all in-between checkboxes,

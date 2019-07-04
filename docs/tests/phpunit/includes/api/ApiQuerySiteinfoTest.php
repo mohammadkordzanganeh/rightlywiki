@@ -40,34 +40,36 @@ class ApiQuerySiteinfoTest extends ApiTestCase {
 	}
 
 	public function testLinkPrefixCharset() {
-		$contLang = Language::factory( 'ar' );
-		$this->setContentLang( $contLang );
-		$this->assertTrue( $contLang->linkPrefixExtension(), 'Sanity check' );
+		global $wgContLang;
+
+		$this->setContentLang( 'ar' );
+		$this->assertTrue( $wgContLang->linkPrefixExtension(), 'Sanity check' );
 
 		$data = $this->doQuery();
 
-		$this->assertSame( $contLang->linkPrefixCharset(), $data['linkprefixcharset'] );
+		$this->assertSame( $wgContLang->linkPrefixCharset(), $data['linkprefixcharset'] );
 	}
 
 	public function testVariants() {
-		$contLang = Language::factory( 'zh' );
-		$this->setContentLang( $contLang );
-		$this->assertTrue( $contLang->hasVariants(), 'Sanity check' );
+		global $wgContLang;
+
+		$this->setContentLang( 'zh' );
+		$this->assertTrue( $wgContLang->hasVariants(), 'Sanity check' );
 
 		$data = $this->doQuery();
 
 		$expected = array_map(
-			function ( $code ) use ( $contLang ) {
-				return [ 'code' => $code, 'name' => $contLang->getVariantname( $code ) ];
+			function ( $code ) use ( $wgContLang ) {
+				return [ 'code' => $code, 'name' => $wgContLang->getVariantname( $code ) ];
 			},
-			$contLang->getVariants()
+			$wgContLang->getVariants()
 		);
 
 		$this->assertSame( $expected, $data['variants'] );
 	}
 
 	public function testReadOnly() {
-		$svc = MediaWikiServices::getInstance()->getReadOnlyMode();
+		$svc = \MediaWiki\MediaWikiServices::getInstance()->getReadOnlyMode();
 		$svc->setReason( 'Need more donations' );
 		try {
 			$data = $this->doQuery();
@@ -80,21 +82,18 @@ class ApiQuerySiteinfoTest extends ApiTestCase {
 	}
 
 	public function testNamespaces() {
+		global $wgContLang;
+
 		$this->setMwGlobals( 'wgExtraNamespaces', [ '138' => 'Testing' ] );
 
-		$this->assertSame(
-			array_keys( MediaWikiServices::getInstance()->getContentLanguage()->getFormattedNamespaces() ),
-			array_keys( $this->doQuery( 'namespaces' ) )
-		);
+		$this->assertSame( array_keys( $wgContLang->getFormattedNamespaces() ),
+			array_keys( $this->doQuery( 'namespaces' ) ) );
 	}
 
 	public function testNamespaceAliases() {
-		global $wgNamespaceAliases;
+		global $wgNamespaceAliases, $wgContLang;
 
-		$expected = array_merge(
-			$wgNamespaceAliases,
-			MediaWikiServices::getInstance()->getContentLanguage()->getNamespaceAliases()
-		);
+		$expected = array_merge( $wgNamespaceAliases, $wgContLang->getNamespaceAliases() );
 		$expected = array_map(
 			function ( $key, $val ) {
 				return [ 'id' => $val, 'alias' => strtr( $key, '_', ' ' ) ];
@@ -117,8 +116,10 @@ class ApiQuerySiteinfoTest extends ApiTestCase {
 	}
 
 	public function testMagicWords() {
+		global $wgContLang;
+
 		$this->assertCount(
-			count( MediaWikiServices::getInstance()->getContentLanguage()->getMagicWords() ),
+			count( $wgContLang->getMagicWords() ),
 			$this->doQuery( 'magicwords' )
 		);
 	}
@@ -590,10 +591,7 @@ class ApiQuerySiteinfoTest extends ApiTestCase {
 	}
 
 	public function testVariables() {
-		$this->assertSame(
-			MediaWikiServices::getInstance()->getMagicWordFactory()->getVariableIDs(),
-			$this->doQuery( 'variables' )
-		);
+		$this->assertSame( MagicWord::getVariableIDs(), $this->doQuery( 'variables' ) );
 	}
 
 	public function testProtocols() {

@@ -124,12 +124,12 @@ class TitleBlacklistEntry {
 			}
 		}
 
-		Wikimedia\suppressWarnings();
+		wfSuppressWarnings();
 		$match = preg_match(
 			"/^(?:{$this->mRegex})$/us" . ( isset( $this->mParams['casesensitive'] ) ? '' : 'i' ),
 			$title
 		);
-		Wikimedia\restoreWarnings();
+		wfRestoreWarnings();
 
 		if ( $match ) {
 			if ( isset( $this->mParams['moveonly'] ) && $action != 'move' ) {
@@ -257,7 +257,7 @@ class TitleBlacklistEntry {
 	 * @return string Custom message for this entry
 	 */
 	public function getCustomMessage() {
-		return $this->mParams['errmsg'] ?? null;
+		return isset( $this->mParams['errmsg'] ) ? $this->mParams['errmsg'] : null;
 	}
 
 	/**
@@ -288,6 +288,6 @@ class TitleBlacklistEntry {
 		// For grep:
 		// titleblacklist-forbidden-edit, titleblacklist-forbidden-move,
 		// titleblacklist-forbidden-upload, titleblacklist-forbidden-new-account
-		return $message ?: "titleblacklist-forbidden-{$operation}";
+		return $message ? $message : "titleblacklist-forbidden-{$operation}";
 	}
 }

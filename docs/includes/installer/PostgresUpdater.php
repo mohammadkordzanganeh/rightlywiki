@@ -71,6 +71,7 @@ class PostgresUpdater extends DatabaseUpdater {
 			[ 'addSequence', 'externallinks', false, 'externallinks_el_id_seq' ],
 			[ 'addSequence', 'watchlist', false, 'watchlist_wl_id_seq' ],
 			[ 'addSequence', 'change_tag', false, 'change_tag_ct_id_seq' ],
+			[ 'addSequence', 'tag_summary', false, 'tag_summary_ts_id_seq' ],
 
 			# new tables
 			[ 'addTable', 'category', 'patch-category.sql' ],
@@ -83,6 +84,8 @@ class PostgresUpdater extends DatabaseUpdater {
 			[ 'addTable', 'redirect', 'patch-redirect.sql' ],
 			[ 'addTable', 'updatelog', 'patch-updatelog.sql' ],
 			[ 'addTable', 'change_tag', 'patch-change_tag.sql' ],
+			[ 'addTable', 'tag_summary', 'patch-tag_summary.sql' ],
+			[ 'addTable', 'valid_tag', 'patch-valid_tag.sql' ],
 			[ 'addTable', 'user_properties', 'patch-user_properties.sql' ],
 			[ 'addTable', 'log_search', 'patch-log_search.sql' ],
 			[ 'addTable', 'l10n_cache', 'patch-l10n_cache.sql' ],
@@ -440,6 +443,8 @@ class PostgresUpdater extends DatabaseUpdater {
 				'( rc_namespace, rc_type, rc_patrolled, rc_timestamp )' ],
 			[ 'addPgField', 'change_tag', 'ct_id',
 				"INTEGER NOT NULL PRIMARY KEY DEFAULT nextval('change_tag_ct_id_seq')" ],
+			[ 'addPgField', 'tag_summary', 'ts_id',
+				"INTEGER NOT NULL PRIMARY KEY DEFAULT nextval('tag_summary_ts_id_seq')" ],
 
 			// 1.29
 			[ 'addPgField', 'externallinks', 'el_index_60', "BYTEA NOT NULL DEFAULT ''" ],
@@ -562,6 +567,7 @@ class PostgresUpdater extends DatabaseUpdater {
 			[ 'setSequenceOwner', 'job', 'job_id', 'job_job_id_seq' ],
 			[ 'setSequenceOwner', 'category', 'cat_id', 'category_cat_id_seq' ],
 			[ 'setSequenceOwner', 'change_tag', 'ct_id', 'change_tag_ct_id_seq' ],
+			[ 'setSequenceOwner', 'tag_summary', 'ts_id', 'tag_summary_ts_id_seq' ],
 			[ 'setSequenceOwner', 'sites', 'site_id', 'sites_site_id_seq' ],
 
 			// 1.32
@@ -595,29 +601,6 @@ class PostgresUpdater extends DatabaseUpdater {
 			[ 'dropPgField', 'category', 'cat_hidden' ],
 			[ 'dropPgField', 'site_stats', 'ss_admins' ],
 			[ 'dropPgField', 'recentchanges', 'rc_cur_time' ],
-
-			// 1.33
-			[ 'dropField', 'change_tag', 'ct_tag', 'patch-drop-ct_tag.sql' ],
-			[ 'dropTable', 'valid_tag' ],
-			[ 'dropTable', 'tag_summary' ],
-			[ 'dropPgField', 'archive', 'ar_comment' ],
-			[ 'dropDefault', 'archive', 'ar_comment_id' ],
-			[ 'dropPgField', 'ipblocks', 'ipb_reason' ],
-			[ 'dropDefault', 'ipblocks', 'ipb_reason_id' ],
-			[ 'dropPgField', 'image', 'img_description' ],
-			[ 'dropDefault', 'image', 'img_description_id' ],
-			[ 'dropPgField', 'oldimage', 'oi_description' ],
-			[ 'dropDefault', 'oldimage', 'oi_description_id' ],
-			[ 'dropPgField', 'filearchive', 'fa_deleted_reason' ],
-			[ 'dropDefault', 'filearchive', 'fa_deleted_reason_id' ],
-			[ 'dropPgField', 'filearchive', 'fa_description' ],
-			[ 'dropDefault', 'filearchive', 'fa_description_id' ],
-			[ 'dropPgField', 'recentchanges', 'rc_comment' ],
-			[ 'dropDefault', 'recentchanges', 'rc_comment_id' ],
-			[ 'dropPgField', 'logging', 'log_comment' ],
-			[ 'dropDefault', 'logging', 'log_comment_id' ],
-			[ 'dropPgField', 'protected_titles', 'pt_reason' ],
-			[ 'dropDefault', 'protected_titles', 'pt_reason_id' ],
 		];
 	}
 
@@ -839,7 +822,7 @@ END;
 		if ( !$this->db->tableExists( $table, __METHOD__ ) ) {
 			$this->output( "...skipping: '$table' table doesn't exist yet.\n" );
 
-			return true;
+			return;
 		}
 
 		// Second requirement: the new index must be missing
@@ -853,18 +836,17 @@ END;
 					"            $old should be manually removed if not needed anymore.\n" );
 			}
 
-			return true;
+			return;
 		}
 
 		// Third requirement: the old index must exist
 		if ( !$this->db->indexExists( $table, $old, __METHOD__ ) ) {
 			$this->output( "...skipping: index $old doesn't exist.\n" );
 
-			return true;
+			return;
 		}
 
 		$this->db->query( "ALTER INDEX $old RENAME TO $new" );
-		return true;
 	}
 
 	protected function dropPgField( $table, $field ) {
@@ -947,7 +929,7 @@ END;
 
 	protected function setDefault( $table, $field, $default ) {
 		$info = $this->db->fieldInfo( $table, $field );
-		if ( $info && $info->defaultValue() !== $default ) {
+		if ( $info->defaultValue() !== $default ) {
 			$this->output( "Changing '$table.$field' default value\n" );
 			$this->db->query( "ALTER TABLE $table ALTER $field SET DEFAULT "
 				. $this->db->addQuotes( $default ) );
@@ -975,7 +957,7 @@ END;
 		}
 		if ( $fi->isNullable() ) {
 			# # It's NULL - does it need to be NOT NULL?
-			if ( $null === 'NOT NULL' ) {
+			if ( 'NOT NULL' === $null ) {
 				$this->output( "Changing '$table.$field' to not allow NULLs\n" );
 				if ( $update ) {
 					$this->db->query( "UPDATE $table SET $field = DEFAULT WHERE $field IS NULL" );
@@ -986,7 +968,7 @@ END;
 			}
 		} else {
 			# # It's NOT NULL - does it need to be NULL?
-			if ( $null === 'NULL' ) {
+			if ( 'NULL' === $null ) {
 				$this->output( "Changing '$table.$field' to allow NULLs\n" );
 				$this->db->query( "ALTER TABLE $table ALTER $field DROP NOT NULL" );
 			} else {
@@ -1008,11 +990,13 @@ END;
 	public function addPgExtIndex( $table, $index, $type ) {
 		if ( $this->db->indexExists( $table, $index ) ) {
 			$this->output( "...index '$index' on table '$table' already exists\n" );
-		} elseif ( preg_match( '/^\(/', $type ) ) {
-			$this->output( "Creating index '$index' on table '$table'\n" );
-			$this->db->query( "CREATE INDEX $index ON $table $type" );
 		} else {
-			$this->applyPatch( $type, true, "Creating index '$index' on table '$table'" );
+			if ( preg_match( '/^\(/', $type ) ) {
+				$this->output( "Creating index '$index' on table '$table'\n" );
+				$this->db->query( "CREATE INDEX $index ON $table $type" );
+			} else {
+				$this->applyPatch( $type, true, "Creating index '$index' on table '$table'" );
+			}
 		}
 	}
 

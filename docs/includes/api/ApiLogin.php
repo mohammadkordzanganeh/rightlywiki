@@ -107,6 +107,7 @@ class ApiLogin extends ApiBase {
 		}
 
 		$authRes = false;
+		$context = new DerivativeContext( $this->getContext() );
 		$loginType = 'N/A';
 
 		// Check login token
@@ -196,7 +197,7 @@ class ApiLogin extends ApiBase {
 				$injected_html = '';
 				Hooks::run( 'UserLoginComplete', [ &$user, &$injected_html, true ] );
 
-				$result['lguserid'] = (int)$user->getId();
+				$result['lguserid'] = intval( $user->getId() );
 				$result['lgusername'] = $user->getName();
 				break;
 

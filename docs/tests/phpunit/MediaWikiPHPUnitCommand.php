@@ -18,18 +18,11 @@ class MediaWikiPHPUnitCommand extends PHPUnit_TextUI_Command {
 			$this->arguments['configuration'] = __DIR__ . '/suite.xml';
 		}
 
-		// Add our own listeners
+		// Add our own listener
 		$this->arguments['listeners'][] = new MediaWikiPHPUnitTestListener;
-		$this->arguments['listeners'][] = new MediaWikiLoggerPHPUnitTestListener;
 
 		// Output only to stderr to avoid "Headers already sent" problems
 		$this->arguments['stderr'] = true;
-
-		// Use a custom result printer that includes per-test logging output
-		// when nothing is provided.
-		if ( !isset( $this->arguments['printer'] ) ) {
-			$this->arguments['printer'] = MediaWikiPHPUnitResultPrinter::class;
-		}
 	}
 
 	protected function createRunner() {

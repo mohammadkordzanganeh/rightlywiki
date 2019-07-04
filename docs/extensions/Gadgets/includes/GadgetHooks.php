@@ -244,6 +244,7 @@ class GadgetHooks {
 	 * @param string $summary
 	 * @throws Exception
 	 * @return bool
+	 * @suppress PhanUndeclaredMethod
 	 */
 	public static function onEditFilterMergedContent( $context, $content, $status, $summary ) {
 		$title = $context->getTitle();
@@ -291,7 +292,7 @@ class GadgetHooks {
 	public static function onContentHandlerDefaultModelFor( Title $title, &$model ) {
 		if ( $title->inNamespace( NS_GADGET ) ) {
 			preg_match( '!\.(css|js)$!u', $title->getText(), $ext );
-			$ext = $ext[1] ?? '';
+			$ext = isset( $ext[1] ) ? $ext[1] : '';
 			switch ( $ext ) {
 				case 'js':
 					$model = 'javascript';

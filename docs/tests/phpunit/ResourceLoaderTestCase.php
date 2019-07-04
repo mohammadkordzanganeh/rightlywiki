@@ -26,7 +26,6 @@ abstract class ResourceLoaderTestCase extends MediaWikiTestCase {
 			$options = [ 'lang' => $options ];
 		}
 		$options += [
-			'debug' => 'true',
 			'lang' => 'en',
 			'dir' => 'ltr',
 			'skin' => 'vector',
@@ -36,7 +35,6 @@ abstract class ResourceLoaderTestCase extends MediaWikiTestCase {
 		];
 		$resourceLoader = $rl ?: new ResourceLoader();
 		$request = new FauxRequest( [
-				'debug' => $options['debug'],
 				'lang' => $options['lang'],
 				'modules' => $options['modules'],
 				'only' => $options['only'],
@@ -59,6 +57,9 @@ abstract class ResourceLoaderTestCase extends MediaWikiTestCase {
 
 			// Avoid influence from wgInvalidateCacheOnLocalSettingsChange
 			'CacheEpoch' => '20140101000000',
+
+			// For ResourceLoader::__construct()
+			'ResourceLoaderSources' => [],
 
 			// For wfScript()
 			'ScriptPath' => '/w',

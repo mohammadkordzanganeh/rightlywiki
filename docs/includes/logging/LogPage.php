@@ -385,7 +385,7 @@ class LogPage {
 	 */
 	public function addRelations( $field, $values, $logid ) {
 		if ( !strlen( $field ) || empty( $values ) ) {
-			return false;
+			return false; // nothing
 		}
 
 		$data = [];
@@ -437,7 +437,11 @@ class LogPage {
 		global $wgLogNames;
 
 		// BC
-		$key = $wgLogNames[$this->type] ?? 'log-name-' . $this->type;
+		if ( isset( $wgLogNames[$this->type] ) ) {
+			$key = $wgLogNames[$this->type];
+		} else {
+			$key = 'log-name-' . $this->type;
+		}
 
 		return wfMessage( $key );
 	}
@@ -450,7 +454,11 @@ class LogPage {
 	public function getDescription() {
 		global $wgLogHeaders;
 		// BC
-		$key = $wgLogHeaders[$this->type] ?? 'log-description-' . $this->type;
+		if ( isset( $wgLogHeaders[$this->type] ) ) {
+			$key = $wgLogHeaders[$this->type];
+		} else {
+			$key = 'log-description-' . $this->type;
+		}
 
 		return wfMessage( $key );
 	}
@@ -462,8 +470,14 @@ class LogPage {
 	 */
 	public function getRestriction() {
 		global $wgLogRestrictions;
-		// '' always returns true with $user->isAllowed()
-		return $wgLogRestrictions[$this->type] ?? '';
+		if ( isset( $wgLogRestrictions[$this->type] ) ) {
+			$restriction = $wgLogRestrictions[$this->type];
+		} else {
+			// '' always returns true with $user->isAllowed()
+			$restriction = '';
+		}
+
+		return $restriction;
 	}
 
 	/**

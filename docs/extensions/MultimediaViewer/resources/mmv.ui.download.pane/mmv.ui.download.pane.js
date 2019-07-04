@@ -15,7 +15,7 @@
  * along with MultimediaViewer.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-( function () {
+( function ( mw, $, oo ) {
 	// Shortcut for prototype later
 	var DP;
 
@@ -58,7 +58,7 @@
 		/** @property {mw.mmv.model.Image|null} Image the download button currently points to. */
 		this.image = null;
 	}
-	OO.inheritClass( Pane, mw.mmv.ui.Element );
+	oo.inheritClass( Pane, mw.mmv.ui.Element );
 	DP = Pane.prototype;
 
 	/**
@@ -145,18 +145,18 @@
 
 	DP.createAttributionButton = function ( $container ) {
 		var dl = this,
-			attributionInput = new OO.ui.TextInputWidget( {
+			attributionInput = new oo.ui.TextInputWidget( {
 				classes: [ 'mw-mmv-download-attr-input' ],
 				readOnly: true
 			} ),
-			attributionSwitch = new OO.ui.ButtonSelectWidget( {
+			attributionSwitch = new oo.ui.ButtonSelectWidget( {
 				classes: [ 'mw-mmv-download-attr-select' ]
 			} ),
-			plainOption = new OO.ui.ButtonOptionWidget( {
+			plainOption = new oo.ui.ButtonOptionWidget( {
 				data: 'plain',
 				label: mw.message( 'multimediaviewer-attr-plain' ).text()
 			} ),
-			htmlOption = new OO.ui.ButtonOptionWidget( {
+			htmlOption = new oo.ui.ButtonOptionWidget( {
 				data: 'html',
 				label: mw.message( 'multimediaviewer-attr-html' ).text()
 			} );
@@ -357,9 +357,7 @@
 	/**
 	 * Sets the text in the attribution input element.
 	 *
-	 * @param {Object} embed
-	 * @param {mw.mmv.model.Image} embed.imageInfo
-	 * @param {mw.mmv.model.Repo} embed.repoInfo
+	 * @param {mw.mmv.model.EmbedFileInfo} embed
 	 */
 	DP.setAttributionText = function ( embed ) {
 		this.htmlCredit = this.formatter.getCreditHtml( embed );
@@ -386,7 +384,6 @@
 	 */
 	DP.set = function ( image, repo ) {
 		var attributionCtaMessage,
-			embedFileInfo,
 			license = image && image.license,
 			sizeOptions = this.downloadSizeMenu.getMenu().getItems(),
 			sizes = this.utils.getPossibleImageSizesForHtml( image.width, image.height );
@@ -404,11 +401,7 @@
 		this.downloadSizeMenu.getMenu().chooseItem( this.defaultItem );
 
 		if ( image && repo ) {
-			embedFileInfo = {
-				imageInfo: image,
-				repoInfo: repo
-			};
-			this.setAttributionText( embedFileInfo );
+			this.setAttributionText( new mw.mmv.model.EmbedFileInfo( image, repo ) );
 		}
 
 		attributionCtaMessage = ( license && license.needsAttribution() ) ?
@@ -433,4 +426,4 @@
 	};
 
 	mw.mmv.ui.download.Pane = Pane;
-}() );
+}( mediaWiki, jQuery, OO ) );

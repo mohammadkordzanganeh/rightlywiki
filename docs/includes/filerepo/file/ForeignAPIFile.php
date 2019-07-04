@@ -77,7 +77,9 @@ class ForeignAPIFile extends File {
 			if ( $lastRedirect >= 0 ) {
 				$newtitle = Title::newFromText( $data['query']['redirects'][$lastRedirect]['to'] );
 				$img = new self( $newtitle, $repo, $info, true );
-				$img->redirectedFrom( $title->getDBkey() );
+				if ( $img ) {
+					$img->redirectedFrom( $title->getDBkey() );
+				}
 			} else {
 				$img = new self( $title, $repo, $info, true );
 			}
@@ -154,7 +156,7 @@ class ForeignAPIFile extends File {
 
 	/**
 	 * @param int $page
-	 * @return int
+	 * @return int|number
 	 */
 	public function getWidth( $page = 1 ) {
 		return isset( $this->mInfo['width'] ) ? intval( $this->mInfo['width'] ) : 0;
@@ -184,7 +186,11 @@ class ForeignAPIFile extends File {
 	 *   null on error
 	 */
 	public function getExtendedMetadata() {
-		return $this->mInfo['extmetadata'] ?? null;
+		if ( isset( $this->mInfo['extmetadata'] ) ) {
+			return $this->mInfo['extmetadata'];
+		}
+
+		return null;
 	}
 
 	/**
@@ -314,15 +320,16 @@ class ForeignAPIFile extends File {
 	 * @return null|string
 	 */
 	function getThumbPath( $suffix = '' ) {
-		if ( !$this->repo->canCacheThumbs() ) {
+		if ( $this->repo->canCacheThumbs() ) {
+			$path = $this->repo->getZonePath( 'thumb' ) . '/' . $this->getHashPath( $this->getName() );
+			if ( $suffix ) {
+				$path = $path . $suffix . '/';
+			}
+
+			return $path;
+		} else {
 			return null;
 		}
-
-		$path = $this->repo->getZonePath( 'thumb' ) . '/' . $this->getHashPath();
-		if ( $suffix ) {
-			$path .= $suffix . '/';
-		}
-		return $path;
 	}
 
 	/**

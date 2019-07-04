@@ -27,12 +27,6 @@ class EnhancedChangesListTest extends MediaWikiLangTestCase {
 		$styleModules = $enhancedChangesList->getOutput()->getModuleStyles();
 
 		$this->assertContains(
-			'mediawiki.icon',
-			$styleModules,
-			'has mediawiki.icon'
-		);
-
-		$this->assertContains(
 			'mediawiki.special.changeslist',
 			$styleModules,
 			'has mediawiki.special.changeslist'
@@ -52,6 +46,7 @@ class EnhancedChangesListTest extends MediaWikiLangTestCase {
 		$modules = $enhancedChangesList->getOutput()->getModules();
 
 		$this->assertContains( 'jquery.makeCollapsible', $modules, 'has jquery.makeCollapsible' );
+		$this->assertContains( 'mediawiki.icon', $modules, 'has mediawiki.icon' );
 	}
 
 	public function testBeginRecentChangesList_html() {
@@ -124,14 +119,14 @@ class EnhancedChangesListTest extends MediaWikiLangTestCase {
 		$html = $this->createCategorizationLine(
 			$this->getCategorizationChange( '20150629191735', 0, 0 )
 		);
-		$this->assertNotContains( 'diffhist', strip_tags( $html ) );
+		$this->assertNotContains( '(diff | hist)', strip_tags( $html ) );
 	}
 
 	public function testCategorizationLineFormattingWithRevision() {
 		$html = $this->createCategorizationLine(
 			$this->getCategorizationChange( '20150629191735', 1025, 1024 )
 		);
-		$this->assertContains( 'diffhist', strip_tags( $html ) );
+		$this->assertContains( '(diff | hist)', strip_tags( $html ) );
 	}
 
 	/**

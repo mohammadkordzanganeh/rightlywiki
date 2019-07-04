@@ -15,7 +15,7 @@
  * along with MediaViewer.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-( function () {
+( function ( mw ) {
 	var ITP;
 
 	/**
@@ -77,4 +77,4 @@
 	};
 
 	mw.mmv.model.IwTitle = IwTitle;
-}() );
+}( mediaWiki ) );

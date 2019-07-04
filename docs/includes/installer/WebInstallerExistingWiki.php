@@ -154,8 +154,16 @@ class WebInstallerExistingWiki extends WebInstallerPage {
 			return $status;
 		}
 
-		$this->setVar( '_InstallUser', $vars['wgDBadminuser'] ?? $vars['wgDBuser'] );
-		$this->setVar( '_InstallPassword', $vars['wgDBadminpassword'] ?? $vars['wgDBpassword'] );
+		if ( isset( $vars['wgDBadminuser'] ) ) {
+			$this->setVar( '_InstallUser', $vars['wgDBadminuser'] );
+		} else {
+			$this->setVar( '_InstallUser', $vars['wgDBuser'] );
+		}
+		if ( isset( $vars['wgDBadminpassword'] ) ) {
+			$this->setVar( '_InstallPassword', $vars['wgDBadminpassword'] );
+		} else {
+			$this->setVar( '_InstallPassword', $vars['wgDBpassword'] );
+		}
 
 		// Test the database connection
 		$status = $installer->getConnection();

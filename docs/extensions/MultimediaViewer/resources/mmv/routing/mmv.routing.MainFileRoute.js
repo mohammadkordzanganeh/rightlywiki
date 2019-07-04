@@ -15,7 +15,7 @@
  * along with MediaViewer.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-( function () {
+( function ( mw, oo ) {
 	/**
 	 * Route for showing the main image on the page, (whatever that means might depend on the page).
 	 * This is typically used on file pages.
@@ -25,6 +25,6 @@
 	 * @constructor
 	 */
 	function MainFileRoute() {}
-	OO.inheritClass( MainFileRoute, mw.mmv.routing.Route );
+	oo.inheritClass( MainFileRoute, mw.mmv.routing.Route );
 	mw.mmv.routing.MainFileRoute = MainFileRoute;
-}() );
+}( mediaWiki, OO ) );

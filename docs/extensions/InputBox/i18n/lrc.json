@@ -2,11 +2,10 @@
 	"@metadata": {
 		"authors": [
 			"Bonevarluri",
-			"Mogoeilor",
-			"Lorestani"
+			"Mogoeilor"
 		]
 	},
-	"inputbox-tryexact": "تٱفرٱ سی یٱکؽ کردن راسٱکی",
+	"inputbox-tryexact": "تلاش سی یکی کردن راستکی",
 	"inputbox-searchfulltext": "پی جوری متنی",
 	"inputbox-createarticle": "راس كردن بلگه",
 	"inputbox-movearticle": "بلگه نه جا وه جا کو",

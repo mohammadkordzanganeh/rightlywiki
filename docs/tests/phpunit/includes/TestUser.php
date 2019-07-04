@@ -143,7 +143,7 @@ class TestUser {
 		}
 
 		$passwordFactory = MediaWikiServices::getInstance()->getPasswordFactory();
-		if ( !$passwordFactory->newFromCiphertext( $row->user_password )->verify( $password ) ) {
+		if ( !$passwordFactory->newFromCiphertext( $row->user_password )->equals( $password ) ) {
 			$passwordHash = $passwordFactory->newFromPlaintext( $password );
 			$dbw->update(
 				'user',

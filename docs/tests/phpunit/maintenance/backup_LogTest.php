@@ -2,7 +2,6 @@
 
 namespace MediaWiki\Tests\Maintenance;
 
-use Exception;
 use MediaWiki\MediaWikiServices;
 use DumpBackup;
 use ManualLogEntry;
@@ -99,6 +98,53 @@ class BackupDumperLoggerTest extends DumpTestCase {
 		}
 	}
 
+	/**
+	 * asserts that the xml reader is at the beginning of a log entry and skips over
+	 * it while analyzing it.
+	 *
+	 * @param int $id Id of the log entry
+	 * @param string $user_name User name of the log entry's performer
+	 * @param int $user_id User id of the log entry 's performer
+	 * @param string|null $comment Comment of the log entry. If null, the comment text is ignored.
+	 * @param string $type Type of the log entry
+	 * @param string $subtype Subtype of the log entry
+	 * @param string $title Title of the log entry's target
+	 * @param array $parameters (optional) unserialized data accompanying the log entry
+	 */
+	private function assertLogItem( $id, $user_name, $user_id, $comment, $type,
+		$subtype, $title, $parameters = []
+	) {
+		$this->assertNodeStart( "logitem" );
+		$this->skipWhitespace();
+
+		$this->assertTextNode( "id", $id );
+		$this->assertTextNode( "timestamp", false );
+
+		$this->assertNodeStart( "contributor" );
+		$this->skipWhitespace();
+		$this->assertTextNode( "username", $user_name );
+		$this->assertTextNode( "id", $user_id );
+		$this->assertNodeEnd( "contributor" );
+		$this->skipWhitespace();
+
+		if ( $comment !== null ) {
+			$this->assertTextNode( "comment", $comment );
+		}
+		$this->assertTextNode( "type", $type );
+		$this->assertTextNode( "action", $subtype );
+		$this->assertTextNode( "logtitle", $title );
+
+		$this->assertNodeStart( "params" );
+		$parameters_xml = unserialize( $this->xml->value );
+		$this->assertEquals( $parameters, $parameters_xml );
+		$this->assertTrue( $this->xml->read(), "Skipping past processed text of params" );
+		$this->assertNodeEnd( "params" );
+		$this->skipWhitespace();
+
+		$this->assertNodeEnd( "logitem" );
+		$this->skipWhitespace();
+	}
+
 	function testPlain() {
 		// Preparing the dump
 		$fname = $this->getNewTempFile();
@@ -113,12 +159,9 @@ class BackupDumperLoggerTest extends DumpTestCase {
 		$dumper->dump( WikiExporter::LOGS, WikiExporter::TEXT );
 
 		// Analyzing the dumped data
-		$this->assertDumpSchema( $fname, $this->getXmlSchemaPath() );
+		$this->assertDumpStart( $fname );
 
-		$asserter = $this->getDumpAsserter();
-		$asserter->assertDumpStart( $fname );
-
-		$asserter->assertLogItem( $this->logId1, "BackupDumperLogUserA",
+		$this->assertLogItem( $this->logId1, "BackupDumperLogUserA",
 			$this->userId1, null, "type", "subtype", "PageA" );
 
 		$contLang = MediaWikiServices::getInstance()->getContentLanguage();
@@ -126,15 +169,15 @@ class BackupDumperLoggerTest extends DumpTestCase {
 		$namespace = $contLang->getNsText( NS_TALK );
 		$this->assertInternalType( 'string', $namespace );
 		$this->assertGreaterThan( 0, strlen( $namespace ) );
-		$asserter->assertLogItem( $this->logId2, "BackupDumperLogUserB",
+		$this->assertLogItem( $this->logId2, "BackupDumperLogUserB",
 			$this->userId2, "SomeComment", "supress", "delete",
 			$namespace . ":PageB" );
 
-		$asserter->assertLogItem( $this->logId3, "BackupDumperLogUserB",
+		$this->assertLogItem( $this->logId3, "BackupDumperLogUserB",
 			$this->userId2, "SomeOtherComment", "move", "delete",
 			"PageA", [ 'key1' => 1, 3 => 'value3' ] );
 
-		$asserter->assertDumpEnd();
+		$this->assertDumpEnd();
 	}
 
 	function testXmlDumpsBackupUseCaseLogging() {
@@ -168,12 +211,9 @@ class BackupDumperLoggerTest extends DumpTestCase {
 		// Analyzing the dumped data
 		$this->gunzip( $fname );
 
-		$this->assertDumpSchema( $fname, $this->getXmlSchemaPath() );
+		$this->assertDumpStart( $fname );
 
-		$asserter = $this->getDumpAsserter();
-		$asserter->assertDumpStart( $fname );
-
-		$asserter->assertLogItem( $this->logId1, "BackupDumperLogUserA",
+		$this->assertLogItem( $this->logId1, "BackupDumperLogUserA",
 			$this->userId1, null, "type", "subtype", "PageA" );
 
 		$contLang = MediaWikiServices::getInstance()->getContentLanguage();
@@ -181,15 +221,15 @@ class BackupDumperLoggerTest extends DumpTestCase {
 		$namespace = $contLang->getNsText( NS_TALK );
 		$this->assertInternalType( 'string', $namespace );
 		$this->assertGreaterThan( 0, strlen( $namespace ) );
-		$asserter->assertLogItem( $this->logId2, "BackupDumperLogUserB",
+		$this->assertLogItem( $this->logId2, "BackupDumperLogUserB",
 			$this->userId2, "SomeComment", "supress", "delete",
 			$namespace . ":PageB" );
 
-		$asserter->assertLogItem( $this->logId3, "BackupDumperLogUserB",
+		$this->assertLogItem( $this->logId3, "BackupDumperLogUserB",
 			$this->userId2, "SomeOtherComment", "move", "delete",
 			"PageA", [ 'key1' => 1, 3 => 'value3' ] );
 
-		$asserter->assertDumpEnd();
+		$this->assertDumpEnd();
 
 		// Currently, no reporting is implemented. Alert via failure, once
 		// this changes.

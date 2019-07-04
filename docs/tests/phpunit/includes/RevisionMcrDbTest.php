@@ -46,10 +46,4 @@ class RevisionMcrDbTest extends RevisionDbTestBase {
 		yield [ $rec, 789 ];
 	}
 
-	public function provideGetRevisionText() {
-		yield 'no text table' => [
-			[]
-		];
-	}
-
 }

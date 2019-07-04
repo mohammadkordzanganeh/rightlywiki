@@ -27,7 +27,6 @@ use DateTimeZone;
 use Wikimedia;
 use InvalidArgumentException;
 use Exception;
-use RuntimeException;
 use stdClass;
 
 /**
@@ -106,7 +105,7 @@ abstract class DatabaseMysqlBase extends Database {
 				$this->$var = $params[$var];
 			}
 		}
-		$this->sqlMode = $params['sqlMode'] ?? null;
+		$this->sqlMode = $params['sqlMode'] ?? '';
 		$this->utf8Mode = !empty( $params['utf8Mode'] );
 		$this->insertSelectIsSafe = isset( $params['insertSelectIsSafe'] )
 			? (bool)$params['insertSelectIsSafe'] : null;
@@ -223,39 +222,6 @@ abstract class DatabaseMysqlBase extends Database {
 		} else {
 			return $this->mysqlSetCharset( 'binary' );
 		}
-	}
-
-	protected function doSelectDomain( DatabaseDomain $domain ) {
-		if ( $domain->getSchema() !== null ) {
-			throw new DBExpectedError( $this, __CLASS__ . ": domain schemas are not supported." );
-		}
-
-		$database = $domain->getDatabase();
-		// A null database means "don't care" so leave it as is and update the table prefix
-		if ( $database === null ) {
-			$this->currentDomain = new DatabaseDomain(
-				$this->currentDomain->getDatabase(),
-				null,
-				$domain->getTablePrefix()
-			);
-
-			return true;
-		}
-
-		if ( $database !== $this->getDBname() ) {
-			$sql = 'USE ' . $this->addIdentifierQuotes( $database );
-			$ret = $this->doQuery( $sql );
-			if ( $ret === false ) {
-				$error = $this->lastError();
-				$errno = $this->lastErrno();
-				$this->reportQueryError( $error, $errno, $sql, __METHOD__ );
-			}
-		}
-
-		// Update that domain fields on success (no exception thrown)
-		$this->currentDomain = $domain;
-
-		return true;
 	}
 
 	/**
@@ -519,13 +485,18 @@ abstract class DatabaseMysqlBase extends Database {
 	abstract protected function mysqlError( $conn = null );
 
 	protected function wasQueryTimeout( $error, $errno ) {
-		// https://dev.mysql.com/doc/refman/8.0/en/client-error-reference.html
-		// https://phabricator.wikimedia.org/T170638
-		return in_array( $errno, [ 2062, 3024 ] );
+		return $errno == 2062;
 	}
 
+	/**
+	 * @param string $table
+	 * @param array $uniqueIndexes
+	 * @param array $rows
+	 * @param string $fname
+	 * @return ResultWrapper
+	 */
 	public function replace( $table, $uniqueIndexes, $rows, $fname = __METHOD__ ) {
-		$this->nativeReplace( $table, $rows, $fname );
+		return $this->nativeReplace( $table, $rows, $fname );
 	}
 
 	protected function isInsertSelectSafe( array $insertOptions, array $selectOptions ) {
@@ -787,11 +758,7 @@ abstract class DatabaseMysqlBase extends Database {
 				// given that the isolation level will typically be REPEATABLE-READ
 				$this->queryLogger->warning(
 					"Using cached lag value for {db_server} due to active transaction",
-					$this->getLogContext( [
-						'method' => __METHOD__,
-						'age' => $staleness,
-						'trace' => ( new RuntimeException() )->getTraceAsString()
-					] )
+					$this->getLogContext( [ 'method' => __METHOD__, 'age' => $staleness ] )
 				);
 			}
 
@@ -1336,6 +1303,7 @@ abstract class DatabaseMysqlBase extends Database {
 	 * @param array|string $conds
 	 * @param bool|string $fname
 	 * @throws DBUnexpectedError
+	 * @return bool|ResultWrapper
 	 */
 	public function deleteJoin(
 		$delTable, $joinTable, $delVar, $joinVar, $conds, $fname = __METHOD__
@@ -1352,13 +1320,21 @@ abstract class DatabaseMysqlBase extends Database {
 			$sql .= ' AND ' . $this->makeList( $conds, self::LIST_AND );
 		}
 
-		$this->query( $sql, $fname );
+		return $this->query( $sql, $fname );
 	}
 
-	public function upsert(
-		$table, array $rows, $uniqueIndexes, array $set, $fname = __METHOD__
+	/**
+	 * @param string $table
+	 * @param array $rows
+	 * @param array $uniqueIndexes
+	 * @param array $set
+	 * @param string $fname
+	 * @return bool
+	 */
+	public function upsert( $table, array $rows, array $uniqueIndexes,
+		array $set, $fname = __METHOD__
 	) {
-		if ( $rows === [] ) {
+		if ( !count( $rows ) ) {
 			return true; // nothing to do
 		}
 
@@ -1377,9 +1353,7 @@ abstract class DatabaseMysqlBase extends Database {
 		$sql .= implode( ',', $rowTuples );
 		$sql .= " ON DUPLICATE KEY UPDATE " . $this->makeList( $set, self::LIST_SET );
 
-		$this->query( $sql, $fname );
-
-		return true;
+		return (bool)$this->query( $sql, $fname );
 	}
 
 	/**
@@ -1442,7 +1416,7 @@ abstract class DatabaseMysqlBase extends Database {
 		}
 
 		// See https://dev.mysql.com/doc/refman/5.5/en/error-messages-server.html
-		return in_array( $errno, [ 1022, 1062, 1216, 1217, 1137, 1146, 1051, 1054 ], true );
+		return in_array( $errno, [ 1022, 1216, 1217, 1137 ], true );
 	}
 
 	/**
@@ -1460,7 +1434,7 @@ abstract class DatabaseMysqlBase extends Database {
 		$oldName = $this->addIdentifierQuotes( $oldName );
 		$query = "CREATE $tmp TABLE $newName (LIKE $oldName)";
 
-		return $this->query( $query, $fname, $this::QUERY_PSEUDO_PERMANENT );
+		return $this->query( $query, $fname );
 	}
 
 	/**
@@ -1567,10 +1541,6 @@ abstract class DatabaseMysqlBase extends Database {
 	protected function isTransactableQuery( $sql ) {
 		return parent::isTransactableQuery( $sql ) &&
 			!preg_match( '/^SELECT\s+(GET|RELEASE|IS_FREE)_LOCK\(/', $sql );
-	}
-
-	public function buildStringCast( $field ) {
-		return "CAST( $field AS BINARY )";
 	}
 
 	/**

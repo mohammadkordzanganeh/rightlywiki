@@ -23,7 +23,7 @@
  */
 
 use MediaWiki\MediaWikiServices;
-use Wikimedia\Rdbms\IResultWrapper;
+use Wikimedia\Rdbms\ResultWrapper;
 use Wikimedia\Rdbms\Database;
 use Wikimedia\Rdbms\IDatabase;
 
@@ -201,7 +201,7 @@ class LocalRepo extends FileRepo {
 		}
 
 		$method = __METHOD__;
-		$redirDbKey = $this->wanCache->getWithSetCallback(
+		$redirDbKey = MediaWikiServices::getInstance()->getMainWANObjectCache()->getWithSetCallback(
 			$memcKey,
 			$expiry,
 			function ( $oldValue, &$ttl, array &$setOpts ) use ( $method, $title ) {
@@ -275,7 +275,7 @@ class LocalRepo extends FileRepo {
 			);
 		};
 
-		$applyMatchingFiles = function ( IResultWrapper $res, &$searchSet, &$finalFiles )
+		$applyMatchingFiles = function ( ResultWrapper $res, &$searchSet, &$finalFiles )
 			use ( $fileMatchesSearch, $flags )
 		{
 			$contLang = MediaWikiServices::getInstance()->getContentLanguage();
@@ -405,7 +405,7 @@ class LocalRepo extends FileRepo {
 	 * @return array[] An Array of arrays or iterators of file objects and the hash as key
 	 */
 	function findBySha1s( array $hashes ) {
-		if ( $hashes === [] ) {
+		if ( !count( $hashes ) ) {
 			return []; // empty parameter
 		}
 
@@ -500,14 +500,14 @@ class LocalRepo extends FileRepo {
 	/**
 	 * Get a key on the primary cache for this repository.
 	 * Returns false if the repository's cache is not accessible at this site.
-	 * The parameters are the parts of the key.
+	 * The parameters are the parts of the key, as for wfMemcKey().
 	 *
 	 * @return string
 	 */
 	function getSharedCacheKey( /*...*/ ) {
 		$args = func_get_args();
 
-		return $this->wanCache->makeKey( ...$args );
+		return wfMemcKey( ...$args );
 	}
 
 	/**
@@ -521,7 +521,7 @@ class LocalRepo extends FileRepo {
 		if ( $key ) {
 			$this->getMasterDB()->onTransactionPreCommitOrIdle(
 				function () use ( $key ) {
-					$this->wanCache->delete( $key );
+					MediaWikiServices::getInstance()->getMainWANObjectCache()->delete( $key );
 				},
 				__METHOD__
 			);

@@ -105,15 +105,12 @@ trait ApiMessageTrait {
 			} else {
 				$this->apiCode = $key;
 			}
-
-			// Ensure the code is actually valid
-			$this->apiCode = preg_replace( '/[^a-zA-Z0-9_-]/', '_', $this->apiCode );
 		}
 		return $this->apiCode;
 	}
 
 	public function setApiCode( $code, array $data = null ) {
-		if ( $code !== null && !ApiErrorFormatter::isValidApiCode( $code ) ) {
+		if ( $code !== null && !( is_string( $code ) && $code !== '' ) ) {
 			throw new InvalidArgumentException( "Invalid code \"$code\"" );
 		}
 

@@ -30,10 +30,9 @@ class CategoryTree {
 	public $mOptions = [];
 
 	/**
-	 * @suppress PhanTypeInvalidDimOffset
 	 * @param array $options
 	 */
-	public function __construct( array $options ) {
+	public function __construct( $options ) {
 		global $wgCategoryTreeDefaultOptions;
 
 		// ensure default values and order of options.
@@ -127,8 +126,7 @@ class CategoryTree {
 			}
 		}
 
-		# get elements into canonical order
-		sort( $namespaces );
+		sort( $namespaces ); # get elements into canonical order
 		return $namespaces;
 	}
 
@@ -251,9 +249,9 @@ class CategoryTree {
 	 * Add ResourceLoader modules to the OutputPage object
 	 * @param OutputPage $outputPage
 	 */
-	public static function setHeaders( OutputPage $outputPage ) {
+	public static function setHeaders( $outputPage ) {
 		# Add the modules
-		$outputPage->addModuleStyles( 'ext.categoryTree.styles' );
+		$outputPage->addModuleStyles( 'ext.categoryTree.css' );
 		$outputPage->addModules( 'ext.categoryTree' );
 	}
 
@@ -263,7 +261,7 @@ class CategoryTree {
 	 * @return mixed
 	 * @throws Exception
 	 */
-	protected static function encodeOptions( array $options, $enc ) {
+	protected static function encodeOptions( $options, $enc ) {
 		if ( $enc == 'mode' || $enc == '' ) {
 			$opt = $options['mode'];
 		} elseif ( $enc == 'json' ) {
@@ -321,8 +319,7 @@ class CategoryTree {
 	/**
 	 * Custom tag implementation. This is called by CategoryTreeHooks::parserHook, which is used to
 	 * load CategoryTreeFunctions.php on demand.
-	 * @suppress PhanParamReqAfterOpt $parser is not optional but nullable
-	 * @param Parser|null $parser
+	 * @param Parser $parser
 	 * @param string $category
 	 * @param bool $hideroot
 	 * @param array $attr
@@ -330,8 +327,8 @@ class CategoryTree {
 	 * @param bool $allowMissing
 	 * @return bool|string
 	 */
-	public function getTag( Parser $parser = null, $category, $hideroot = false, array $attr = [],
-		$depth = 1, $allowMissing = false
+	public function getTag( $parser, $category, $hideroot = false, $attr = [], $depth = 1,
+		$allowMissing = false
 	) {
 		global $wgCategoryTreeDisableCache;
 
@@ -394,7 +391,7 @@ class CategoryTree {
 	 * @param int $depth
 	 * @return string
 	 */
-	public function renderChildren( Title $title, $depth = 1 ) {
+	public function renderChildren( $title, $depth = 1 ) {
 		global $wgCategoryTreeMaxChildren, $wgCategoryTreeUseCategoryTable;
 
 		if ( $title->getNamespace() != NS_CATEGORY ) {
@@ -492,7 +489,7 @@ class CategoryTree {
 	 * @param Title $title
 	 * @return string
 	 */
-	public function renderParents( Title $title ) {
+	public function renderParents( $title ) {
 		global $wgCategoryTreeMaxChildren;
 
 		$dbr = wfGetDB( DB_REPLICA );
@@ -541,7 +538,7 @@ class CategoryTree {
 	 * @param int $children
 	 * @return string
 	 */
-	public function renderNode( Title $title, $children = 0 ) {
+	public function renderNode( $title, $children = 0 ) {
 		global $wgCategoryTreeUseCategoryTable;
 
 		if ( $wgCategoryTreeUseCategoryTable && $title->getNamespace() == NS_CATEGORY
@@ -559,11 +556,11 @@ class CategoryTree {
 	 * Returns a string with a HTML represenation of the given page.
 	 * $info must be an associative array, containing at least a Title object under the 'title' key.
 	 * @param Title $title
-	 * @param Category|null $cat
+	 * @param Category $cat
 	 * @param int $children
 	 * @return string
 	 */
-	public function renderNodeInfo( Title $title, Category $cat = null, $children = 0 ) {
+	public function renderNodeInfo( $title, $cat, $children = 0 ) {
 		$mode = $this->getOption( 'mode' );
 
 		$ns = $title->getNamespace();
@@ -640,19 +637,20 @@ class CategoryTree {
 				$linkattr[ 'class' ] = "CategoryTreeToggle";
 				$linkattr['data-ct-title'] = $key;
 
+				$tag = 'span';
 				if ( $children == 0 ) {
-					// Use ->plain() to ensure identical result as JS,
-					// which does:
-					// $link.text( mw.msg( 'categorytree-expand-bullet' ) );
-					$txt = wfMessage( 'categorytree-expand-bullet' )->plain();
+					// Use ->plain() and htmlspecialchars() to ensure
+					// identical to what is done by JS, which does:
+					// $link.text( mw.msg( 'categorytree-expand-bullet' ) )
+					$txt = htmlspecialchars( wfMessage( 'categorytree-expand-bullet' )->plain() );
 					$linkattr[ 'data-ct-state' ] = 'collapsed';
 				} else {
-					$txt = wfMessage( 'categorytree-collapse-bullet' )->plain();
+					$txt = htmlspecialchars( wfMessage( 'categorytree-collapse-bullet' )->plain() );
 					$linkattr[ 'data-ct-loaded' ] = true;
 					$linkattr[ 'data-ct-state' ] = 'expanded';
 				}
 
-				$bullet = Html::element( 'span', $linkattr, $txt ) . ' ';
+				$bullet = Xml::openElement( $tag, $linkattr ) . $txt . Xml::closeElement( $tag ) . ' ';
 			}
 		} else {
 			$bullet = wfMessage( 'categorytree-page-bullet' )->escaped();
@@ -709,15 +707,12 @@ class CategoryTree {
 
 	/**
 	 * Create a string which format the page, subcat and file counts of a category
-	 * @suppress PhanParamReqAfterOpt $cat is not optional but nullable
 	 * @param IContextSource $context
 	 * @param Category|null $cat
 	 * @param int $countMode
 	 * @return string
 	 */
-	public static function createCountString( IContextSource $context, Category $cat = null,
-		$countMode
-	) {
+	public static function createCountString( IContextSource $context, $cat, $countMode ) {
 		global $wgContLang;
 
 		# Get counts, with conversion to integer so === works
@@ -731,8 +726,7 @@ class CategoryTree {
 		$attr = [
 			'title' => $context->msg( 'categorytree-member-counts' )
 				->numParams( $subcatCount, $pages, $fileCount, $allCount, $countMode )->text(),
-			# numbers and commas get messed up in a mixed dir env
-			'dir' => $context->getLanguage()->getDir()
+			'dir' => $context->getLanguage()->getDir() # numbers and commas get messed up in a mixed dir env
 		];
 
 		$s = $wgContLang->getDirMark() . ' ';
@@ -794,7 +788,6 @@ class CategoryTree {
 
 	/**
 	 * Internal function to cap depth
-	 * @suppress PhanPluginDuplicateConditionalNullCoalescing until PHP7 is required
 	 * @param string $mode
 	 * @param int $depth
 	 * @return int|mixed

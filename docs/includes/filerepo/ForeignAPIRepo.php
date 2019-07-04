@@ -22,6 +22,7 @@
  */
 
 use MediaWiki\Logger\LoggerFactory;
+use MediaWiki\MediaWikiServices;
 
 /**
  * A foreign repository with a remote MediaWiki with an API thingy
@@ -332,6 +333,7 @@ class ForeignAPIRepo extends FileRepo {
 	 * @return bool|string
 	 */
 	function getThumbUrlFromCache( $name, $width, $height, $params = "" ) {
+		$cache = MediaWikiServices::getInstance()->getMainWANObjectCache();
 		// We can't check the local cache using FileRepo functions because
 		// we override fileExistsBatch(). We have to use the FileBackend directly.
 		$backend = $this->getBackend(); // convenience
@@ -344,15 +346,18 @@ class ForeignAPIRepo extends FileRepo {
 		$sizekey = "$width:$height:$params";
 
 		/* Get the array of urls that we already know */
-		$knownThumbUrls = $this->wanCache->get( $key );
+		$knownThumbUrls = $cache->get( $key );
 		if ( !$knownThumbUrls ) {
 			/* No knownThumbUrls for this file */
 			$knownThumbUrls = [];
-		} elseif ( isset( $knownThumbUrls[$sizekey] ) ) {
-			wfDebug( __METHOD__ . ': Got thumburl from local cache: ' .
-				"{$knownThumbUrls[$sizekey]} \n" );
+		} else {
+			if ( isset( $knownThumbUrls[$sizekey] ) ) {
+				wfDebug( __METHOD__ . ': Got thumburl from local cache: ' .
+					"{$knownThumbUrls[$sizekey]} \n" );
 
-			return $knownThumbUrls[$sizekey];
+				return $knownThumbUrls[$sizekey];
+			}
+			/* This size is not yet known */
 		}
 
 		$metadata = null;
@@ -387,7 +392,7 @@ class ForeignAPIRepo extends FileRepo {
 			if ( $remoteModified < $modified && $diff < $this->fileCacheExpiry ) {
 				/* Use our current and already downloaded thumbnail */
 				$knownThumbUrls[$sizekey] = $localUrl;
-				$this->wanCache->set( $key, $knownThumbUrls, $this->apiThumbCacheExpiry );
+				$cache->set( $key, $knownThumbUrls, $this->apiThumbCacheExpiry );
 
 				return $localUrl;
 			}
@@ -412,9 +417,9 @@ class ForeignAPIRepo extends FileRepo {
 		$knownThumbUrls[$sizekey] = $localUrl;
 
 		$ttl = $mtime
-			? $this->wanCache->adaptiveTTL( $mtime, $this->apiThumbCacheExpiry )
+			? $cache->adaptiveTTL( $mtime, $this->apiThumbCacheExpiry )
 			: $this->apiThumbCacheExpiry;
-		$this->wanCache->set( $key, $knownThumbUrls, $ttl );
+		$cache->set( $key, $knownThumbUrls, $ttl );
 		wfDebug( __METHOD__ . " got local thumb $localUrl, saving to cache \n" );
 
 		return $localUrl;
@@ -565,21 +570,22 @@ class ForeignAPIRepo extends FileRepo {
 			$url = $this->makeUrl( $query, 'api' );
 		}
 
-		return $this->wanCache->getWithSetCallback(
+		$cache = MediaWikiServices::getInstance()->getMainWANObjectCache();
+		return $cache->getWithSetCallback(
 			$this->getLocalCacheKey( static::class, $target, md5( $url ) ),
 			$cacheTTL,
-			function ( $curValue, &$ttl ) use ( $url ) {
+			function ( $curValue, &$ttl ) use ( $url, $cache ) {
 				$html = self::httpGet( $url, 'default', [], $mtime );
 				if ( $html !== false ) {
-					$ttl = $mtime ? $this->wanCache->adaptiveTTL( $mtime, $ttl ) : $ttl;
+					$ttl = $mtime ? $cache->adaptiveTTL( $mtime, $ttl ) : $ttl;
 				} else {
-					$ttl = $this->wanCache->adaptiveTTL( $mtime, $ttl );
+					$ttl = $cache->adaptiveTTL( $mtime, $ttl );
 					$html = null; // caches negatives
 				}
 
 				return $html;
 			},
-			[ 'pcTTL' => WANObjectCache::TTL_PROC_LONG ]
+			[ 'pcTTL' => $cache::TTL_PROC_LONG ]
 		);
 	}
 

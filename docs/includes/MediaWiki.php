@@ -43,7 +43,7 @@ class MediaWiki {
 	private $config;
 
 	/**
-	 * @var string Cache what action this request is
+	 * @var String Cache what action this request is
 	 */
 	private $action;
 
@@ -330,7 +330,7 @@ class MediaWiki {
 
 		if ( $request->getVal( 'action', 'view' ) != 'view'
 			|| $request->wasPosted()
-			|| ( $request->getCheck( 'title' )
+			|| ( $request->getVal( 'title' ) !== null
 				&& $title->getPrefixedDBkey() == $request->getVal( 'title' ) )
 			|| count( $request->getValueNames( [ 'action', 'title' ] ) )
 			|| !Hooks::run( 'TestCanonicalRedirect', [ $request, $title, $output ] )
@@ -428,9 +428,11 @@ class MediaWiki {
 			if ( !$ignoreRedirect && ( $target || $page->isRedirect() ) ) {
 				// Is the target already set by an extension?
 				$target = $target ?: $page->followRedirect();
-				if ( is_string( $target ) && !$this->config->get( 'DisableHardRedirects' ) ) {
-					// we'll need to redirect
-					return $target;
+				if ( is_string( $target ) ) {
+					if ( !$this->config->get( 'DisableHardRedirects' ) ) {
+						// we'll need to redirect
+						return $target;
+					}
 				}
 				if ( is_object( $target ) ) {
 					// Rewrite environment to redirected article
@@ -567,11 +569,8 @@ class MediaWiki {
 	}
 
 	/**
-	 * This function commits all DB and session changes as needed *before* the
-	 * client can receive a response (in case DB commit fails) and thus also before
-	 * the response can trigger a subsequent related request by the client
-	 *
-	 * If there is a significant amount of content to flush, it can be done in $postCommitWork
+	 * This function commits all DB changes as needed before
+	 * the user can receive a response (in case commit fails)
 	 *
 	 * @param IContextSource $context
 	 * @param callable|null $postCommitWork [default: null]
@@ -599,8 +598,6 @@ class MediaWiki {
 		// Run updates that need to block the user or affect output (this is the last chance)
 		DeferredUpdates::doUpdates( 'enqueue', DeferredUpdates::PRESEND );
 		wfDebug( __METHOD__ . ': pre-send deferred updates completed' );
-		// T214471: persist the session to avoid race conditions on subsequent requests
-		$request->getSession()->save();
 
 		// Should the client return, their request should observe the new ChronologyProtector
 		// DB positions. This request might be on a foreign wiki domain, so synchronously update
@@ -687,10 +684,9 @@ class MediaWiki {
 	 */
 	private static function getUrlDomainDistance( $url ) {
 		$clusterWiki = WikiMap::getWikiFromUrl( $url );
-		if ( WikiMap::isCurrentWikiId( $clusterWiki ) ) {
+		if ( $clusterWiki === wfWikiID() ) {
 			return 'local'; // the current wiki
-		}
-		if ( $clusterWiki !== false ) {
+		} elseif ( $clusterWiki !== false ) {
 			return 'remote'; // another wiki in this cluster/farm
 		}
 
@@ -708,12 +704,11 @@ class MediaWiki {
 	 * @since 1.26
 	 */
 	public function doPostOutputShutdown( $mode = 'normal' ) {
-		// Record backend request timing
-		$timing = $this->context->getTiming();
-		$timing->mark( 'requestShutdown' );
-
 		// Perform the last synchronous operations...
 		try {
+			// Record backend request timing
+			$timing = $this->context->getTiming();
+			$timing->mark( 'requestShutdown' );
 			// Show visible profiling data if enabled (which cannot be post-send)
 			Profiler::instance()->logDataPageOutputOnly();
 		} catch ( Exception $e ) {
@@ -896,7 +891,8 @@ class MediaWiki {
 
 		// Loosen DB query expectations since the HTTP client is unblocked
 		$trxProfiler = Profiler::instance()->getTransactionProfiler();
-		$trxProfiler->redefineExpectations(
+		$trxProfiler->resetExpectations();
+		$trxProfiler->setExpectations(
 			$this->context->getRequest()->hasSafeMethod()
 				? $this->config->get( 'TrxProfilerLimits' )['PostSend-GET']
 				: $this->config->get( 'TrxProfilerLimits' )['PostSend-POST'],
@@ -935,7 +931,7 @@ class MediaWiki {
 	) {
 		if ( $config->get( 'StatsdServer' ) && $stats->hasData() ) {
 			try {
-				$statsdServer = explode( ':', $config->get( 'StatsdServer' ), 2 );
+				$statsdServer = explode( ':', $config->get( 'StatsdServer' ) );
 				$statsdHost = $statsdServer[0];
 				$statsdPort = $statsdServer[1] ?? 8125;
 				$statsdSender = new SocketSender( $statsdHost, $statsdPort );

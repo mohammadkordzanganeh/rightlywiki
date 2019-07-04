@@ -349,18 +349,18 @@ class Sanitizer {
 
 	/**
 	 * Regular expression to match HTML/XML attribute pairs within a tag.
-	 * Based on https://www.w3.org/TR/html5/syntax.html#before-attribute-name-state
-	 * Used in Sanitizer::decodeTagAttributes
+	 * Allows some... latitude. Based on,
+	 * https://www.w3.org/TR/html5/syntax.html#before-attribute-value-state
+	 * Used in Sanitizer::fixTagAttributes and Sanitizer::decodeTagAttributes
 	 * @return string
 	 */
 	static function getAttribsRegex() {
 		if ( self::$attribsRegex === null ) {
-			$spaceChars = '\x09\x0a\x0c\x0d\x20';
-			$space = "[{$spaceChars}]";
-			$attrib = "[^{$spaceChars}\/>=]";
-			$attribFirst = "(?:{$attrib}|=)";
+			$attribFirst = "[:_\p{L}\p{N}]";
+			$attrib = "[:_\.\-\p{L}\p{N}]";
+			$space = '[\x09\x0a\x0c\x0d\x20]';
 			self::$attribsRegex =
-				"/({$attribFirst}{$attrib}*)
+				"/(?:^|$space)({$attribFirst}{$attrib}*)
 					($space*=$space*
 					(?:
 						# The attribute value: quoted or alone
@@ -368,27 +368,9 @@ class Sanitizer {
 						| '([^']*)(?:'|\$)
 						| (((?!$space|>).)*)
 					)
-				)?/sxu";
+				)?(?=$space|\$)/sxu";
 		}
 		return self::$attribsRegex;
-	}
-
-	/**
-	 * Lazy-initialised attribute name regex, see getAttribNameRegex()
-	 */
-	private static $attribNameRegex;
-
-	/**
-	 * Used in Sanitizer::decodeTagAttributes to filter attributes.
-	 * @return string
-	 */
-	static function getAttribNameRegex() {
-		if ( self::$attribNameRegex === null ) {
-			$attribFirst = "[:_\p{L}\p{N}]";
-			$attrib = "[:_\.\-\p{L}\p{N}]";
-			self::$attribNameRegex = "/^({$attribFirst}{$attrib}*)$/sxu";
-		}
-		return self::$attribNameRegex;
 	}
 
 	/**
@@ -513,7 +495,6 @@ class Sanitizer {
 		$bits = explode( '<', $text );
 		$text = str_replace( '>', '&gt;', array_shift( $bits ) );
 		if ( !MWTidy::isEnabled() ) {
-			wfDeprecated( 'disabling tidy', '1.33' );
 			$tagstack = $tablestack = [];
 			foreach ( $bits as $x ) {
 				$regs = [];
@@ -578,8 +559,10 @@ class Sanitizer {
 									$badtag = true;
 								}
 							}
-						} elseif ( $t == 'table' ) {
-							$tagstack = array_pop( $tablestack );
+						} else {
+							if ( $t == 'table' ) {
+								$tagstack = array_pop( $tablestack );
+							}
 						}
 						$newparams = '';
 					} else {
@@ -1374,14 +1357,20 @@ class Sanitizer {
 
 	/**
 	 * Given a string containing a space delimited list of ids, escape each id
-	 * to match ids escaped by the escapeIdForAttribute() function.
+	 * to match ids escaped by the escapeId() function.
+	 *
+	 * @todo remove $options completely in 1.32
 	 *
 	 * @since 1.27
 	 *
 	 * @param string $referenceString Space delimited list of ids
+	 * @param string|array $options Deprecated and does nothing.
 	 * @return string
 	 */
-	public static function escapeIdReferenceList( $referenceString ) {
+	static function escapeIdReferenceList( $referenceString, $options = [] ) {
+		if ( $options ) {
+			wfDeprecated( __METHOD__ . ' with $options', '1.31' );
+		}
 		# Explode the space delimited list string into an array of tokens
 		$references = preg_split( '/\s+/', "{$referenceString}", -1, PREG_SPLIT_NO_EMPTY );
 
@@ -1445,24 +1434,18 @@ class Sanitizer {
 			return [];
 		}
 
+		$attribs = [];
 		$pairs = [];
 		if ( !preg_match_all(
 			self::getAttribsRegex(),
 			$text,
 			$pairs,
 			PREG_SET_ORDER ) ) {
-			return [];
+			return $attribs;
 		}
 
-		$attribs = [];
 		foreach ( $pairs as $set ) {
 			$attribute = strtolower( $set[1] );
-
-			// Filter attribute names with unacceptable characters
-			if ( !preg_match( self::getAttribNameRegex(), $attribute ) ) {
-				continue;
-			}
-
 			$value = self::getTagAttributeCallback( $set );
 
 			// Normalize whitespace

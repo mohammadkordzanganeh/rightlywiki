@@ -75,7 +75,7 @@ class ApiDelete extends ApiBase {
 			$status = self::delete( $pageObj, $user, $reason, $params['tags'] );
 		}
 
-		if ( !$status->isOK() ) {
+		if ( !$status->isOk() ) {
 			$this->dieStatus( $status );
 		}
 		$this->addMessagesFromStatus( $status, [ 'warning' ], [ 'delete-scheduled' ] );

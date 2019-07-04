@@ -32,10 +32,11 @@ class PageExists extends Maintenance {
 	}
 
 	public function execute() {
-		$titleArg = $this->getArg( 0 );
+		$titleArg = $this->getArg();
 		$title = Title::newFromText( $titleArg );
 		$pageExists = $title && $title->exists();
 
+		$text = '';
 		$code = 0;
 		if ( $pageExists ) {
 			$text = "{$title} exists.";

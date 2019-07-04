@@ -237,7 +237,7 @@ class Shell {
 		// Give site config file a chance to run the script in a wrapper.
 		// The caller may likely want to call wfBasename() on $script.
 		Hooks::run( 'wfShellWikiCmd', [ &$script, &$parameters, &$options ] );
-		$cmd = [ $options['php'] ?? $wgPhpCli ];
+		$cmd = isset( $options['php'] ) ? [ $options['php'] ] : [ $wgPhpCli ];
 		if ( isset( $options['wrapper'] ) ) {
 			$cmd[] = $options['wrapper'];
 		}

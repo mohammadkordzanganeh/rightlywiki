@@ -104,7 +104,7 @@ class DummyContentForTesting extends AbstractContent {
 	public function getParserOutput( Title $title, $revId = null,
 		ParserOptions $options = null, $generateHtml = true
 	) {
-		return new ParserOutput( $this->data );
+		return new ParserOutput( $this->getNativeData() );
 	}
 
 	/**
@@ -118,6 +118,6 @@ class DummyContentForTesting extends AbstractContent {
 	 */
 	protected function fillParserOutput( Title $title, $revId,
 			ParserOptions $options, $generateHtml, ParserOutput &$output ) {
-		$output = new ParserOutput( $this->data );
+		$output = new ParserOutput( $this->getNativeData() );
 	}
 }

@@ -77,8 +77,8 @@ class CheckBlocksSecondaryAuthenticationProvider extends AbstractSecondaryAuthen
 	public function testUserForCreation( $user, $autocreate, array $options = [] ) {
 		$block = $user->isBlockedFromCreateAccount();
 		if ( $block ) {
-			if ( $block->getReason() ) {
-				$reason = $block->getReason();
+			if ( $block->mReason ) {
+				$reason = $block->mReason;
 			} else {
 				$msg = \Message::newFromKey( 'blockednoreason' );
 				if ( !\RequestContext::getMain()->getUser()->isSafeToLoad() ) {

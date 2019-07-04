@@ -15,7 +15,7 @@
  * along with MultimediaViewer.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-( function () {
+( function ( mw, $, oo ) {
 	// Shortcut for prototype later
 	var DP;
 
@@ -66,7 +66,7 @@
 		this.$dialog.appendTo( this.$container );
 	}
 
-	OO.inheritClass( Dialog, mw.mmv.ui.Element );
+	oo.inheritClass( Dialog, mw.mmv.ui.Element );
 	DP = Dialog.prototype;
 
 	/**
@@ -255,4 +255,4 @@
 	};
 
 	mw.mmv.ui.Dialog = Dialog;
-}() );
+}( mediaWiki, jQuery, OO ) );

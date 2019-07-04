@@ -73,7 +73,7 @@ class ApiQueryGadgets extends ApiQueryBase {
 	private function getList() {
 		$gadgets = GadgetRepo::singleton()->getStructuredList();
 
-		if ( !$gadgets ) {
+		if ( $gadgets === false ) {
 			return [];
 		}
 
@@ -177,7 +177,7 @@ class ApiQueryGadgets extends ApiQueryBase {
 		foreach ( $metadata as $data ) {
 			foreach ( $data as $key => $value ) {
 				if ( is_array( $value ) ) {
-					$tag = $tagNames[$key] ?? $key;
+					$tag = isset( $tagNames[$key] ) ? $tagNames[$key] : $key;
 					$result->setIndexedTagName( $value, $tag );
 				}
 			}

@@ -27,9 +27,4 @@ class SearchNearMatcherTest extends \PHPUnit\Framework\TestCase {
 		$title = $matcher->getNearMatch( $searchterm );
 		$this->assertEquals( $expected, $title === null ? null : (string)$title );
 	}
-
-	function tearDown() {
-		Title::clearCaches();
-		parent::tearDown();
-	}
 }

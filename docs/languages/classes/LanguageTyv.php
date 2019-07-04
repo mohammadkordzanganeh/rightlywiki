@@ -72,11 +72,15 @@ class LanguageTyv extends Language {
 				if ( strcmp( $xvalue, $yvalue ) == 0 ) {
 					$wordLastVowel = $xvalue;
 					break;
+				} else {
+					continue;
 				}
 			}
 
 			if ( $wordLastVowel !== null ) {
 				break;
+			} else {
+				continue;
 			}
 		}
 

@@ -41,10 +41,6 @@ class InvalidPassword extends Password {
 		return false;
 	}
 
-	public function verify( $password ) {
-		return false;
-	}
-
 	public function needsUpdate() {
 		return false;
 	}

@@ -62,7 +62,7 @@ class SpecialListGrants extends SpecialPage {
 					'<span class="mw-listgrants-right-name">' . $permission . '</span>'
 				)->parse();
 			}
-			if ( $descs === [] ) {
+			if ( !count( $descs ) ) {
 				$grantCellHtml = '';
 			} else {
 				sort( $descs );

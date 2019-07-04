@@ -5,8 +5,7 @@
 			"Lloffiwr",
 			"Muddyb Blast Producer",
 			"Macofe",
-			"Muddyb",
-			"Rance"
+			"Muddyb"
 		]
 	},
 	"wikieditor": "Kusano ya juu ya kuandika kiwiki",
@@ -14,7 +13,7 @@
 	"wikieditor-loading": "Inapakizwa",
 	"wikieditor-toolbar": "Mwambaa zana wa kuhariri",
 	"wikieditor-toolbar-desc": "Mwambaa zana wa kuhariri uliozidishwa",
-	"wikieditor-toolbar-preference": "Wezesha mwambaa zana wa kuhariri",
+	"wikieditor-toolbar-preference": "Tumia mwambaa zana wa kuhariri uliozidishwa",
 	"wikieditor-toolbar-loading": "Inapakizwa...",
 	"wikieditor-toolbar-tool-bold": "Koze",
 	"wikieditor-toolbar-tool-bold-example": "Maandishi ya kooze",

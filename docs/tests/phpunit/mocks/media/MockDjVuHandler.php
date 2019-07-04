@@ -22,7 +22,7 @@
  */
 
 class MockDjVuHandler extends DjVuHandler {
-	public function isEnabled() {
+	function isEnabled() {
 		return true;
 	}
 

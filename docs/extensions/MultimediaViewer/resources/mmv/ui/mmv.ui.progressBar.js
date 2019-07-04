@@ -15,7 +15,7 @@
  * along with MediaViewer.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-( function () {
+( function ( mw, $, oo ) {
 	var PBP;
 
 	/**
@@ -30,7 +30,7 @@
 		mw.mmv.ui.Element.call( this, $container );
 		this.init();
 	}
-	OO.inheritClass( ProgressBar, mw.mmv.ui.Element );
+	oo.inheritClass( ProgressBar, mw.mmv.ui.Element );
 	PBP = ProgressBar.prototype;
 
 	/**
@@ -71,14 +71,10 @@
 		if ( percent === 100 ) {
 			// When a 100% update comes in, we make sure that the bar is visible, we animate
 			// fast to 100 and we hide the bar when the animation is done
-			// FIXME: Use CSS transition
-			// eslint-disable-next-line no-jquery/no-animate
-			this.$percent.animate( { width: percent + '%' }, 50, 'swing', panel.hide.bind( panel ) );
+			this.$percent.animate( { width: percent + '%' }, 50, 'swing', $.proxy( panel.hide, panel ) );
 		} else {
 			// When any other % update comes in, we make sure the bar is visible
 			// and we animate to the right position
-			// FIXME: Use CSS transition
-			// eslint-disable-next-line no-jquery/no-animate
 			this.$percent.animate( { width: percent + '%' } );
 		}
 	};
@@ -94,4 +90,4 @@
 	};
 
 	mw.mmv.ui.ProgressBar = ProgressBar;
-}() );
+}( mediaWiki, jQuery, OO ) );

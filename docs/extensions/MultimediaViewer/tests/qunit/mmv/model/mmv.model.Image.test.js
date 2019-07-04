@@ -15,7 +15,7 @@
  * along with MediaViewer.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-( function () {
+( function ( mw ) {
 	QUnit.module( 'mmv.model.Image', QUnit.newMwEnvironment() );
 
 	QUnit.test( 'Image model constructor sanity check', function ( assert ) {
@@ -148,4 +148,4 @@
 		}
 	} );
 
-}() );
+}( mediaWiki ) );

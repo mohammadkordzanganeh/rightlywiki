@@ -102,6 +102,7 @@ class ApiHelp extends ApiBase {
 			'mediawiki.apihelp',
 		] );
 		if ( !empty( $options['toc'] ) ) {
+			$out->addModules( 'mediawiki.toc' );
 			$out->addModuleStyles( 'mediawiki.toc.styles' );
 		}
 		$out->setPageTitle( $context->msg( 'api-help-title' ) );
@@ -559,9 +560,11 @@ class ApiHelp extends ApiBase {
 										$arr = &$submodules;
 										try {
 											$submod = $module->getModuleFromPath( $m );
-											if ( $submod && $submod->isDeprecated() ) {
-												$arr = &$deprecatedSubmodules;
-												$attrs['class'] = 'apihelp-deprecated-value';
+											if ( $submod ) {
+												if ( $submod->isDeprecated() ) {
+													$arr = &$deprecatedSubmodules;
+													$attrs['class'] = 'apihelp-deprecated-value';
+												}
 											}
 										} catch ( ApiUsageException $ex ) {
 											// Ignore

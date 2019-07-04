@@ -20,7 +20,7 @@
  * @file
  * @defgroup JobQueue JobQueue
  */
-use Liuggio\StatsdClient\Factory\StatsdDataFactoryInterface;
+use MediaWiki\MediaWikiServices;
 
 /**
  * Class to handle enqueueing and running of background jobs
@@ -29,8 +29,8 @@ use Liuggio\StatsdClient\Factory\StatsdDataFactoryInterface;
  * @since 1.21
  */
 abstract class JobQueue {
-	/** @var string DB domain ID */
-	protected $domain;
+	/** @var string Wiki ID */
+	protected $wiki;
 	/** @var string Job type */
 	protected $type;
 	/** @var string Job priority for pop() */
@@ -41,11 +41,11 @@ abstract class JobQueue {
 	protected $maxTries;
 	/** @var string|bool Read only rationale (or false if r/w) */
 	protected $readOnlyReason;
-	/** @var StatsdDataFactoryInterface */
-	protected $stats;
 
 	/** @var BagOStuff */
 	protected $dupCache;
+	/** @var JobQueueAggregator */
+	protected $aggr;
 
 	const QOS_ATOMIC = 1; // integer; "all-or-nothing" job insertions
 
@@ -53,10 +53,10 @@ abstract class JobQueue {
 
 	/**
 	 * @param array $params
-	 * @throws JobQueueError
+	 * @throws MWException
 	 */
 	protected function __construct( array $params ) {
-		$this->domain = $params['domain'] ?? $params['wiki']; // b/c
+		$this->wiki = $params['wiki'];
 		$this->type = $params['type'];
 		$this->claimTTL = $params['claimTTL'] ?? 0;
 		$this->maxTries = $params['maxTries'] ?? 3;
@@ -66,18 +66,18 @@ abstract class JobQueue {
 			$this->order = $this->optimalOrder();
 		}
 		if ( !in_array( $this->order, $this->supportedOrders() ) ) {
-			throw new JobQueueError( __CLASS__ . " does not support '{$this->order}' order." );
+			throw new MWException( __CLASS__ . " does not support '{$this->order}' order." );
 		}
+		$this->dupCache = wfGetCache( CACHE_ANYTHING );
+		$this->aggr = $params['aggregator'] ?? new JobQueueAggregatorNull( [] );
 		$this->readOnlyReason = $params['readOnlyReason'] ?? false;
-		$this->stats = $params['stats'] ?? new NullStatsdDataFactory();
-		$this->dupCache = $params['stash'] ?? new EmptyBagOStuff();
 	}
 
 	/**
 	 * Get a job queue object of the specified type.
 	 * $params includes:
 	 *   - class      : What job class to use (determines job type)
-	 *   - domain     : Database domain ID of the wiki the jobs are for (defaults to current wiki)
+	 *   - wiki       : wiki ID of the wiki the jobs are for (defaults to current wiki)
 	 *   - type       : The name of the job types this queue handles
 	 *   - order      : Order that pop() selects jobs, one of "fifo", "timestamp" or "random".
 	 *                  If "fifo" is used, the queue will effectively be FIFO. Note that job
@@ -94,41 +94,31 @@ abstract class JobQueue {
 	 *                  of jobs simply means re-inserting them into the queue. Jobs can be
 	 *                  attempted up to three times before being discarded.
 	 *   - readOnlyReason : Set this to a string to make the queue read-only.
-	 *   - stash      : A BagOStuff instance that can be used for root job deduplication
-	 *   - stats      : A StatsdDataFactoryInterface [optional]
 	 *
 	 * Queue classes should throw an exception if they do not support the options given.
 	 *
 	 * @param array $params
 	 * @return JobQueue
-	 * @throws JobQueueError
+	 * @throws MWException
 	 */
 	final public static function factory( array $params ) {
 		$class = $params['class'];
 		if ( !class_exists( $class ) ) {
-			throw new JobQueueError( "Invalid job queue class '$class'." );
+			throw new MWException( "Invalid job queue class '$class'." );
 		}
 		$obj = new $class( $params );
 		if ( !( $obj instanceof self ) ) {
-			throw new JobQueueError( "Class '$class' is not a " . __CLASS__ . " class." );
+			throw new MWException( "Class '$class' is not a " . __CLASS__ . " class." );
 		}
 
 		return $obj;
 	}
 
 	/**
-	 * @return string Database domain ID
-	 */
-	final public function getDomain() {
-		return $this->domain;
-	}
-
-	/**
 	 * @return string Wiki ID
-	 * @deprecated 1.33
 	 */
 	final public function getWiki() {
-		return WikiMap::getWikiIdFromDbDomain( $this->domain );
+		return $this->wiki;
 	}
 
 	/**
@@ -320,26 +310,27 @@ abstract class JobQueue {
 	 * @param IJobSpecification[] $jobs
 	 * @param int $flags Bitfield (supports JobQueue::QOS_ATOMIC)
 	 * @return void
-	 * @throws JobQueueError
+	 * @throws MWException
 	 */
 	final public function batchPush( array $jobs, $flags = 0 ) {
 		$this->assertNotReadOnly();
 
-		if ( $jobs === [] ) {
+		if ( !count( $jobs ) ) {
 			return; // nothing to do
 		}
 
 		foreach ( $jobs as $job ) {
 			if ( $job->getType() !== $this->type ) {
-				throw new JobQueueError(
+				throw new MWException(
 					"Got '{$job->getType()}' job; expected a '{$this->type}' job." );
 			} elseif ( $job->getReleaseTimestamp() && !$this->supportsDelayedJobs() ) {
-				throw new JobQueueError(
+				throw new MWException(
 					"Got delayed '{$job->getType()}' job; delays are not supported." );
 			}
 		}
 
 		$this->doBatchPush( $jobs, $flags );
+		$this->aggr->notifyQueueNonEmpty( $this->wiki, $this->type );
 
 		foreach ( $jobs as $job ) {
 			if ( $job->isRootJob() ) {
@@ -360,18 +351,30 @@ abstract class JobQueue {
 	 * This requires $wgJobClasses to be set for the given job type.
 	 * Outside callers should use JobQueueGroup::pop() instead of this function.
 	 *
-	 * @throws JobQueueError
+	 * @throws MWException
 	 * @return Job|bool Returns false if there are no jobs
 	 */
 	final public function pop() {
+		global $wgJobClasses;
+
 		$this->assertNotReadOnly();
+		if ( !WikiMap::isCurrentWikiDbDomain( $this->wiki ) ) {
+			throw new MWException( "Cannot pop '{$this->type}' job off foreign wiki queue." );
+		} elseif ( !isset( $wgJobClasses[$this->type] ) ) {
+			// Do not pop jobs if there is no class for the queue type
+			throw new MWException( "Unrecognized job type '{$this->type}'." );
+		}
 
 		$job = $this->doPop();
+
+		if ( !$job ) {
+			$this->aggr->notifyQueueEmpty( $this->wiki, $this->type );
+		}
 
 		// Flag this job as an old duplicate based on its "root" job...
 		try {
 			if ( $job && $this->isRootJobOldDuplicate( $job ) ) {
-				$this->incrStats( 'dupe_pops', $this->type );
+				self::incrStats( 'dupe_pops', $this->type );
 				$job = DuplicateJob::newFromJob( $job ); // convert to a no-op
 			}
 		} catch ( Exception $e ) {
@@ -395,12 +398,12 @@ abstract class JobQueue {
 	 *
 	 * @param Job $job
 	 * @return void
-	 * @throws JobQueueError
+	 * @throws MWException
 	 */
 	final public function ack( Job $job ) {
 		$this->assertNotReadOnly();
 		if ( $job->getType() !== $this->type ) {
-			throw new JobQueueError( "Got '{$job->getType()}' job; expected '{$this->type}'." );
+			throw new MWException( "Got '{$job->getType()}' job; expected '{$this->type}'." );
 		}
 
 		$this->doAck( $job );
@@ -440,13 +443,13 @@ abstract class JobQueue {
 	 * This does nothing for certain queue classes.
 	 *
 	 * @param IJobSpecification $job
-	 * @throws JobQueueError
+	 * @throws MWException
 	 * @return bool
 	 */
 	final public function deduplicateRootJob( IJobSpecification $job ) {
 		$this->assertNotReadOnly();
 		if ( $job->getType() !== $this->type ) {
-			throw new JobQueueError( "Got '{$job->getType()}' job; expected '{$this->type}'." );
+			throw new MWException( "Got '{$job->getType()}' job; expected '{$this->type}'." );
 		}
 
 		return $this->doDeduplicateRootJob( $job );
@@ -455,12 +458,12 @@ abstract class JobQueue {
 	/**
 	 * @see JobQueue::deduplicateRootJob()
 	 * @param IJobSpecification $job
-	 * @throws JobQueueError
+	 * @throws MWException
 	 * @return bool
 	 */
 	protected function doDeduplicateRootJob( IJobSpecification $job ) {
 		if ( !$job->hasRootJobParams() ) {
-			throw new JobQueueError( "Cannot register root job; missing parameters." );
+			throw new MWException( "Cannot register root job; missing parameters." );
 		}
 		$params = $job->getRootJobParams();
 
@@ -476,19 +479,19 @@ abstract class JobQueue {
 		}
 
 		// Update the timestamp of the last root job started at the location...
-		return $this->dupCache->set( $key, $params['rootJobTimestamp'], self::ROOTJOB_TTL );
+		return $this->dupCache->set( $key, $params['rootJobTimestamp'], JobQueueDB::ROOTJOB_TTL );
 	}
 
 	/**
 	 * Check if the "root" job of a given job has been superseded by a newer one
 	 *
 	 * @param Job $job
-	 * @throws JobQueueError
+	 * @throws MWException
 	 * @return bool
 	 */
 	final protected function isRootJobOldDuplicate( Job $job ) {
 		if ( $job->getType() !== $this->type ) {
-			throw new JobQueueError( "Got '{$job->getType()}' job; expected '{$this->type}'." );
+			throw new MWException( "Got '{$job->getType()}' job; expected '{$this->type}'." );
 		}
 		$isDuplicate = $this->doIsRootJobOldDuplicate( $job );
 
@@ -519,13 +522,9 @@ abstract class JobQueue {
 	 * @return string
 	 */
 	protected function getRootJobCacheKey( $signature ) {
-		return $this->dupCache->makeGlobalKey(
-			'jobqueue',
-			$this->domain,
-			$this->type,
-			'rootjob',
-			$signature
-		);
+		list( $db, $prefix ) = wfSplitWikiID( $this->wiki );
+
+		return wfForeignMemcKey( $db, $prefix, 'jobqueue', $this->type, 'rootjob', $signature );
 	}
 
 	/**
@@ -543,10 +542,10 @@ abstract class JobQueue {
 
 	/**
 	 * @see JobQueue::delete()
-	 * @throws JobQueueError
+	 * @throws MWException
 	 */
 	protected function doDelete() {
-		throw new JobQueueError( "This method is not implemented." );
+		throw new MWException( "This method is not implemented." );
 	}
 
 	/**
@@ -647,7 +646,7 @@ abstract class JobQueue {
 	 *
 	 * @param array $types List of queues types
 	 * @return array|null (list of non-empty queue types) or null if unsupported
-	 * @throws JobQueueError
+	 * @throws MWException
 	 * @since 1.22
 	 */
 	final public function getSiblingQueuesWithJobs( array $types ) {
@@ -670,7 +669,7 @@ abstract class JobQueue {
 	 *
 	 * @param array $types List of queues types
 	 * @return array|null (job type => whether queue is empty) or null if unsupported
-	 * @throws JobQueueError
+	 * @throws MWException
 	 * @since 1.22
 	 */
 	final public function getSiblingQueueSizes( array $types ) {
@@ -703,8 +702,26 @@ abstract class JobQueue {
 	 * @param int $delta
 	 * @since 1.22
 	 */
-	protected function incrStats( $key, $type, $delta = 1 ) {
-		$this->stats->updateCount( "jobqueue.{$key}.all", $delta );
-		$this->stats->updateCount( "jobqueue.{$key}.{$type}", $delta );
+	public static function incrStats( $key, $type, $delta = 1 ) {
+		static $stats;
+		if ( !$stats ) {
+			$stats = MediaWikiServices::getInstance()->getStatsdDataFactory();
+		}
+		$stats->updateCount( "jobqueue.{$key}.all", $delta );
+		$stats->updateCount( "jobqueue.{$key}.{$type}", $delta );
 	}
+}
+
+/**
+ * @ingroup JobQueue
+ * @since 1.22
+ */
+class JobQueueError extends MWException {
+}
+
+class JobQueueConnectionError extends JobQueueError {
+}
+
+class JobQueueReadOnlyError extends JobQueueError {
+
 }

@@ -20,7 +20,7 @@ class FieldsetLayout extends Layout {
 
 	/**
 	 * @param array $config Configuration options
-	 *      - FieldLayout[] $config['items'] Items to add
+	 * @param FieldLayout[] $config['items'] Items to add
 	 * @param-taint $config escapes_htmlnoent
 	 */
 	public function __construct( array $config = [] ) {

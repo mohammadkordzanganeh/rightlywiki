@@ -129,10 +129,12 @@ class PageProps {
 				if ( $propertyValue === false ) {
 					$queryIDs[] = $pageID;
 					break;
-				} elseif ( $gotArray ) {
-					$values[$pageID][$propertyName] = $propertyValue;
 				} else {
-					$values[$pageID] = $propertyValue;
+					if ( $gotArray ) {
+						$values[$pageID][$propertyName] = $propertyValue;
+					} else {
+						$values[$pageID] = $propertyValue;
+					}
 				}
 			}
 		}

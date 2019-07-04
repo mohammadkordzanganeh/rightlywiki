@@ -72,7 +72,7 @@ class XmlTypeCheck {
 	 * Additional parsing options
 	 */
 	private $parserOptions = [
-		'processing_instruction_handler' => null,
+		'processing_instruction_handler' => '',
 		'external_dtd_handler' => '',
 		'dtd_handler' => '',
 		'require_safe_dtd' => true
@@ -364,7 +364,6 @@ class XmlTypeCheck {
 			$this->filterMatchType = $callbackReturn;
 		}
 	}
-
 	/**
 	 * Handle coming across a <!DOCTYPE declaration.
 	 *
@@ -406,10 +405,10 @@ class XmlTypeCheck {
 			$callbackReturn = false;
 		}
 
-		if ( $checkIfSafe && isset( $parsedDTD['internal'] ) &&
-			!$this->checkDTDIsSafe( $parsedDTD['internal'] )
-		) {
-			$this->wellFormed = false;
+		if ( $checkIfSafe && isset( $parsedDTD['internal'] ) ) {
+			if ( !$this->checkDTDIsSafe( $parsedDTD['internal'] ) ) {
+				$this->wellFormed = false;
+			}
 		}
 	}
 
@@ -419,7 +418,7 @@ class XmlTypeCheck {
 	 * We whitelist an extremely restricted subset of DTD features.
 	 *
 	 * Safe is defined as:
-	 *  * Only contains entity definitions (e.g. No <!ATLIST )
+	 *  * Only contains entity defintions (e.g. No <!ATLIST )
 	 *  * Entity definitions are not "system" entities
 	 *  * Entity definitions are not "parameter" (i.e. %) entities
 	 *  * Entity definitions do not reference other entites except &amp;

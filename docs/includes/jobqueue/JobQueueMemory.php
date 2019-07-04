@@ -32,12 +32,6 @@ class JobQueueMemory extends JobQueue {
 	/** @var array[] */
 	protected static $data = [];
 
-	public function __construct( array $params ) {
-		parent::__construct( $params );
-
-		$this->dupCache = new HashBagOStuff();
-	}
-
 	/**
 	 * @see JobQueue::doBatchPush
 	 *
@@ -49,7 +43,10 @@ class JobQueueMemory extends JobQueue {
 
 		foreach ( $jobs as $job ) {
 			if ( $job->ignoreDuplicates() ) {
-				$sha1 = sha1( serialize( $job->getDeduplicationInfo() ) );
+				$sha1 = Wikimedia\base_convert(
+					sha1( serialize( $job->getDeduplicationInfo() ) ),
+					16, 36, 31
+				);
 				if ( !isset( $unclaimed[$sha1] ) ) {
 					$unclaimed[$sha1] = $job;
 				}
@@ -135,7 +132,7 @@ class JobQueueMemory extends JobQueue {
 		$job = $this->jobFromSpecInternal( $spec );
 
 		end( $claimed );
-		$job->setMetadata( 'claimId', key( $claimed ) );
+		$job->metadata['claimId'] = key( $claimed );
 
 		return $job;
 	}
@@ -151,15 +148,15 @@ class JobQueueMemory extends JobQueue {
 		}
 
 		$claimed =& $this->getQueueData( 'claimed' );
-		unset( $claimed[$job->getMetadata( 'claimId' )] );
+		unset( $claimed[$job->metadata['claimId']] );
 	}
 
 	/**
 	 * @see JobQueue::doDelete
 	 */
 	protected function doDelete() {
-		if ( isset( self::$data[$this->type][$this->domain] ) ) {
-			unset( self::$data[$this->type][$this->domain] );
+		if ( isset( self::$data[$this->type][$this->wiki] ) ) {
+			unset( self::$data[$this->type][$this->wiki] );
 			if ( !self::$data[$this->type] ) {
 				unset( self::$data[$this->type] );
 			}
@@ -220,14 +217,14 @@ class JobQueueMemory extends JobQueue {
 	 * @return mixed
 	 */
 	private function &getQueueData( $field, $init = null ) {
-		if ( !isset( self::$data[$this->type][$this->domain][$field] ) ) {
+		if ( !isset( self::$data[$this->type][$this->wiki][$field] ) ) {
 			if ( $init !== null ) {
-				self::$data[$this->type][$this->domain][$field] = $init;
+				self::$data[$this->type][$this->wiki][$field] = $init;
 			} else {
 				return $init;
 			}
 		}
 
-		return self::$data[$this->type][$this->domain][$field];
+		return self::$data[$this->type][$this->wiki][$field];
 	}
 }

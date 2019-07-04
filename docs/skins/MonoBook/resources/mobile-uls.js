@@ -1,4 +1,3 @@
-/* eslint-disable no-jquery/no-global-selector */
 $( function () {
 	var mobileCutoffWidth = 550,
 		ULSTrigger = $( '#pt-uls' ),
@@ -18,6 +17,6 @@ $( function () {
 		}
 	}
 
-	$( window ).on( 'resize', moveULS );
+	$( window ).resize( moveULS );
 	moveULS();
 } );

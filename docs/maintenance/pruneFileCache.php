@@ -81,7 +81,7 @@ class PruneFileCache extends Maintenance {
 	protected function prune_directory( $dir, $report = false ) {
 		$tsNow = time();
 		$dirHandle = opendir( $dir );
-		while ( ( $file = readdir( $dirHandle ) ) !== false ) {
+		while ( false !== ( $file = readdir( $dirHandle ) ) ) {
 			// Skip ".", "..", and also any dirs or files like ".svn" or ".htaccess"
 			if ( $file[0] != "." ) {
 				$path = $dir . '/' . $file; // absolute

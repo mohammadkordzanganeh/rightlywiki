@@ -168,7 +168,7 @@ class CopyFileBackend extends Maintenance {
 	 * @param FileBackend $src
 	 * @param FileBackend $dst
 	 * @param string $backendRel
-	 * @return string[] (rel paths in $src minus those in $dst)
+	 * @return array (rel paths in $src minus those in $dst)
 	 */
 	protected function getListingDiffRel( FileBackend $src, FileBackend $dst, $backendRel ) {
 		$srcPathsRel = $src->getFileList( [
@@ -200,7 +200,7 @@ class CopyFileBackend extends Maintenance {
 	}
 
 	/**
-	 * @param string[] $srcPathsRel
+	 * @param array $srcPathsRel
 	 * @param string $backendRel
 	 * @param FileBackend $src
 	 * @param FileBackend $dst
@@ -288,7 +288,7 @@ class CopyFileBackend extends Maintenance {
 	}
 
 	/**
-	 * @param string[] $dstPathsRel
+	 * @param array $dstPathsRel
 	 * @param string $backendRel
 	 * @param FileBackend $dst
 	 * @return void

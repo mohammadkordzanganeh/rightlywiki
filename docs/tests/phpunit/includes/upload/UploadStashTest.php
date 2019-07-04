@@ -84,7 +84,6 @@ class UploadStashTest extends MediaWikiTestCase {
 				] ) ],
 		];
 	}
-
 	/**
 	 * @dataProvider provideValidRequests
 	 */

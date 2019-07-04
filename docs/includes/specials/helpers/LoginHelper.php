@@ -63,9 +63,10 @@ class LoginHelper extends ContextSource {
 	public function showReturnToPage(
 		$type, $returnTo = '', $returnToQuery = '', $stickHTTPS = false
 	) {
-		$config = $this->getConfig();
-		if ( $type !== 'error' && $config->get( 'RedirectOnLogin' ) !== null ) {
-			$returnTo = $config->get( 'RedirectOnLogin' );
+		global $wgRedirectOnLogin, $wgSecureLogin;
+
+		if ( $type !== 'error' && $wgRedirectOnLogin !== null ) {
+			$returnTo = $wgRedirectOnLogin;
 			$returnToQuery = [];
 		} elseif ( is_string( $returnToQuery ) ) {
 			$returnToQuery = wfCgiToArray( $returnToQuery );
@@ -76,10 +77,10 @@ class LoginHelper extends ContextSource {
 
 		$returnToTitle = Title::newFromText( $returnTo ) ?: Title::newMainPage();
 
-		if ( $config->get( 'SecureLogin' ) && !$stickHTTPS ) {
+		if ( $wgSecureLogin && !$stickHTTPS ) {
 			$options = [ 'http' ];
 			$proto = PROTO_HTTP;
-		} elseif ( $config->get( 'SecureLogin' ) ) {
+		} elseif ( $wgSecureLogin ) {
 			$options = [ 'https' ];
 			$proto = PROTO_HTTPS;
 		} else {

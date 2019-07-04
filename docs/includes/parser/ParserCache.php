@@ -146,19 +146,6 @@ class ParserCache {
 	}
 
 	/**
-	 * @param WikiPage $article
-	 * @param string $metricSuffix
-	 */
-	private function incrementStats( $article, $metricSuffix ) {
-		// old style global metric (can be removed once no longer used)
-		wfIncrStats( 'pcache.' . $metricSuffix );
-		// new per content model metric
-		$contentModel = str_replace( '.', '_', $article->getContentModel() );
-		$metricSuffix = str_replace( '.', '_', $metricSuffix );
-		wfIncrStats( 'pcache.' . $contentModel . '.' . $metricSuffix );
-	}
-
-	/**
 	 * Generates a key for caching the given article considering
 	 * the given parser options.
 	 *
@@ -189,11 +176,12 @@ class ParserCache {
 		}
 
 		// Determine the options which affect this article
+		$casToken = null;
 		$optionsKey = $this->mMemc->get(
-			$this->getOptionsKey( $article ), BagOStuff::READ_VERIFIED );
+			$this->getOptionsKey( $article ), $casToken, BagOStuff::READ_VERIFIED );
 		if ( $optionsKey instanceof CacheTime ) {
 			if ( $useOutdated < self::USE_EXPIRED && $optionsKey->expired( $article->getTouched() ) ) {
-				$this->incrementStats( $article, "miss.expired" );
+				wfIncrStats( "pcache.miss.expired" );
 				$cacheTime = $optionsKey->getCacheTime();
 				wfDebugLog( "ParserCache",
 					"Parser options key expired, touched " . $article->getTouched()
@@ -202,7 +190,7 @@ class ParserCache {
 			} elseif ( $useOutdated < self::USE_OUTDATED &&
 				$optionsKey->isDifferentRevision( $article->getLatest() )
 			) {
-				$this->incrementStats( $article, "miss.revid" );
+				wfIncrStats( "pcache.miss.revid" );
 				$revId = $article->getLatest();
 				$cachedRevId = $optionsKey->getCacheRevisionId();
 				wfDebugLog( "ParserCache",
@@ -250,16 +238,16 @@ class ParserCache {
 			$useOutdated ? self::USE_OUTDATED : self::USE_CURRENT_ONLY
 		);
 		if ( $parserOutputKey === false ) {
-			$this->incrementStats( $article, 'miss.absent' );
+			wfIncrStats( 'pcache.miss.absent' );
 			return false;
 		}
 
 		$casToken = null;
 		/** @var ParserOutput $value */
-		$value = $this->mMemc->get( $parserOutputKey, BagOStuff::READ_VERIFIED );
+		$value = $this->mMemc->get( $parserOutputKey, $casToken, BagOStuff::READ_VERIFIED );
 		if ( !$value ) {
 			wfDebug( "ParserOutput cache miss.\n" );
-			$this->incrementStats( $article, "miss.absent" );
+			wfIncrStats( "pcache.miss.absent" );
 			return false;
 		}
 
@@ -270,14 +258,14 @@ class ParserCache {
 			: $article;
 
 		if ( !$useOutdated && $value->expired( $touched ) ) {
-			$this->incrementStats( $article, "miss.expired" );
+			wfIncrStats( "pcache.miss.expired" );
 			$cacheTime = $value->getCacheTime();
 			wfDebugLog( "ParserCache",
 				"ParserOutput key expired, touched $touched, "
 				. "epoch {$this->cacheEpoch}, cached $cacheTime\n" );
 			$value = false;
 		} elseif ( !$useOutdated && $value->isDifferentRevision( $article->getLatest() ) ) {
-			$this->incrementStats( $article, "miss.revid" );
+			wfIncrStats( "pcache.miss.revid" );
 			$revId = $article->getLatest();
 			$cachedRevId = $value->getCacheRevisionId();
 			wfDebugLog( "ParserCache",
@@ -287,13 +275,13 @@ class ParserCache {
 		} elseif (
 			Hooks::run( 'RejectParserCacheValue', [ $value, $wikiPage, $popts ] ) === false
 		) {
-			$this->incrementStats( $article, 'miss.rejected' );
+			wfIncrStats( 'pcache.miss.rejected' );
 			wfDebugLog( "ParserCache",
 				"ParserOutput key valid, but rejected by RejectParserCacheValue hook handler.\n"
 			);
 			$value = false;
 		} else {
-			$this->incrementStats( $article, "hit" );
+			wfIncrStats( "pcache.hit" );
 		}
 
 		return $value;

@@ -15,7 +15,7 @@
  * along with MultimediaViewer.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-( function () {
+( function ( mw, $ ) {
 	/**
 	 * Base class for API-based data providers.
 	 *
@@ -176,7 +176,6 @@
 
 			// pages is an associative array indexed by pageid,
 			// we need to iterate through to find the right page
-			// eslint-disable-next-line no-jquery/no-each-util
 			$.each( data.query.pages, function ( id, page ) {
 				if ( page.title === pageName ) {
 					pageData = page;
@@ -197,4 +196,4 @@
 
 	mw.mmv.provider = {};
 	mw.mmv.provider.Api = Api;
-}() );
+}( mediaWiki, jQuery ) );

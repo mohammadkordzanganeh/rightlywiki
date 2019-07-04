@@ -33,7 +33,9 @@ class SpecialActiveUsers extends SpecialPage {
 	}
 
 	/**
-	 * @param string|null $par Parameter passed to the page or null
+	 * Show the special page
+	 *
+	 * @param string $par Parameter passed to the page or null
 	 */
 	public function execute( $par ) {
 		$out = $this->getOutput();

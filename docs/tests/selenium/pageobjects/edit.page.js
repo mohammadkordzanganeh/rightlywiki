@@ -3,20 +3,12 @@ const Page = require( 'wdio-mediawiki/Page' ),
 
 class EditPage extends Page {
 	get content() { return browser.element( '#wpTextbox1' ); }
-	get conflictingContent() { return browser.element( '#wpTextbox2' ); }
-	get displayedContent() { return browser.element( '#mw-content-text .mw-parser-output' ); }
+	get displayedContent() { return browser.element( '#mw-content-text' ); }
 	get heading() { return browser.element( '#firstHeading' ); }
 	get save() { return browser.element( '#wpSave' ); }
-	get previewButton() { return browser.element( '#wpPreview' ); }
 
 	openForEditing( title ) {
 		super.openTitle( title, { action: 'edit' } );
-	}
-
-	preview( name, content ) {
-		this.openForEditing( name );
-		this.content.setValue( content );
-		this.previewButton.click();
 	}
 
 	edit( name, content ) {

@@ -61,10 +61,8 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 	const SLOW_WRITE_SEC = 0.500;
 	const SMALL_WRITE_ROWS = 100;
 
-	/** @var string Lock granularity is on the level of the entire database */
+	/** @var string Whether lock granularity is on the level of the entire database */
 	const ATTR_DB_LEVEL_LOCKING = 'db-level-locking';
-	/** @var string The SCHEMA keyword refers to a grouping of tables in a database */
-	const ATTR_SCHEMAS_AS_TABLE_GROUPS = 'supports-schemas';
 
 	/** @var int New Database instance will not be connected yet when returned */
 	const NEW_UNCONNECTED = 0;
@@ -99,12 +97,12 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 	protected $connLogger;
 	/** @var LoggerInterface */
 	protected $queryLogger;
-	/** @var callable Error logging callback */
+	/** @var callback Error logging callback */
 	protected $errorLogger;
-	/** @var callable Deprecation logging callback */
+	/** @var callback Deprecation logging callback */
 	protected $deprecationLogger;
 
-	/** @var object|resource|null Database connection */
+	/** @var resource|null Database connection */
 	protected $conn = null;
 	/** @var bool */
 	protected $opened = false;
@@ -262,7 +260,7 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 	/** @var int[] Prior flags member variable values */
 	private $priorFlags = [];
 
-	/** @var callable|null */
+	/** @var mixed Class name or object With profileIn/profileOut methods */
 	protected $profiler;
 	/** @var TransactionProfiler */
 	protected $trxProfiler;
@@ -281,11 +279,6 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 	const STATUS_TRX_OK = 2;
 	/** @var int No transaction is active */
 	const STATUS_TRX_NONE = 3;
-
-	/** @var int Writes to this temporary table do not affect lastDoneWrites() */
-	const TEMP_NORMAL = 1;
-	/** @var int Writes to this temporary table effect lastDoneWrites() */
-	const TEMP_PSEUDO_PERMANENT = 2;
 
 	/**
 	 * @note exceptions for missing libraries/drivers should be thrown in initConnection()
@@ -315,7 +308,7 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 
 		$this->srvCache = $params['srvCache'] ?? new HashBagOStuff();
 
-		$this->profiler = is_callable( $params['profiler'] ) ? $params['profiler'] : null;
+		$this->profiler = $params['profiler'];
 		$this->trxProfiler = $params['trxProfiler'];
 		$this->connLogger = $params['connLogger'];
 		$this->queryLogger = $params['queryLogger'];
@@ -415,10 +408,9 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 	 *      used to adjust lock timeouts or encoding modes and the like.
 	 *   - connLogger: Optional PSR-3 logger interface instance.
 	 *   - queryLogger: Optional PSR-3 logger interface instance.
-	 *   - profiler : Optional callback that takes a section name argument and returns
-	 *      a ScopedCallback instance that ends the profile section in its destructor.
-	 *      These will be called in query(), using a simplified version of the SQL that
-	 *      also includes the agent as a SQL comment.
+	 *   - profiler: Optional class name or object with profileIn()/profileOut() methods.
+	 *      These will be called in query(), using a simplified version of the SQL that also
+	 *      includes the agent as a SQL comment.
 	 *   - trxProfiler: Optional TransactionProfiler instance.
 	 *   - errorLogger: Optional callback that takes an Exception and logs it.
 	 *   - deprecationLogger: Optional callback that takes a string and logs it.
@@ -482,15 +474,12 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 	/**
 	 * @param string $dbType A possible DB type (sqlite, mysql, postgres,...)
 	 * @param string|null $driver Optional name of a specific DB client driver
-	 * @return array Map of (Database::ATTR_* constant => value) for all such constants
+	 * @return array Map of (Database::ATTRIBUTE_* constant => value) for all such constants
 	 * @throws InvalidArgumentException
 	 * @since 1.31
 	 */
 	final public static function attributesFromType( $dbType, $driver = null ) {
-		static $defaults = [
-			self::ATTR_DB_LEVEL_LOCKING => false,
-			self::ATTR_SCHEMAS_AS_TABLE_GROUPS => false
-		];
+		static $defaults = [ self::ATTR_DB_LEVEL_LOCKING => false ];
 
 		$class = self::getClass( $dbType, $driver );
 
@@ -524,18 +513,20 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 			$possibleDrivers = $builtinTypes[$dbType];
 			if ( is_string( $possibleDrivers ) ) {
 				$class = $possibleDrivers;
-			} elseif ( (string)$driver !== '' ) {
-				if ( !isset( $possibleDrivers[$driver] ) ) {
-					throw new InvalidArgumentException( __METHOD__ .
-						" type '$dbType' does not support driver '{$driver}'" );
-				}
-
-				$class = $possibleDrivers[$driver];
 			} else {
-				foreach ( $possibleDrivers as $posDriver => $possibleClass ) {
-					if ( extension_loaded( $posDriver ) ) {
-						$class = $possibleClass;
-						break;
+				if ( (string)$driver !== '' ) {
+					if ( !isset( $possibleDrivers[$driver] ) ) {
+						throw new InvalidArgumentException( __METHOD__ .
+							" type '$dbType' does not support driver '{$driver}'" );
+					} else {
+						$class = $possibleDrivers[$driver];
+					}
+				} else {
+					foreach ( $possibleDrivers as $posDriver => $possibleClass ) {
+						if ( extension_loaded( $posDriver ) ) {
+							$class = $possibleClass;
+							break;
+						}
 					}
 				}
 			}
@@ -552,7 +543,7 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 	}
 
 	/**
-	 * @return array Map of (Database::ATTR_* constant => value
+	 * @return array Map of (Database::ATTRIBUTE_* constant => value
 	 * @since 1.31
 	 */
 	protected static function getAttributes() {
@@ -615,10 +606,6 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 	}
 
 	public function dbSchema( $schema = null ) {
-		if ( strlen( $schema ) && $this->getDBname() === null ) {
-			throw new DBUnexpectedError( $this, "Cannot set schema to '$schema'; no database set." );
-		}
-
 		$old = $this->currentDomain->getSchema();
 		if ( $schema !== null ) {
 			$this->currentDomain = new DatabaseDomain(
@@ -642,13 +629,13 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 	public function getLBInfo( $name = null ) {
 		if ( is_null( $name ) ) {
 			return $this->lbInfo;
+		} else {
+			if ( array_key_exists( $name, $this->lbInfo ) ) {
+				return $this->lbInfo[$name];
+			} else {
+				return null;
+			}
 		}
-
-		if ( array_key_exists( $name, $this->lbInfo ) ) {
-			return $this->lbInfo[$name];
-		}
-
-		return null;
 	}
 
 	public function setLBInfo( $name, $value = null ) {
@@ -833,7 +820,7 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 	}
 
 	public function getFlag( $flag ) {
-		return (bool)( $this->flags & $flag );
+		return !!( $this->flags & $flag );
 	}
 
 	/**
@@ -938,8 +925,6 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 	final public function close() {
 		$exception = null; // error to throw after disconnecting
 
-		$wasOpen = $this->opened;
-		// This should mostly do nothing if the connection is already closed
 		if ( $this->conn ) {
 			// Roll back any dangling transaction first
 			if ( $this->trxLevel ) {
@@ -982,11 +967,11 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 
 			// Close the actual connection in the binding handle
 			$closed = $this->closeConnection();
+			$this->conn = false;
 		} else {
 			$closed = true; // already closed; nothing to do
 		}
 
-		$this->conn = false;
 		$this->opened = false;
 
 		// Throw any unexpected errors after having disconnected
@@ -994,52 +979,25 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 			throw $exception;
 		}
 
-		// Note that various subclasses call close() at the start of open(), which itself is
-		// called by replaceLostConnection(). In that case, just because onTransactionResolution()
-		// callbacks are pending does not mean that an exception should be thrown. Rather, they
-		// will be executed after the reconnection step.
-		if ( $wasOpen ) {
-			// Sanity check that no callbacks are dangling
-			$fnames = $this->pendingWriteAndCallbackCallers();
-			if ( $fnames ) {
-				throw new RuntimeException(
-					"Transaction callbacks are still pending:\n" . implode( ', ', $fnames )
-				);
-			}
+		// Sanity check that no callbacks are dangling
+		$fnames = $this->pendingWriteAndCallbackCallers();
+		if ( $fnames ) {
+			throw new RuntimeException(
+				"Transaction callbacks are still pending:\n" . implode( ', ', $fnames )
+			);
 		}
 
 		return $closed;
 	}
 
 	/**
-	 * Make sure there is an open connection handle (alive or not) as a sanity check
-	 *
-	 * This guards against fatal errors to the binding handle not being defined
-	 * in cases where open() was never called or close() was already called
+	 * Make sure isOpen() returns true as a sanity check
 	 *
 	 * @throws DBUnexpectedError
 	 */
-	protected function assertHasConnectionHandle() {
+	protected function assertOpen() {
 		if ( !$this->isOpen() ) {
 			throw new DBUnexpectedError( $this, "DB connection was already closed." );
-		}
-	}
-
-	/**
-	 * Make sure that this server is not marked as a replica nor read-only as a sanity check
-	 *
-	 * @throws DBUnexpectedError
-	 */
-	protected function assertIsWritableMaster() {
-		if ( $this->getLBInfo( 'replica' ) === true ) {
-			throw new DBReadOnlyRoleError(
-				$this,
-				'Write operations are not allowed on replica database connections.'
-			);
-		}
-		$reason = $this->getReadOnlyReason();
-		if ( $reason !== false ) {
-			throw new DBReadOnlyError( $this, "Database is read-only: $reason" );
 		}
 	}
 
@@ -1061,22 +1019,13 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 	}
 
 	/**
-	 * Run a query and return a DBMS-dependent wrapper or boolean
+	 * Run a query and return a DBMS-dependent wrapper (that has all IResultWrapper methods)
 	 *
-	 * For SELECT queries, this returns either:
-	 *   - a) A driver-specific value/resource, only on success. This can be iterated
-	 *        over by calling fetchObject()/fetchRow() until there are no more rows.
-	 *        Alternatively, the result can be passed to resultObject() to obtain a
-	 *        ResultWrapper instance which can then be iterated over via "foreach".
-	 *   - b) False, on any query failure
+	 * This might return things, such as mysqli_result, that do not formally implement
+	 * IResultWrapper, but nonetheless implement all of its methods correctly
 	 *
-	 * For non-SELECT queries, this returns either:
-	 *   - a) A driver-specific value/resource, only on success
-	 *   - b) True, only on success (e.g. no meaningful result other than "OK")
-	 *   - c) False, on any query failure
-	 *
-	 * @param string $sql SQL query
-	 * @return mixed|bool An object, resource, or true on success; false on failure
+	 * @param string $sql SQL query.
+	 * @return IResultWrapper|bool Iterator to feed to fetchObject/fetchRow; false on failure
 	 */
 	abstract protected function doQuery( $sql );
 
@@ -1147,131 +1096,144 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 
 	/**
 	 * @param string $sql A SQL query
-	 * @param bool $pseudoPermanent Treat any table from CREATE TEMPORARY as pseudo-permanent
-	 * @return int|null A self::TEMP_* constant for temp table operations or null otherwise
+	 * @return bool Whether $sql is SQL for TEMPORARY table operation
 	 */
-	protected function registerTempTableWrite( $sql, $pseudoPermanent ) {
-		static $qt = '[`"\']?(\w+)[`"\']?'; // quoted table
-
+	protected function registerTempTableOperation( $sql ) {
 		if ( preg_match(
-			'/^CREATE\s+TEMPORARY\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?' . $qt . '/i',
+			'/^CREATE\s+TEMPORARY\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?[`"\']?(\w+)[`"\']?/i',
 			$sql,
 			$matches
 		) ) {
-			$type = $pseudoPermanent ? self::TEMP_PSEUDO_PERMANENT : self::TEMP_NORMAL;
-			$this->sessionTempTables[$matches[1]] = $type;
+			$this->sessionTempTables[$matches[1]] = 1;
 
-			return $type;
+			return true;
 		} elseif ( preg_match(
-			'/^DROP\s+(?:TEMPORARY\s+)?TABLE\s+(?:IF\s+EXISTS\s+)?' . $qt . '/i',
+			'/^DROP\s+(?:TEMPORARY\s+)?TABLE\s+(?:IF\s+EXISTS\s+)?[`"\']?(\w+)[`"\']?/i',
 			$sql,
 			$matches
 		) ) {
-			$type = $this->sessionTempTables[$matches[1]] ?? null;
+			$isTemp = isset( $this->sessionTempTables[$matches[1]] );
 			unset( $this->sessionTempTables[$matches[1]] );
 
-			return $type;
+			return $isTemp;
 		} elseif ( preg_match(
-			'/^TRUNCATE\s+(?:TEMPORARY\s+)?TABLE\s+(?:IF\s+EXISTS\s+)?' . $qt . '/i',
+			'/^TRUNCATE\s+(?:TEMPORARY\s+)?TABLE\s+(?:IF\s+EXISTS\s+)?[`"\']?(\w+)[`"\']?/i',
 			$sql,
 			$matches
 		) ) {
-			return $this->sessionTempTables[$matches[1]] ?? null;
+			return isset( $this->sessionTempTables[$matches[1]] );
 		} elseif ( preg_match(
-			'/^(?:(?:INSERT|REPLACE)\s+(?:\w+\s+)?INTO|UPDATE|DELETE\s+FROM)\s+' . $qt . '/i',
+			'/^(?:INSERT\s+(?:\w+\s+)?INTO|UPDATE|DELETE\s+FROM)\s+[`"\']?(\w+)[`"\']?/i',
 			$sql,
 			$matches
 		) ) {
-			return $this->sessionTempTables[$matches[1]] ?? null;
+			return isset( $this->sessionTempTables[$matches[1]] );
 		}
 
-		return null;
+		return false;
 	}
 
-	public function query( $sql, $fname = __METHOD__, $flags = 0 ) {
+	public function query( $sql, $fname = __METHOD__, $tempIgnore = false ) {
 		$this->assertTransactionStatus( $sql, $fname );
-		$this->assertHasConnectionHandle();
 
-		$flags = (int)$flags; // b/c; this field used to be a bool
-		$ignoreErrors = $this->hasFlags( $flags, self::QUERY_SILENCE_ERRORS );
+		# Avoid fatals if close() was called
+		$this->assertOpen();
 
-		$priorTransaction = $this->trxLevel;
 		$priorWritesPending = $this->writesOrCallbacksPending();
 		$this->lastQuery = $sql;
 
-		if ( $this->isWriteQuery( $sql ) ) {
+		$isWrite = $this->isWriteQuery( $sql );
+		if ( $isWrite ) {
+			$isNonTempWrite = !$this->registerTempTableOperation( $sql );
+		} else {
+			$isNonTempWrite = false;
+		}
+
+		if ( $isWrite ) {
+			if ( $this->getLBInfo( 'replica' ) === true ) {
+				throw new DBError(
+					$this,
+					'Write operations are not allowed on replica database connections.'
+				);
+			}
 			# In theory, non-persistent writes are allowed in read-only mode, but due to things
 			# like https://bugs.mysql.com/bug.php?id=33669 that might not work anyway...
-			$this->assertIsWritableMaster();
-			# Do not treat temporary table writes as "meaningful writes" that need committing.
-			# Profile them as reads. Integration tests can override this behavior via $flags.
-			$pseudoPermanent = $this->hasFlags( $flags, self::QUERY_PSEUDO_PERMANENT );
-			$tableType = $this->registerTempTableWrite( $sql, $pseudoPermanent );
-			$isEffectiveWrite = ( $tableType !== self::TEMP_NORMAL );
-			# DBConnRef uses QUERY_REPLICA_ROLE to enforce the replica role for raw SQL queries
-			if ( $isEffectiveWrite && $this->hasFlags( $flags, self::QUERY_REPLICA_ROLE ) ) {
-				throw new DBReadOnlyRoleError( $this, "Cannot write; target role is DB_REPLICA" );
+			$reason = $this->getReadOnlyReason();
+			if ( $reason !== false ) {
+				throw new DBReadOnlyError( $this, "Database is read-only: $reason" );
 			}
-		} else {
-			$isEffectiveWrite = false;
+			# Set a flag indicating that writes have been done
+			$this->lastWriteTime = microtime( true );
 		}
 
 		# Add trace comment to the begin of the sql string, right after the operator.
 		# Or, for one-word queries (like "BEGIN" or COMMIT") add it to the end (T44598)
 		$commentedSql = preg_replace( '/\s|$/', " /* $fname {$this->agent} */ ", $sql, 1 );
 
+		# Start implicit transactions that wrap the request if DBO_TRX is enabled
+		if ( !$this->trxLevel && $this->getFlag( self::DBO_TRX )
+			&& $this->isTransactableQuery( $sql )
+		) {
+			$this->begin( __METHOD__ . " ($fname)", self::TRANSACTION_INTERNAL );
+			$this->trxAutomatic = true;
+		}
+
+		# Keep track of whether the transaction has write queries pending
+		if ( $this->trxLevel && !$this->trxDoneWrites && $isWrite ) {
+			$this->trxDoneWrites = true;
+			$this->trxProfiler->transactionWritingIn(
+				$this->server, $this->getDomainID(), $this->trxShortId );
+		}
+
+		if ( $this->getFlag( self::DBO_DEBUG ) ) {
+			$this->queryLogger->debug( "{$this->getDomainID()} {$commentedSql}" );
+		}
+
 		# Send the query to the server and fetch any corresponding errors
-		$ret = $this->attemptQuery( $sql, $commentedSql, $isEffectiveWrite, $fname );
+		$ret = $this->doProfiledQuery( $sql, $commentedSql, $isNonTempWrite, $fname );
 		$lastError = $this->lastError();
 		$lastErrno = $this->lastErrno();
 
-		$recoverableSR = false; // recoverable statement rollback?
-		$recoverableCL = false; // recoverable connection loss?
-
+		# Try reconnecting if the connection was lost
 		if ( $ret === false && $this->wasConnectionLoss() ) {
-			# Check if no meaningful session state was lost
-			$recoverableCL = $this->canRecoverFromDisconnect( $sql, $priorWritesPending );
+			# Check if any meaningful session state was lost
+			$recoverable = $this->canRecoverFromDisconnect( $sql, $priorWritesPending );
 			# Update session state tracking and try to restore the connection
 			$reconnected = $this->replaceLostConnection( __METHOD__ );
 			# Silently resend the query to the server if it is safe and possible
-			if ( $recoverableCL && $reconnected ) {
-				$ret = $this->attemptQuery( $sql, $commentedSql, $isEffectiveWrite, $fname );
+			if ( $reconnected && $recoverable ) {
+				$ret = $this->doProfiledQuery( $sql, $commentedSql, $isNonTempWrite, $fname );
 				$lastError = $this->lastError();
 				$lastErrno = $this->lastErrno();
 
 				if ( $ret === false && $this->wasConnectionLoss() ) {
 					# Query probably causes disconnects; reconnect and do not re-run it
 					$this->replaceLostConnection( __METHOD__ );
-				} else {
-					$recoverableCL = false; // connection does not need recovering
-					$recoverableSR = $this->wasKnownStatementRollbackError();
 				}
 			}
-		} else {
-			$recoverableSR = $this->wasKnownStatementRollbackError();
 		}
 
 		if ( $ret === false ) {
-			if ( $priorTransaction ) {
-				if ( $recoverableSR ) {
+			if ( $this->trxLevel ) {
+				if ( $this->wasKnownStatementRollbackError() ) {
 					# We're ignoring an error that caused just the current query to be aborted.
 					# But log the cause so we can log a deprecation notice if a caller actually
 					# does ignore it.
 					$this->trxStatusIgnoredCause = [ $lastError, $lastErrno, $fname ];
-				} elseif ( !$recoverableCL ) {
+				} else {
 					# Either the query was aborted or all queries after BEGIN where aborted.
 					# In the first case, the only options going forward are (a) ROLLBACK, or
 					# (b) ROLLBACK TO SAVEPOINT (if one was set). If the later case, the only
 					# option is ROLLBACK, since the snapshots would have been released.
 					$this->trxStatus = self::STATUS_TRX_ERROR;
 					$this->trxStatusCause =
-						$this->getQueryExceptionAndLog( $lastError, $lastErrno, $sql, $fname );
-					$ignoreErrors = false; // cannot recover
+						$this->makeQueryException( $lastError, $lastErrno, $sql, $fname );
+					$tempIgnore = false; // cannot recover
 					$this->trxStatusIgnoredCause = null;
 				}
 			}
 
-			$this->reportQueryError( $lastError, $lastErrno, $sql, $fname, $ignoreErrors );
+			$this->reportQueryError( $lastError, $lastErrno, $sql, $fname, $tempIgnore );
 		}
 
 		return $this->resultObject( $ret );
@@ -1282,28 +1244,12 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 	 *
 	 * @param string $sql Original SQL query
 	 * @param string $commentedSql SQL query with debugging/trace comment
-	 * @param bool $isEffectiveWrite Whether the query is a (non-temporary table) write
+	 * @param bool $isWrite Whether the query is a (non-temporary) write operation
 	 * @param string $fname Name of the calling function
 	 * @return bool|ResultWrapper True for a successful write query, ResultWrapper
 	 *     object for a successful read query, or false on failure
 	 */
-	private function attemptQuery( $sql, $commentedSql, $isEffectiveWrite, $fname ) {
-		$this->beginIfImplied( $sql, $fname );
-
-		# Keep track of whether the transaction has write queries pending
-		if ( $isEffectiveWrite ) {
-			$this->lastWriteTime = microtime( true );
-			if ( $this->trxLevel && !$this->trxDoneWrites ) {
-				$this->trxDoneWrites = true;
-				$this->trxProfiler->transactionWritingIn(
-					$this->server, $this->getDomainID(), $this->trxShortId );
-			}
-		}
-
-		if ( $this->getFlag( self::DBO_DEBUG ) ) {
-			$this->queryLogger->debug( "{$this->getDomainID()} {$commentedSql}" );
-		}
-
+	private function doProfiledQuery( $sql, $commentedSql, $isWrite, $fname ) {
 		$isMaster = !is_null( $this->getLBInfo( 'master' ) );
 		# generalizeSQL() will probably cut down the query to reasonable
 		# logging size most of the time. The substr is really just a sanity check.
@@ -1317,16 +1263,22 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 		$queryProf .= $this->trxShortId ? " [TRX#{$this->trxShortId}]" : "";
 
 		$startTime = microtime( true );
-		$ps = $this->profiler ? ( $this->profiler )( $queryProf ) : null;
+		if ( $this->profiler ) {
+			$this->profiler->profileIn( $queryProf );
+		}
 		$this->affectedRowCount = null;
 		$ret = $this->doQuery( $commentedSql );
 		$this->affectedRowCount = $this->affectedRows();
-		unset( $ps ); // profile out (if set)
+		if ( $this->profiler ) {
+			$this->profiler->profileOut( $queryProf );
+		}
 		$queryRuntime = max( microtime( true ) - $startTime, 0.0 );
+
+		unset( $queryProfSection ); // profile out (if set)
 
 		if ( $ret !== false ) {
 			$this->lastPing = $startTime;
-			if ( $isEffectiveWrite && $this->trxLevel ) {
+			if ( $isWrite && $this->trxLevel ) {
 				$this->updateTrxWriteQueryTime( $sql, $queryRuntime, $this->affectedRows() );
 				$this->trxWriteCallers[] = $fname;
 			}
@@ -1339,8 +1291,8 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 		$this->trxProfiler->recordQueryCompletion(
 			$queryProf,
 			$startTime,
-			$isEffectiveWrite,
-			$isEffectiveWrite ? $this->affectedRows() : $this->numRows( $ret )
+			$isWrite,
+			$isWrite ? $this->affectedRows() : $this->numRows( $ret )
 		);
 		$this->queryLogger->debug( $sql, [
 			'method' => $fname,
@@ -1349,23 +1301,6 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 		] );
 
 		return $ret;
-	}
-
-	/**
-	 * Start an implicit transaction if DBO_TRX is enabled and no transaction is active
-	 *
-	 * @param string $sql
-	 * @param string $fname
-	 */
-	private function beginIfImplied( $sql, $fname ) {
-		if (
-			!$this->trxLevel &&
-			$this->getFlag( self::DBO_TRX ) &&
-			$this->isTransactableQuery( $sql )
-		) {
-			$this->begin( __METHOD__ . " ($fname)", self::TRANSACTION_INTERNAL );
-			$this->trxAutomatic = true;
-		}
 	}
 
 	/**
@@ -1403,19 +1338,12 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 	}
 
 	/**
-	 * Error out if the DB is not in a valid state for a query via query()
-	 *
 	 * @param string $sql
 	 * @param string $fname
 	 * @throws DBTransactionStateError
 	 */
 	private function assertTransactionStatus( $sql, $fname ) {
-		$verb = $this->getQueryVerb( $sql );
-		if ( $verb === 'USE' ) {
-			throw new DBUnexpectedError( $this, "Got USE query; use selectDomain() instead." );
-		}
-
-		if ( $verb === 'ROLLBACK' ) { // transaction/savepoint
+		if ( $this->getQueryVerb( $sql ) === 'ROLLBACK' ) { // transaction/savepoint
 			return;
 		}
 
@@ -1447,7 +1375,8 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 	}
 
 	/**
-	 * Determine whether it is safe to retry queries after a database connection is lost
+	 * Determine whether or not it is safe to retry queries after a database
+	 * connection is lost
 	 *
 	 * @param string $sql SQL query
 	 * @param bool $priorWritesPending Whether there is a transaction open with
@@ -1478,9 +1407,9 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 	}
 
 	/**
-	 * Clean things up after session (and thus transaction) loss before reconnect
+	 * Clean things up after session (and thus transaction) loss
 	 */
-	private function handleSessionLossPreconnect() {
+	private function handleSessionLoss() {
 		// Clean up tracking of session-level things...
 		// https://dev.mysql.com/doc/refman/5.7/en/implicit-commit.html
 		// https://www.postgresql.org/docs/9.2/static/sql-createtable.html (ignoring ON COMMIT)
@@ -1489,26 +1418,17 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 		// https://www.postgresql.org/docs/9.4/static/functions-admin.html#FUNCTIONS-ADVISORY-LOCKS
 		$this->namedLocksHeld = [];
 		// Session loss implies transaction loss
+		$this->handleTransactionLoss();
+	}
+
+	/**
+	 * Clean things up after transaction loss
+	 */
+	private function handleTransactionLoss() {
 		$this->trxLevel = 0;
 		$this->trxAtomicCounter = 0;
 		$this->trxIdleCallbacks = []; // T67263; transaction already lost
 		$this->trxPreCommitCallbacks = []; // T67263; transaction already lost
-		// @note: leave trxRecurringCallbacks in place
-		if ( $this->trxDoneWrites ) {
-			$this->trxProfiler->transactionWritingOut(
-				$this->server,
-				$this->getDomainID(),
-				$this->trxShortId,
-				$this->pendingWriteQueryDuration( self::ESTIMATE_TOTAL ),
-				$this->trxWriteAffectedRows
-			);
-		}
-	}
-
-	/**
-	 * Clean things up after session (and thus transaction) loss after reconnect
-	 */
-	private function handleSessionLossPostconnect() {
 		try {
 			// Handle callbacks in trxEndCallbacks, e.g. onTransactionResolution().
 			// If callback suppression is set then the array will remain unhandled.
@@ -1540,20 +1460,20 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 
 	/**
 	 * Report a query error. Log the error, and if neither the object ignore
-	 * flag nor the $ignoreErrors flag is set, throw a DBQueryError.
+	 * flag nor the $tempIgnore flag is set, throw a DBQueryError.
 	 *
 	 * @param string $error
 	 * @param int $errno
 	 * @param string $sql
 	 * @param string $fname
-	 * @param bool $ignoreErrors
+	 * @param bool $tempIgnore
 	 * @throws DBQueryError
 	 */
-	public function reportQueryError( $error, $errno, $sql, $fname, $ignoreErrors = false ) {
-		if ( $ignoreErrors ) {
+	public function reportQueryError( $error, $errno, $sql, $fname, $tempIgnore = false ) {
+		if ( $tempIgnore ) {
 			$this->queryLogger->debug( "SQL ERROR (ignored): $error\n" );
 		} else {
-			$exception = $this->getQueryExceptionAndLog( $error, $errno, $sql, $fname );
+			$exception = $this->makeQueryException( $error, $errno, $sql, $fname );
 
 			throw $exception;
 		}
@@ -1566,7 +1486,7 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 	 * @param string $fname
 	 * @return DBError
 	 */
-	private function getQueryExceptionAndLog( $error, $errno, $sql, $fname ) {
+	private function makeQueryException( $error, $errno, $sql, $fname ) {
 		$sql1line = mb_substr( str_replace( "\n", "\\n", $sql ), 0, 5 * 1024 );
 		$this->queryLogger->error(
 			"{fname}\t{db_server}\t{errno}\t{error}\t{sql1line}",
@@ -1576,7 +1496,6 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 				'error' => $error,
 				'sql1line' => $sql1line,
 				'fname' => $fname,
-				'trace' => ( new RuntimeException() )->getTraceAsString()
 			] )
 		);
 		$this->queryLogger->debug( "SQL ERROR: " . $error . "\n" );
@@ -2119,6 +2038,10 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 			$options = [ $options ];
 		}
 
+		$fh = null;
+		if ( isset( $options['fileHandle'] ) ) {
+			$fh = $options['fileHandle'];
+		}
 		$options = $this->makeInsertOptions( $options );
 
 		if ( isset( $a[0] ) && is_array( $a[0] ) ) {
@@ -2146,9 +2069,13 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 			$sql .= '(' . $this->makeList( $a ) . ')';
 		}
 
-		$this->query( $sql, $fname );
+		if ( $fh !== null && false === fwrite( $fh, $sql ) ) {
+			return false;
+		} elseif ( $fh !== null ) {
+			return true;
+		}
 
-		return true;
+		return (bool)$this->query( $sql, $fname );
 	}
 
 	/**
@@ -2192,9 +2119,7 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 			$sql .= " WHERE " . $this->makeList( $conds, self::LIST_AND );
 		}
 
-		$this->query( $sql, $fname );
-
-		return true;
+		return (bool)$this->query( $sql, $fname );
 	}
 
 	public function makeList( $a, $mode = self::LIST_COMMA ) {
@@ -2359,9 +2284,7 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 	}
 
 	public function buildStringCast( $field ) {
-		// In theory this should work for any standards-compliant
-		// SQL implementation, although it may not be the best way to do it.
-		return "CAST( $field AS CHARACTER )";
+		return $field;
 	}
 
 	public function buildIntegerCast( $field ) {
@@ -2558,7 +2481,7 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 			throw new InvalidArgumentException( "Table must be a string or Subquery." );
 		}
 
-		if ( $alias === false || $alias === $table ) {
+		if ( !strlen( $alias ) || $alias === $table ) {
 			if ( $table instanceof Subquery ) {
 				throw new InvalidArgumentException( "Subquery table missing alias." );
 			}
@@ -2747,6 +2670,15 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 		}
 	}
 
+	/**
+	 * Quotes an identifier using `backticks` or "double quotes" depending on the database type.
+	 * MySQL uses `backticks` while basically everything else uses double quotes.
+	 * Since MySQL is the odd one out here the double quotes are our generic
+	 * and we implement backticks in DatabaseMysqlBase.
+	 *
+	 * @param string $s
+	 * @return string
+	 */
 	public function addIdentifierQuotes( $s ) {
 		return '"' . str_replace( '"', '""', $s ) . '"';
 	}
@@ -2847,7 +2779,6 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 			return;
 		}
 
-		$uniqueIndexes = (array)$uniqueIndexes;
 		// Single row case
 		if ( !is_array( reset( $rows ) ) ) {
 			$rows = [ $rows ];
@@ -2902,6 +2833,8 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 	 * @param string $table Table name
 	 * @param array|string $rows Row(s) to insert
 	 * @param string $fname Caller function name
+	 *
+	 * @return ResultWrapper
 	 */
 	protected function nativeReplace( $table, $rows, $fname ) {
 		$table = $this->tableName( $table );
@@ -2924,17 +2857,16 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 			$sql .= '(' . $this->makeList( $row ) . ')';
 		}
 
-		$this->query( $sql, $fname );
+		return $this->query( $sql, $fname );
 	}
 
-	public function upsert( $table, array $rows, $uniqueIndexes, array $set,
+	public function upsert( $table, array $rows, array $uniqueIndexes, array $set,
 		$fname = __METHOD__
 	) {
-		if ( $rows === [] ) {
+		if ( !count( $rows ) ) {
 			return true; // nothing to do
 		}
 
-		$uniqueIndexes = (array)$uniqueIndexes;
 		if ( !is_array( reset( $rows ) ) ) {
 			$rows = [ $rows ];
 		}
@@ -2961,11 +2893,13 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 			$this->startAtomic( $fname, self::ATOMIC_CANCELABLE );
 			# Update any existing conflicting row(s)
 			if ( $where !== false ) {
-				$this->update( $table, $set, $where, $fname );
+				$ok = $this->update( $table, $set, $where, $fname );
 				$affectedRowCount += $this->affectedRows();
+			} else {
+				$ok = true;
 			}
 			# Now insert any non-conflicting row(s)
-			$this->insert( $table, $rows, $fname, [ 'IGNORE' ] );
+			$ok = $this->insert( $table, $rows, $fname, [ 'IGNORE' ] ) && $ok;
 			$affectedRowCount += $this->affectedRows();
 			$this->endAtomic( $fname );
 			$this->affectedRowCount = $affectedRowCount;
@@ -2974,7 +2908,7 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 			throw $e;
 		}
 
-		return true;
+		return $ok;
 	}
 
 	public function deleteJoin( $delTable, $joinTable, $delVar, $joinVar, $conds,
@@ -3027,9 +2961,7 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 			$sql .= ' WHERE ' . $conds;
 		}
 
-		$this->query( $sql, $fname );
-
-		return true;
+		return $this->query( $sql, $fname );
 	}
 
 	final public function insertSelect(
@@ -3044,18 +2976,7 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 		if ( $this->cliMode && $this->isInsertSelectSafe( $insertOptions, $selectOptions ) ) {
 			// For massive migrations with downtime, we don't want to select everything
 			// into memory and OOM, so do all this native on the server side if possible.
-			$this->nativeInsertSelect(
-				$destTable,
-				$srcTable,
-				$varMap,
-				$conds,
-				$fname,
-				array_diff( $insertOptions, $hints ),
-				$selectOptions,
-				$selectJoinConds
-			);
-		} else {
-			$this->nonNativeInsertSelect(
+			return $this->nativeInsertSelect(
 				$destTable,
 				$srcTable,
 				$varMap,
@@ -3067,7 +2988,16 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 			);
 		}
 
-		return true;
+		return $this->nonNativeInsertSelect(
+			$destTable,
+			$srcTable,
+			$varMap,
+			$conds,
+			$fname,
+			array_diff( $insertOptions, $hints ),
+			$selectOptions,
+			$selectJoinConds
+		);
 	}
 
 	/**
@@ -3093,6 +3023,7 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 	 * @param array $insertOptions
 	 * @param array $selectOptions
 	 * @param array $selectJoinConds
+	 * @return bool
 	 */
 	protected function nonNativeInsertSelect( $destTable, $srcTable, $varMap, $conds,
 		$fname = __METHOD__,
@@ -3110,7 +3041,7 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 			$srcTable, implode( ',', $fields ), $conds, $fname, $selectOptions, $selectJoinConds
 		);
 		if ( !$res ) {
-			return;
+			return false;
 		}
 
 		try {
@@ -3143,6 +3074,7 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 			} else {
 				$this->cancelAtomic( $fname );
 			}
+			return $ok;
 		} catch ( Exception $e ) {
 			$this->cancelAtomic( $fname );
 			throw $e;
@@ -3162,6 +3094,7 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 	 * @param array $insertOptions
 	 * @param array $selectOptions
 	 * @param array $selectJoinConds
+	 * @return bool
 	 */
 	protected function nativeInsertSelect( $destTable, $srcTable, $varMap, $conds,
 		$fname = __METHOD__,
@@ -3188,7 +3121,7 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 			" INTO $destTable (" . implode( ',', array_keys( $varMap ) ) . ') ' .
 			$selectSql;
 
-		$this->query( $sql, $fname );
+		return $this->query( $sql, $fname );
 	}
 
 	/**
@@ -3353,7 +3286,7 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 	}
 
 	/**
-	 * @return bool Whether it is known that the last query error only caused statement rollback
+	 * @return bool Whether it is safe to assume the given error only caused statement rollback
 	 * @note This is for backwards compatibility for callers catching DBError exceptions in
 	 *   order to ignore problems like duplicate key errors or foriegn key violations
 	 * @since 1.31
@@ -3584,7 +3517,6 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 				list( $phpCallback ) = $callback;
 				$this->clearFlag( self::DBO_TRX ); // make each query its own transaction
 				try {
-					// @phan-suppress-next-line PhanParamTooManyCallable
 					call_user_func( $phpCallback, $trigger, $this );
 				} catch ( Exception $ex ) {
 					call_user_func( $this->errorLogger, $ex );
@@ -3915,7 +3847,8 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 			throw new DBUnexpectedError( $this, $msg );
 		}
 
-		$this->assertHasConnectionHandle();
+		// Avoid fatals if close() was called
+		$this->assertOpen();
 
 		$this->doBegin( $fname );
 		$this->trxStatus = self::STATUS_TRX_OK;
@@ -3978,18 +3911,21 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 					"$fname: Flushing an explicit transaction, getting out of sync."
 				);
 			}
-		} elseif ( !$this->trxLevel ) {
-			$this->queryLogger->error(
-				"$fname: No transaction to commit, something got out of sync." );
-			return; // nothing to do
-		} elseif ( $this->trxAutomatic ) {
-			throw new DBUnexpectedError(
-				$this,
-				"$fname: Expected mass commit of all peer transactions (DBO_TRX set)."
-			);
+		} else {
+			if ( !$this->trxLevel ) {
+				$this->queryLogger->error(
+					"$fname: No transaction to commit, something got out of sync." );
+				return; // nothing to do
+			} elseif ( $this->trxAutomatic ) {
+				throw new DBUnexpectedError(
+					$this,
+					"$fname: Expected mass commit of all peer transactions (DBO_TRX set)."
+				);
+			}
 		}
 
-		$this->assertHasConnectionHandle();
+		// Avoid fatals if close() was called
+		$this->assertOpen();
 
 		$this->runOnTransactionPreCommitCallbacks();
 
@@ -4031,18 +3967,18 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 	final public function rollback( $fname = __METHOD__, $flush = '' ) {
 		$trxActive = $this->trxLevel;
 
-		if ( $flush !== self::FLUSHING_INTERNAL
-			&& $flush !== self::FLUSHING_ALL_PEERS
-			&& $this->getFlag( self::DBO_TRX )
-		) {
-			throw new DBUnexpectedError(
-				$this,
-				"$fname: Expected mass rollback of all peer transactions (DBO_TRX set)."
-			);
+		if ( $flush !== self::FLUSHING_INTERNAL && $flush !== self::FLUSHING_ALL_PEERS ) {
+			if ( $this->getFlag( self::DBO_TRX ) ) {
+				throw new DBUnexpectedError(
+					$this,
+					"$fname: Expected mass rollback of all peer transactions (DBO_TRX set)."
+				);
+			}
 		}
 
 		if ( $trxActive ) {
-			$this->assertHasConnectionHandle();
+			// Avoid fatals if close() was called
+			$this->assertOpen();
 
 			$this->doRollback( $fname );
 			$this->trxStatus = self::STATUS_TRX_NONE;
@@ -4211,9 +4147,6 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 		$this->closeConnection();
 		$this->opened = false;
 		$this->conn = false;
-
-		$this->handleSessionLossPreconnect();
-
 		try {
 			$this->open(
 				$this->server,
@@ -4242,7 +4175,7 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 			);
 		}
 
-		$this->handleSessionLossPostconnect();
+		$this->handleSessionLoss();
 
 		return $ok;
 	}
@@ -4352,7 +4285,7 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 		$fp = fopen( $filename, 'r' );
 		Wikimedia\restoreWarnings();
 
-		if ( $fp === false ) {
+		if ( false === $fp ) {
 			throw new RuntimeException( "Could not open \"{$filename}\".\n" );
 		}
 
@@ -4403,7 +4336,7 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 				continue;
 			}
 
-			if ( $line[0] == '-' && $line[1] == '-' ) {
+			if ( '-' == $line[0] && '-' == $line[1] ) {
 				continue;
 			}
 
@@ -4433,7 +4366,7 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 						$resultCallback( $res, $this );
 					}
 
-					if ( $res === false ) {
+					if ( false === $res ) {
 						$err = $this->lastError();
 
 						return "Query \"{$cmd}\" failed with error code \"$err\".\n";
@@ -4711,15 +4644,6 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 	}
 
 	/**
-	 * @param int $field
-	 * @param int $flags
-	 * @return bool
-	 */
-	protected function hasFlags( $field, $flags ) {
-		return ( ( $field & $flags ) === $flags );
-	}
-
-	/**
 	 * Get the underlying binding connection handle
 	 *
 	 * Makes sure the connection resource is set (disconnects and ping() failure can unset it).
@@ -4764,7 +4688,7 @@ abstract class Database implements IDatabase, IMaintainableDatabase, LoggerAware
 			$this->opened = false;
 			$this->conn = false;
 			$this->trxEndCallbacks = []; // don't copy
-			$this->handleSessionLossPreconnect(); // no trx or locks anymore
+			$this->handleSessionLoss(); // no trx or locks anymore
 			$this->open(
 				$this->server,
 				$this->user,

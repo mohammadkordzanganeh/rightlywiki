@@ -55,7 +55,7 @@
 			hovzer.$.append( this.$container );
 			hovzer.update();
 
-			$( '.mw-debug-panelink' ).on( 'click', this.switchPane );
+			$( '.mw-debug-panelink' ).click( this.switchPane );
 		},
 
 		/**
@@ -90,8 +90,6 @@
 
 			// Hide the current pane
 			if ( requestedPaneId === currentPaneId ) {
-				// FIXME: Use CSS transition
-				// eslint-disable-next-line no-jquery/no-slide
 				$currentPane.slideUp( updateHov );
 				debug.$container.data( 'currentPane', null );
 				return;
@@ -100,8 +98,6 @@
 			debug.$container.data( 'currentPane', requestedPaneId );
 
 			if ( currentPaneId === undefined || currentPaneId === null ) {
-				// FIXME: Use CSS transition
-				// eslint-disable-next-line no-jquery/no-slide
 				$requestedPane.slideDown( updateHov );
 			} else {
 				$currentPane.hide();
@@ -116,15 +112,9 @@
 		buildHtml: function () {
 			var $container, $bits, panes, id, gitInfo;
 
-			$container = $( '<div>' )
-				.attr( {
-					id: 'mw-debug-toolbar',
-					lang: 'en',
-					dir: 'ltr'
-				} )
-				.addClass( 'mw-debug' );
+			$container = $( '<div id="mw-debug-toolbar" class="mw-debug" lang="en" dir="ltr"></div>' );
 
-			$bits = $( '<div>' ).addClass( 'mw-debug-bits' );
+			$bits = $( '<div class="mw-debug-bits"></div>' );
 
 			/**
 			 * Returns a jQuery element for a debug-bit div
@@ -199,7 +189,7 @@
 			}
 
 			bitDiv( 'mwversion' )
-				.append( $( '<a>' ).attr( 'href', '//www.mediawiki.org/' ).text( 'MediaWiki' ) )
+				.append( $( '<a href="//www.mediawiki.org/">MediaWiki</a>' ) )
 				.append( document.createTextNode( ': ' + this.data.mwVersion + ' ' ) )
 				.append( gitInfo );
 
@@ -208,10 +198,10 @@
 			}
 
 			bitDiv( 'phpversion' )
-				.append( this.data.phpEngine === 'HHVM' ?
-					$( '<a>' ).attr( 'href', 'https://hhvm.com/' ).text( 'HHVM' ) :
-					$( '<a>' ).attr( 'href', 'https://php.net/' ).text( 'PHP' )
-				)
+				.append( $( this.data.phpEngine === 'HHVM' ?
+					'<a href="https://hhvm.com/">HHVM</a>' :
+					'<a href="https://php.net/">PHP</a>'
+				) )
 				.append( ': ' + this.data.phpVersion );
 
 			bitDiv( 'time' )
@@ -251,7 +241,7 @@
 		buildConsoleTable: function () {
 			var $table, entryTypeText, i, length, entry;
 
-			$table = $( '<table>' ).attr( 'id', 'mw-debug-console' );
+			$table = $( '<table id="mw-debug-console">' );
 
 			$( '<colgroup>' ).css( 'width', /* padding = */ 20 + ( 10 * /* fontSize = */ 11 ) ).appendTo( $table );
 			$( '<colgroup>' ).appendTo( $table );
@@ -295,13 +285,13 @@
 		buildQueryTable: function () {
 			var $table, i, length, query;
 
-			$table = $( '<table>' ).attr( 'id', 'mw-debug-querylist' );
+			$table = $( '<table id="mw-debug-querylist"></table>' );
 
 			$( '<tr>' )
-				.append( $( '<th>' ).attr( 'scope', 'col' ).text( '#' ).css( 'width', '4em' ) )
-				.append( $( '<th>' ).attr( 'scope', 'col' ).text( 'SQL' ) )
-				.append( $( '<th>' ).attr( 'scope', 'col' ).text( 'Time' ).css( 'width', '8em' ) )
-				.append( $( '<th>' ).attr( 'scope', 'col' ).text( 'Call' ).css( 'width', '18em' ) )
+				.append( $( '<th>#</th>' ).css( 'width', '4em' ) )
+				.append( $( '<th>SQL</th>' ) )
+				.append( $( '<th>Time</th>' ).css( 'width', '8em' ) )
+				.append( $( '<th>Call</th>' ).css( 'width', '18em' ) )
 				.appendTo( $table );
 
 			for ( i = 0, length = this.data.queries.length; i < length; i += 1 ) {
@@ -310,8 +300,8 @@
 				$( '<tr>' )
 					.append( $( '<td>' ).text( i + 1 ) )
 					.append( $( '<td>' ).text( query.sql ) )
-					.append( $( '<td>' ).text( ( query.time * 1000 ).toFixed( 4 ) + 'ms' ).addClass( 'stats' ) )
-					.append( $( '<td>' ).text( query.function ) )
+					.append( $( '<td class="stats">' ).text( ( query.time * 1000 ).toFixed( 4 ) + 'ms' ) )
+					.append( $( '<td>' ).text( query[ 'function' ] ) )
 					.appendTo( $table );
 			}
 
@@ -352,12 +342,12 @@
 				$table = $( '<table>' ).appendTo( $unit );
 
 				$( '<tr>' )
-					.html( '<th scope="col">Key</th><th scope="col">Value</th>' )
+					.html( '<th>Key</th><th>Value</th>' )
 					.appendTo( $table );
 
 				for ( key in data ) {
 					$( '<tr>' )
-						.append( $( '<th>' ).attr( 'scope', 'row' ).text( key ) )
+						.append( $( '<th>' ).text( key ) )
 						.append( $( '<td>' ).text( data[ key ] ) )
 						.appendTo( $table );
 				}
@@ -385,7 +375,7 @@
 				file = this.data.includes[ i ];
 				$( '<tr>' )
 					.append( $( '<td>' ).text( file.name ) )
-					.append( $( '<td>' ).text( file.size ).addClass( 'nr' ) )
+					.append( $( '<td class="nr">' ).text( file.size ) )
 					.appendTo( $table );
 			}
 

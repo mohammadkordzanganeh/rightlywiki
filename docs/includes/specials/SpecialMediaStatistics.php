@@ -102,7 +102,7 @@ class MediaStatisticsPage extends QueryPage {
 	 *
 	 * It's important that img_media_type come first, otherwise the
 	 * tables will be fragmented.
-	 * @return array Fields to sort by
+	 * @return Array Fields to sort by
 	 */
 	function getOrderFields() {
 		return [ 'img_media_type', 'count(*)', 'img_major_mime', 'img_minor_mime' ];
@@ -143,7 +143,7 @@ class MediaStatisticsPage extends QueryPage {
 			$this->outputTableEnd();
 			// add total size of all files
 			$this->outputMediaType( 'total' );
-			$this->getOutput()->addWikiTextAsInterface(
+			$this->getOutput()->addWikiText(
 				$this->msg( 'mediastatistics-allbytes' )
 					->numParams( $this->totalSize )
 					->sizeParams( $this->totalSize )
@@ -156,11 +156,8 @@ class MediaStatisticsPage extends QueryPage {
 	 * Output closing </table>
 	 */
 	protected function outputTableEnd() {
-		$this->getOutput()->addHTML(
-			Html::closeElement( 'tbody' ) .
-			Html::closeElement( 'table' )
-		);
-		$this->getOutput()->addWikiTextAsInterface(
+		$this->getOutput()->addHTML( Html::closeElement( 'table' ) );
+		$this->getOutput()->addWikiText(
 				$this->msg( 'mediastatistics-bytespertype' )
 					->numParams( $this->totalPerType )
 					->sizeParams( $this->totalPerType )
@@ -217,7 +214,7 @@ class MediaStatisticsPage extends QueryPage {
 
 	/**
 	 * @param float $decimal A decimal percentage (ie for 12.3%, this would be 0.123)
-	 * @return string The percentage formatted so that 3 significant digits are shown.
+	 * @return String The percentage formatted so that 3 significant digits are shown.
 	 */
 	protected function makePercentPretty( $decimal ) {
 		$decimal *= 100;
@@ -261,10 +258,7 @@ class MediaStatisticsPage extends QueryPage {
 	 * @param string $mediaType
 	 */
 	protected function outputTableStart( $mediaType ) {
-		$out = $this->getOutput();
-		$out->addModuleStyles( 'jquery.tablesorter.styles' );
-		$out->addModules( 'jquery.tablesorter' );
-		$out->addHTML(
+		$this->getOutput()->addHTML(
 			Html::openElement(
 				'table',
 				[ 'class' => [
@@ -273,16 +267,15 @@ class MediaStatisticsPage extends QueryPage {
 					'sortable',
 					'wikitable'
 				] ]
-			) .
-			Html::rawElement( 'thead', [], $this->getTableHeaderRow() ) .
-			Html::openElement( 'tbody' )
+			)
 		);
+		$this->getOutput()->addHTML( $this->getTableHeaderRow() );
 	}
 
 	/**
 	 * Get (not output) the header row for the table
 	 *
-	 * @return string The header row of the table
+	 * @return String the header row of the able
 	 */
 	protected function getTableHeaderRow() {
 		$headers = [ 'mimetype', 'extensions', 'count', 'totalbytes' ];

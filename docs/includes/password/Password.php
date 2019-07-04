@@ -20,8 +20,6 @@
  * @file
  */
 
-use Wikimedia\Assert\Assert;
-
 /**
  * Represents a password hash for use in authentication
  *
@@ -33,6 +31,14 @@ use Wikimedia\Assert\Assert;
  * to be fulfilled:
  *  * If Password::toString() is called on an object, and the result is passed back in
  *    to PasswordFactory::newFromCiphertext(), the result will be identical to the original.
+ *  * The string representations of two Password objects are equal only if
+ *    the original plaintext passwords match. In other words, if the toString() result of
+ *    two objects match, the passwords are the same, and the user will be logged in.
+ *    Since the string representation of a hash includes its type name (@see Password::toString),
+ *    this property is preserved across all classes that inherit Password.
+ *    If a hashing scheme does not fulfill this expectation, it must make sure to override the
+ *    Password::equals() function and use custom comparison logic. However, this is not
+ *    recommended unless absolutely required by the hashing mechanism.
  * With these two points in mind, when creating a new Password sub-class, there are some functions
  * you have to override (because they are abstract) and others that you may want to override.
  *
@@ -48,9 +54,8 @@ use Wikimedia\Assert\Assert;
  *  * Password::toString(), which can be useful if the hash was changed in the constructor and
  *    needs to be re-assembled before being returned as a string. This function is expected to add
  *    the type back on to the hash, so make sure to do that if you override the function.
- *  * Password::verify() - This function checks if $this->hash was generated with the given
- *    password. The default is to just hash the password and do a timing-safe string comparison with
- *    $this->hash.
+ *  * Password::equals() - This function compares two Password objects to see if they are equal.
+ *    The default is to just do a timing-safe string comparison on the $this->hash values.
  *
  * After creating a new password hash type, it can be registered using the static
  * Password::register() method. The default type is set using the Password::setDefaultType() type.
@@ -94,11 +99,8 @@ abstract class Password {
 	 * @param string|null $hash The raw hash, including the type
 	 */
 	final public function __construct( PasswordFactory $factory, array $config, $hash = null ) {
-		if ( !$this->isSupported() ) {
-			throw new Exception( 'PHP support not found for ' . get_class( $this ) );
-		}
 		if ( !isset( $config['type'] ) ) {
-			throw new Exception( 'Password configuration must contain a type name.' );
+			throw new MWException( 'Password configuration must contain a type name.' );
 		}
 		$this->config = $config;
 		$this->factory = $factory;
@@ -119,15 +121,6 @@ abstract class Password {
 	 */
 	final public function getType() {
 		return $this->config['type'];
-	}
-
-	/**
-	 * Whether current password type is supported on this system.
-	 *
-	 * @return bool
-	 */
-	protected function isSupported() {
-		return true;
 	}
 
 	/**
@@ -154,34 +147,19 @@ abstract class Password {
 	 * Password::toString() for each object. This can be overridden to do
 	 * custom comparison, but it is not recommended unless necessary.
 	 *
-	 * @deprecated since 1.33, use verify()
-	 *
 	 * @param Password|string $other The other password
 	 * @return bool True if equal, false otherwise
 	 */
 	public function equals( $other ) {
-		if ( is_string( $other ) ) {
-			return $this->verify( $other );
+		if ( !$other instanceof self ) {
+			// No need to use the factory because we're definitely making
+			// an object of the same type.
+			$obj = clone $this;
+			$obj->crypt( $other );
+			$other = $obj;
 		}
 
 		return hash_equals( $this->toString(), $other->toString() );
-	}
-
-	/**
-	 * Checks whether the given password matches the hash stored in this object.
-	 *
-	 * @param string $password Password to check
-	 * @return bool
-	 */
-	public function verify( $password ) {
-		Assert::parameterType( 'string', $password, '$password' );
-
-		// No need to use the factory because we're definitely making
-		// an object of the same type.
-		$obj = clone $this;
-		$obj->crypt( $password );
-
-		return hash_equals( $this->toString(), $obj->toString() );
 	}
 
 	/**

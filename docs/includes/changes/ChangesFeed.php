@@ -21,7 +21,6 @@
  */
 
 use Wikimedia\Rdbms\ResultWrapper;
-use MediaWiki\MediaWikiServices;
 
 /**
  * Feed to Special:RecentChanges and Special:RecentChangesLiked
@@ -83,7 +82,7 @@ class ChangesFeed {
 			return null;
 		}
 
-		$cache = MediaWikiServices::getInstance()->getMainWANObjectCache();
+		$cache = ObjectCache::getMainWANInstance();
 		$optionsHash = md5( serialize( $opts->getAllValues() ) ) . $wgRenderHashAppend;
 		$timekey = $cache->makeKey(
 			$this->type, $this->format, $wgLang->getCode(), $optionsHash, 'timestamp' );
@@ -120,7 +119,7 @@ class ChangesFeed {
 	 * @param string $key Memcached key of the content
 	 */
 	public function saveToCache( $feed, $timekey, $key ) {
-		$cache = MediaWikiServices::getInstance()->getMainWANObjectCache();
+		$cache = ObjectCache::getMainWANInstance();
 		$cache->set( $key, $feed, $cache::TTL_DAY );
 		$cache->set( $timekey, wfTimestamp( TS_MW ), $cache::TTL_DAY );
 	}
@@ -136,7 +135,7 @@ class ChangesFeed {
 	public function loadFromCache( $lastmod, $timekey, $key ) {
 		global $wgFeedCacheTimeout, $wgOut;
 
-		$cache = MediaWikiServices::getInstance()->getMainWANObjectCache();
+		$cache = ObjectCache::getMainWANInstance();
 		$feedLastmod = $cache->get( $timekey );
 
 		if ( ( $wgFeedCacheTimeout > 0 ) && $feedLastmod ) {
@@ -208,7 +207,7 @@ class ChangesFeed {
 
 		foreach ( $sorted as $obj ) {
 			$title = Title::makeTitle( $obj->rc_namespace, $obj->rc_title );
-			$talkpage = MWNamespace::hasTalkNamespace( $obj->rc_namespace )
+			$talkpage = MWNamespace::canTalk( $obj->rc_namespace )
 				? $title->getTalkPage()->getFullURL()
 				: '';
 

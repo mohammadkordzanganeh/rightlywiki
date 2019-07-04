@@ -20,7 +20,6 @@
  * @file
  * @ingroup Feed
  */
-use MediaWiki\MediaWikiServices;
 
 /**
  * Helper functions for feeds
@@ -42,7 +41,7 @@ class FeedUtils {
 		$purge = $wgRequest->getVal( 'action' ) === 'purge';
 		// Allow users with 'purge' right to clear feed caches
 		if ( $purge && $wgUser->isAllowed( 'purge' ) ) {
-			$cache = MediaWikiServices::getInstance()->getMainWANObjectCache();
+			$cache = ObjectCache::getMainWANInstance();
 			$cache->delete( $timekey, 1 );
 			$cache->delete( $key, 1 );
 		}
@@ -174,7 +173,7 @@ class FeedUtils {
 
 			if ( $newContent instanceof TextContent ) {
 				// only textual content has a "source view".
-				$text = $newContent->getText();
+				$text = $newContent->getNativeData();
 
 				if ( $wgFeedDiffCutoff <= 0 || strlen( $text ) > $wgFeedDiffCutoff ) {
 					$html = null;

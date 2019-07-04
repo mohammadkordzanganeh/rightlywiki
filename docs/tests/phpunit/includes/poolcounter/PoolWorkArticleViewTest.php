@@ -118,7 +118,6 @@ class PoolWorkArticleViewTest extends MediaWikiTestCase {
 			}
 		];
 	}
-
 	/**
 	 * @dataProvider provideMagicWords
 	 */

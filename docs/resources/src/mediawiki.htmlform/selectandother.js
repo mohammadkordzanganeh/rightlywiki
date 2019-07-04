@@ -41,7 +41,7 @@
 					// cache the current selection to avoid expensive lookup
 					currentValReasonList = $reasonList.val();
 
-					$reasonList.on( 'change', function () {
+					$reasonList.change( function () {
 						currentValReasonList = $reasonList.val();
 					} );
 

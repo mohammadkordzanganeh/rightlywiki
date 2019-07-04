@@ -30,7 +30,7 @@ class McrUndoAction extends FormAction {
 
 	protected $undo = 0, $undoafter = 0, $cur = 0;
 
-	/** @var RevisionRecord|null */
+	/** @param RevisionRecord|null */
 	protected $curRev = null;
 
 	public function getName() {
@@ -283,22 +283,16 @@ class McrUndoAction extends FormAction {
 			$previewHTML = '';
 		}
 
-		$previewhead = Html::rawElement(
-			'div', [ 'class' => 'previewnote' ],
-			Html::element(
-				'h2', [ 'id' => 'mw-previewheader' ],
-				$this->context->msg( 'preview' )->text()
-			) .
-			$out->parseAsInterface( $note ) .
-			"<hr />"
-		);
+		$previewhead = "<div class='previewnote'>\n" .
+			'<h2 id="mw-previewheader">' . $this->context->msg( 'preview' )->escaped() . "</h2>" .
+			$out->parse( $note, true, /* interface */true ) . "<hr /></div>\n";
 
 		$pageViewLang = $this->getTitle()->getPageViewLanguage();
 		$attribs = [ 'lang' => $pageViewLang->getHtmlCode(), 'dir' => $pageViewLang->getDir(),
 			'class' => 'mw-content-' . $pageViewLang->getDir() ];
 		$previewHTML = Html::rawElement( 'div', $attribs, $previewHTML );
 
-		$out->addHTML( $previewhead . $previewHTML );
+		$out->addHtml( $previewhead . $previewHTML );
 	}
 
 	public function onSubmit( $data ) {
@@ -358,6 +352,8 @@ class McrUndoAction extends FormAction {
 
 	protected function getFormFields() {
 		$request = $this->getRequest();
+		$config = $this->context->getConfig();
+		$oldCommentSchema = $config->get( 'CommentTableSchemaMigrationStage' ) === MIGRATION_OLD;
 		$ret = [
 			'diff' => [
 				'type' => 'info',
@@ -373,7 +369,7 @@ class McrUndoAction extends FormAction {
 				'name' => 'wpSummary',
 				'cssclass' => 'mw-summary',
 				'label-message' => 'summary',
-				'maxlength' => CommentStore::COMMENT_CHARACTER_LIMIT,
+				'maxlength' => $oldCommentSchema ? 200 : CommentStore::COMMENT_CHARACTER_LIMIT,
 				'value' => $request->getVal( 'wpSummary', '' ),
 				'size' => 60,
 				'spellcheck' => 'true',

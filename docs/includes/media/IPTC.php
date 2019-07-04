@@ -222,7 +222,11 @@ class IPTC {
 				case '2#055':
 					// Date created (not date digitized).
 					// Maps to exif DateTimeOriginal
-					$time = $parsed['2#060'] ?? [];
+					if ( isset( $parsed['2#060'] ) ) {
+						$time = $parsed['2#060'];
+					} else {
+						$time = [];
+					}
 					$timestamp = self::timeHelper( $val, $time, $c );
 					if ( $timestamp ) {
 						$data['DateTimeOriginal'] = $timestamp;
@@ -232,7 +236,11 @@ class IPTC {
 				case '2#062':
 					// Date converted to digital representation.
 					// Maps to exif DateTimeDigitized
-					$time = $parsed['2#063'] ?? [];
+					if ( isset( $parsed['2#063'] ) ) {
+						$time = $parsed['2#063'];
+					} else {
+						$time = [];
+					}
 					$timestamp = self::timeHelper( $val, $time, $c );
 					if ( $timestamp ) {
 						$data['DateTimeDigitized'] = $timestamp;
@@ -241,7 +249,11 @@ class IPTC {
 
 				case '2#030':
 					// Date released.
-					$time = $parsed['2#035'] ?? [];
+					if ( isset( $parsed['2#035'] ) ) {
+						$time = $parsed['2#035'];
+					} else {
+						$time = [];
+					}
 					$timestamp = self::timeHelper( $val, $time, $c );
 					if ( $timestamp ) {
 						$data['DateTimeReleased'] = $timestamp;
@@ -250,7 +262,11 @@ class IPTC {
 
 				case '2#037':
 					// Date expires.
-					$time = $parsed['2#038'] ?? [];
+					if ( isset( $parsed['2#038'] ) ) {
+						$time = $parsed['2#038'];
+					} else {
+						$time = [];
+					}
 					$timestamp = self::timeHelper( $val, $time, $c );
 					if ( $timestamp ) {
 						$data['DateTimeExpires'] = $timestamp;

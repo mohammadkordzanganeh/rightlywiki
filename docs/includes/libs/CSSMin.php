@@ -202,7 +202,11 @@ class CSSMin {
 	public static function getMimeType( $file ) {
 		// Infer the MIME-type from the file extension
 		$ext = strtolower( pathinfo( $file, PATHINFO_EXTENSION ) );
-		return self::$mimeTypes[$ext] ?? mime_content_type( realpath( $file ) );
+		if ( isset( self::$mimeTypes[$ext] ) ) {
+			return self::$mimeTypes[$ext];
+		}
+
+		return mime_content_type( realpath( $file ) );
 	}
 
 	/**

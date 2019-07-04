@@ -290,7 +290,7 @@ class Exif {
 			$this->byteOrder = 'BE'; // BE seems about twice as popular as LE in jpg's.
 		}
 
-		$this->debugFile( __FUNCTION__, true );
+		$this->debugFile( $this->basename, __FUNCTION__, true );
 		if ( function_exists( 'exif_read_data' ) ) {
 			Wikimedia\suppressWarnings();
 			$data = exif_read_data( $this->file, 0, true );
@@ -455,7 +455,8 @@ class Exif {
 			$val = substr( $this->mFilteredExifData[$prop], 8 );
 
 			switch ( $charCode ) {
-				case "JIS\x00\x00\x00\x00\x00":
+				case "\x4A\x49\x53\x00\x00\x00\x00\x00":
+					// JIS
 					$charset = "Shift-JIS";
 					break;
 				case "UNICODE\x00":

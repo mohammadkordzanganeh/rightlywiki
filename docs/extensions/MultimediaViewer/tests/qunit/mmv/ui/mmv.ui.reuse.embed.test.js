@@ -15,7 +15,7 @@
  * along with MultimediaViewer.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-( function () {
+( function ( mw, $ ) {
 	var $qf = $( '#qunit-fixture' );
 
 	QUnit.module( 'mmv.ui.reuse.Embed', QUnit.newMwEnvironment() );
@@ -122,11 +122,7 @@
 			imageInfo = { url: url },
 			repoInfo = {},
 			caption = '-',
-			info = {
-				imageInfo: imageInfo,
-				repoInfo: repoInfo,
-				caption: caption
-			},
+			info = new mw.mmv.model.EmbedFileInfo( imageInfo, repoInfo, caption ),
 			width = 10,
 			height = 20;
 
@@ -172,11 +168,7 @@
 			imageInfo = {},
 			repoInfo = {},
 			caption = '-',
-			info = {
-				imageInfo: imageInfo,
-				repoInfo: repoInfo,
-				caption: caption
-			},
+			info = new mw.mmv.model.EmbedFileInfo( imageInfo, repoInfo, caption ),
 			width = 10;
 
 		embed.set( imageInfo, repoInfo, caption );
@@ -198,7 +190,7 @@
 						small: { width: 300, height: 225 },
 						medium: { width: 400, height: 300 },
 						large: { width: 500, height: 375 },
-						default: { width: null, height: null }
+						'default': { width: null, height: null }
 					}
 				},
 
@@ -206,7 +198,7 @@
 				{
 					width: 201, height: 1536,
 					expected: {
-						default: { width: null, height: null }
+						'default': { width: null, height: null }
 					}
 				},
 
@@ -214,7 +206,7 @@
 				{
 					width: 15, height: 20,
 					expected: {
-						default: { width: null, height: null }
+						'default': { width: null, height: null }
 					}
 				}
 			],
@@ -231,11 +223,7 @@
 			title = mw.Title.newFromText( 'File:Foobar.jpg' ),
 			src = 'https://upload.wikimedia.org/wikipedia/commons/3/3a/Foobar.jpg',
 			url = 'https://commons.wikimedia.org/wiki/File:Foobar.jpg',
-			embedFileInfo = {
-				imageInfo: title,
-				repoInfo: src,
-				caption: url
-			},
+			embedFileInfo = new mw.mmv.model.EmbedFileInfo( title, src, url ),
 			calledSelect = false,
 			width = 15,
 			height = 20;
@@ -295,11 +283,7 @@
 			title = mw.Title.newFromText( 'File:Foobar.jpg' ),
 			src = 'https://upload.wikimedia.org/wikipedia/commons/3/3a/Foobar.jpg',
 			url = 'https://commons.wikimedia.org/wiki/File:Foobar.jpg',
-			embedFileInfo = {
-				imageInfo: title,
-				repoInfo: src,
-				caption: url
-			},
+			embedFileInfo = new mw.mmv.model.EmbedFileInfo( title, src, url ),
 			width = 15,
 			height = 20;
 
@@ -411,4 +395,4 @@
 		mw.user.isAnon = oldUserIsAnon;
 	} );
 
-}() );
+}( mediaWiki, jQuery ) );

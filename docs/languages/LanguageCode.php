@@ -163,7 +163,10 @@ class LanguageCode {
 	 * @since 1.30
 	 */
 	public static function replaceDeprecatedCodes( $code ) {
-		return self::$deprecatedLanguageCodeMapping[$code] ?? $code;
+		if ( isset( self::$deprecatedLanguageCodeMapping[$code] ) ) {
+			return self::$deprecatedLanguageCodeMapping[$code];
+		}
+		return $code;
 	}
 
 	/**

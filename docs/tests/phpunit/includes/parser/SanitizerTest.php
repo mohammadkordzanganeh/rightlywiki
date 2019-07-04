@@ -100,8 +100,6 @@ class SanitizerTest extends MediaWikiTestCase {
 	 * @param bool $escaped Whether sanitizer let the tag in or escape it (ie: '&lt;video&gt;')
 	 */
 	public function testRemovehtmltagsOnHtml5Tags( $tag, $escaped ) {
-		$this->hideDeprecated( 'disabling tidy' );
-		$this->hideDeprecated( 'MWTidy::setInstance' );
 		MWTidy::setInstance( false );
 
 		if ( $escaped ) {
@@ -164,8 +162,6 @@ class SanitizerTest extends MediaWikiTestCase {
 	 * @covers Sanitizer::removeHTMLtags
 	 */
 	public function testRemoveHTMLtags( $input, $output, $msg = null ) {
-		$this->hideDeprecated( 'disabling tidy' );
-		$this->hideDeprecated( 'MWTidy::setInstance' );
 		MWTidy::setInstance( false );
 		$this->assertEquals( $output, Sanitizer::removeHTMLtags( $input ), $msg );
 	}
@@ -528,7 +524,6 @@ class SanitizerTest extends MediaWikiTestCase {
 			],
 			[ '1<span class="<?php">2</span>3', '123' ],
 			[ '1<span class="<?">2</span>3', '123' ],
-			[ '<th>1</th><td>2</td>', '1 2' ],
 		];
 	}
 

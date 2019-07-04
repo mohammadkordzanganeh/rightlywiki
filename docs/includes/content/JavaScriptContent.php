@@ -60,7 +60,7 @@ class JavaScriptContent extends TextContent {
 		// @todo Make pre-save transformation optional for script pages
 		// See T34858
 
-		$text = $this->getText();
+		$text = $this->getNativeData();
 		$pst = $wgParser->preSaveTransform( $text, $title, $user, $popts );
 
 		return new static( $pst );
@@ -72,7 +72,7 @@ class JavaScriptContent extends TextContent {
 	protected function getHtml() {
 		$html = "";
 		$html .= "<pre class=\"mw-code mw-js\" dir=\"ltr\">\n";
-		$html .= htmlspecialchars( $this->getText() );
+		$html .= htmlspecialchars( $this->getNativeData() );
 		$html .= "\n</pre>\n";
 
 		return $html;
@@ -101,7 +101,7 @@ class JavaScriptContent extends TextContent {
 			return $this->redirectTarget;
 		}
 		$this->redirectTarget = null;
-		$text = $this->getText();
+		$text = $this->getNativeData();
 		if ( strpos( $text, '/* #REDIRECT */' ) === 0 ) {
 			// Extract the title from the url
 			preg_match( '/title=(.*?)\\\\u0026action=raw/', $text, $matches );

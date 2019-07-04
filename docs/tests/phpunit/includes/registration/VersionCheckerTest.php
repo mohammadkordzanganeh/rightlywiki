@@ -101,21 +101,7 @@ class VersionCheckerTest extends PHPUnit\Framework\TestCase {
 	 * @dataProvider provideType
 	 */
 	public function testType( $given, $expected ) {
-		$checker = new VersionChecker(
-			'1.0.0',
-			'7.0.0',
-			[ 'phpLoadedExtension' ],
-			[
-				'presentAbility' => true,
-				'presentAbilityWithMessage' => true,
-				'missingAbility' => false,
-				'missingAbilityWithMessage' => false,
-			],
-			[
-				'presentAbilityWithMessage' => 'Present.',
-				'missingAbilityWithMessage' => 'Missing.',
-			]
-		);
+		$checker = new VersionChecker( '1.0.0', '7.0.0', [ 'phpLoadedExtension' ] );
 		$checker->setLoadedExtensionsAndSkins( [
 				'FakeDependency' => [
 					'version' => '1.0.0',
@@ -232,83 +218,6 @@ class VersionCheckerTest extends PHPUnit\Framework\TestCase {
 					],
 				],
 			],
-			[
-				[
-					'platform' => [
-						'ability-presentAbility' => true,
-					],
-				],
-				[],
-			],
-			[
-				[
-					'platform' => [
-						'ability-presentAbilityWithMessage' => true,
-					],
-				],
-				[],
-			],
-			[
-				[
-					'platform' => [
-						'ability-presentAbility' => false,
-					],
-				],
-				[],
-			],
-			[
-				[
-					'platform' => [
-						'ability-presentAbilityWithMessage' => false,
-					],
-				],
-				[],
-			],
-			[
-				[
-					'platform' => [
-						'ability-missingAbility' => true,
-					],
-				],
-				[
-					[
-						'missing' => 'missingAbility',
-						'type' => 'missing-ability',
-						'msg' => 'FakeExtension requires "missingAbility" ability',
-					],
-				],
-			],
-			[
-				[
-					'platform' => [
-						'ability-missingAbilityWithMessage' => true,
-					],
-				],
-				[
-					[
-						'missing' => 'missingAbilityWithMessage',
-						'type' => 'missing-ability',
-						// phpcs:ignore Generic.Files.LineLength.TooLong
-						'msg' => 'FakeExtension requires "missingAbilityWithMessage" ability: Missing.',
-					],
-				],
-			],
-			[
-				[
-					'platform' => [
-						'ability-missingAbility' => false,
-					],
-				],
-				[],
-			],
-			[
-				[
-					'platform' => [
-						'ability-missingAbilityWithMessage' => false,
-					],
-				],
-				[],
-			],
 		];
 	}
 
@@ -376,26 +285,6 @@ class VersionCheckerTest extends PHPUnit\Framework\TestCase {
 			[
 				[
 					'FakeExtension' => [
-						'platform' => [
-							'ability-invalidAbility' => true,
-						],
-					],
-				],
-				'ability-invalidAbility',
-			],
-			[
-				[
-					'FakeExtension' => [
-						'platform' => [
-							'presentAbility' => true,
-						],
-					],
-				],
-				'presentAbility',
-			],
-			[
-				[
-					'FakeExtension' => [
 						'undefinedDependencyType' => '*',
 					],
 				],
@@ -419,15 +308,7 @@ class VersionCheckerTest extends PHPUnit\Framework\TestCase {
 	 * @dataProvider provideInvalidDependency
 	 */
 	public function testInvalidDependency( $depencency, $type ) {
-		$checker = new VersionChecker(
-			'1.0.0',
-			'7.0.0',
-			[ 'phpLoadedExtension' ],
-			[
-				'presentAbility' => true,
-				'missingAbility' => false,
-			]
-		);
+		$checker = new VersionChecker( '1.0.0', '7.0.0', [ 'phpLoadedExtension' ] );
 		$this->setExpectedException(
 			UnexpectedValueException::class,
 			"Dependency type $type unknown in FakeExtension"
@@ -449,31 +330,4 @@ class VersionCheckerTest extends PHPUnit\Framework\TestCase {
 			],
 		] );
 	}
-
-	/**
-	 * @dataProvider provideInvalidAbilityType
-	 */
-	public function testInvalidAbilityType( $value ) {
-		$checker = new VersionChecker( '1.0.0', '7.0.0', [], [ 'presentAbility' => true ] );
-		$this->setExpectedException(
-			UnexpectedValueException::class,
-			'Only booleans are allowed to to indicate the presence of abilities in FakeExtension'
-		);
-		$checker->checkArray( [
-			'FakeExtension' => [
-				'platform' => [
-					'ability-presentAbility' => $value,
-				],
-			],
-		] );
-	}
-
-	public function provideInvalidAbilityType() {
-		return [
-			[ null ],
-			[ 1 ],
-			[ '1' ],
-		];
-	}
-
 }

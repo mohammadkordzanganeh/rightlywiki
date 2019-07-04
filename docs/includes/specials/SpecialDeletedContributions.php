@@ -21,6 +21,8 @@
  * @ingroup SpecialPage
  */
 
+use MediaWiki\MediaWikiServices;
+
 /**
  * Implements Special:DeletedContributions to display archived revisions
  * @ingroup SpecialPage
@@ -43,6 +45,8 @@ class DeletedContributionsPage extends SpecialPage {
 		$this->setHeaders();
 		$this->outputHeader();
 		$this->checkPermissions();
+
+		$user = $this->getUser();
 
 		$out = $this->getOutput();
 		$out->setPageTitle( $this->msg( 'deletedcontributions-title' ) );
@@ -97,7 +101,8 @@ class DeletedContributionsPage extends SpecialPage {
 		}
 
 		# Show a message about replica DB lag, if applicable
-		$lag = $pager->getDatabase()->getSessionLagStatus()['lag'];
+		$lb = MediaWikiServices::getInstance()->getDBLoadBalancer();
+		$lag = $lb->safeGetLag( $pager->getDatabase() );
 		if ( $lag > 0 ) {
 			$out->showLagWarning( $lag );
 		}
@@ -141,18 +146,15 @@ class DeletedContributionsPage extends SpecialPage {
 		if ( $talk ) {
 			$tools = SpecialContributions::getUserLinks( $this, $userObj );
 
-			$contributionsLink = $linkRenderer->makeKnownLink(
+			# Link to contributions
+			$insert['contribs'] = $linkRenderer->makeKnownLink(
 				SpecialPage::getTitleFor( 'Contributions', $nt->getDBkey() ),
 				$this->msg( 'sp-deletedcontributions-contribs' )->text()
 			);
-			if ( isset( $tools['deletedcontribs'] ) ) {
-				// Swap out the deletedcontribs link for our contribs one
-				$tools = wfArrayInsertAfter(
-					$tools, [ 'contribs' => $contributionsLink ], 'deletedcontribs' );
-				unset( $tools['deletedcontribs'] );
-			} else {
-				$tools['contribs'] = $contributionsLink;
-			}
+
+			// Swap out the deletedcontribs link for our contribs one
+			$tools = wfArrayInsertAfter( $tools, $insert, 'deletedcontribs' );
+			unset( $tools['deletedcontribs'] );
 
 			$links = $this->getLanguage()->pipeList( $tools );
 

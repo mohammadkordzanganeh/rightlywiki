@@ -599,9 +599,7 @@ class ApiErrorFormatterTest extends MediaWikiLangTestCase {
 				[
 					'text' => '&#60;b&#62;Something broke!&#60;/b&#62;',
 					'code' => 'internal_api_error_RuntimeException',
-					'data' => [
-						'errorclass' => 'RuntimeException',
-					],
+					'data' => [],
 				]
 			],
 			'Normal exception, wrapped' => [
@@ -634,11 +632,6 @@ class ApiErrorFormatterTest extends MediaWikiLangTestCase {
 		];
 	}
 
-	/**
-	 * @covers ApiErrorFormatter::addMessagesFromStatus
-	 * @covers ApiErrorFormatter::addWarningOrError
-	 * @covers ApiErrorFormatter::formatMessageInternal
-	 */
 	public function testAddMessagesFromStatus_filter() {
 		$result = new ApiResult( 8388608 );
 		$formatter = new ApiErrorFormatter( $result, Language::factory( 'qqx' ), 'plaintext', false );
@@ -671,25 +664,6 @@ class ApiErrorFormatterTest extends MediaWikiLangTestCase {
 			],
 			ApiResult::META_TYPE => 'assoc',
 		], $result->getResultData() );
-	}
-
-	/**
-	 * @dataProvider provideIsValidApiCode
-	 * @covers ApiErrorFormatter::isValidApiCode
-	 * @param string $code
-	 * @param bool $expect
-	 */
-	public function testIsValidApiCode( $code, $expect ) {
-		$this->assertSame( $expect, ApiErrorFormatter::isValidApiCode( $code ) );
-	}
-
-	public static function provideIsValidApiCode() {
-		return [
-			[ 'foo-bar_Baz123', true ],
-			[ 'foo bar', false ],
-			[ 'foo\\bar', false ],
-			[ 'internal_api_error_foo\\bar baz', true ],
-		];
 	}
 
 }

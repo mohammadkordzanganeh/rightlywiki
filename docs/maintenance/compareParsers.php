@@ -144,7 +144,7 @@ class CompareParsers extends DumpIterator {
 			return;
 		}
 
-		$text = strval( $content->getText() );
+		$text = strval( $content->getNativeData() );
 
 		$output1 = $parser1->parse( $text, $title, $this->options );
 		$output2 = $parser2->parse( $text, $title, $this->options );

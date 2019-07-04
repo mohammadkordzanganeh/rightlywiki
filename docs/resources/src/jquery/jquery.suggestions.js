@@ -3,12 +3,12 @@
  *
  * Set options:
  *
- *  $( '#textbox' ).suggestions( { option1: value1, option2: value2 } );
- *  $( '#textbox' ).suggestions( option, value );
+ *		$( '#textbox' ).suggestions( { option1: value1, option2: value2 } );
+ *		$( '#textbox' ).suggestions( option, value );
  *
  * Initialize:
  *
- *  $( '#textbox' ).suggestions();
+ *		$( '#textbox' ).suggestions();
  *
  * Uses jQuery.suggestions singleton internally.
  *
@@ -352,7 +352,7 @@
 									.addClass( 'suggestions-result' )
 									.attr( 'rel', i )
 									.data( 'text', context.config.suggestions[ i ] )
-									.on( 'mousemove', function () {
+									.mousemove( function () {
 										context.data.selectedWithMouse = true;
 										$.suggestions.highlight(
 											context,
@@ -489,7 +489,7 @@
 					context.data.$textbox.val( result.data( 'text' ) );
 					// .val() doesn't call any event handlers, so
 					// let the world know what happened
-					context.data.$textbox.trigger( 'change' );
+					context.data.$textbox.change();
 				}
 				context.data.$textbox.trigger( 'change' );
 			}
@@ -652,10 +652,10 @@
 							// Can't use click() because the container div is hidden when the
 							// textbox loses focus. Instead, listen for a mousedown followed
 							// by a mouseup on the same div.
-							.on( 'mousedown', function ( e ) {
+							.mousedown( function ( e ) {
 								context.data.mouseDownOn = $( e.target ).closest( '.suggestions-results .suggestions-result' );
 							} )
-							.on( 'mouseup', function ( e ) {
+							.mouseup( function ( e ) {
 								var $result = $( e.target ).closest( '.suggestions-results .suggestions-result' ),
 									$other = context.data.mouseDownOn;
 
@@ -673,11 +673,11 @@
 									// when done synchronously in at least Firefox 3.6 (T64858).
 									setTimeout( function () {
 										$.suggestions.hide( context );
-									} );
+									}, 0 );
 								}
 								// Always bring focus to the textbox, as that's probably where the user expects it
 								// if they were just typing.
-								context.data.$textbox.trigger( 'focus' );
+								context.data.$textbox.focus();
 							} )
 					)
 					.append(
@@ -685,10 +685,10 @@
 							// Can't use click() because the container div is hidden when the
 							// textbox loses focus. Instead, listen for a mousedown followed
 							// by a mouseup on the same div.
-							.on( 'mousedown', function ( e ) {
+							.mousedown( function ( e ) {
 								context.data.mouseDownOn = $( e.target ).closest( '.suggestions-special' );
 							} )
-							.on( 'mouseup', function ( e ) {
+							.mouseup( function ( e ) {
 								var $special = $( e.target ).closest( '.suggestions-special' ),
 									$other = context.data.mouseDownOn;
 
@@ -705,13 +705,13 @@
 									// when done synchronously in at least Firefox 3.6 (T64858).
 									setTimeout( function () {
 										$.suggestions.hide( context );
-									} );
+									}, 0 );
 								}
 								// Always bring focus to the textbox, as that's probably where the user expects it
 								// if they were just typing.
-								context.data.$textbox.trigger( 'focus' );
+								context.data.$textbox.focus();
 							} )
-							.on( 'mousemove', function ( e ) {
+							.mousemove( function ( e ) {
 								context.data.selectedWithMouse = true;
 								$.suggestions.highlight(
 									context, $( e.target ).closest( '.suggestions-special' ), false
@@ -723,16 +723,16 @@
 				$( this )
 					// Stop browser autocomplete from interfering
 					.attr( 'autocomplete', 'off' )
-					.on( 'keydown', function ( e ) {
+					.keydown( function ( e ) {
 						// Store key pressed to handle later
 						context.data.keypressed = e.which;
 						context.data.keypressedCount = 0;
 					} )
-					.on( 'keypress', function ( e ) {
+					.keypress( function ( e ) {
 						context.data.keypressedCount++;
 						$.suggestions.keypress( e, context, context.data.keypressed );
 					} )
-					.on( 'keyup', function ( e ) {
+					.keyup( function ( e ) {
 						// The keypress event is fired when a key is pressed down and that key normally
 						// produces a character value. We also want to handle some keys that don't
 						// produce a character value so we also attach to the keydown/keyup events.
@@ -753,7 +753,7 @@
 							$.suggestions.keypress( e, context, context.data.keypressed );
 						}
 					} )
-					.on( 'blur', function () {
+					.blur( function () {
 						// When losing focus because of a mousedown
 						// on a suggestion, don't hide the suggestions
 						if ( context.data.mouseDownOn.length > 0 ) {

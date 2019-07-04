@@ -15,7 +15,7 @@
  * along with MultimediaViewer.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-( function () {
+( function ( mw, $ ) {
 	var $document = $( document ),
 		start;
 
@@ -39,7 +39,7 @@
 			return;
 		}
 
-		start = ( new Date() ).getTime();
+		start = $.now();
 
 		// We wait for document readiness because mw.loader.using writes to the DOM
 		// which can cause a blank page if it happens before DOM readiness
@@ -56,4 +56,4 @@
 
 		e.preventDefault();
 	} );
-}() );
+}( mediaWiki, jQuery ) );

@@ -35,10 +35,7 @@ use WebRequest;
  */
 class CookieSessionProvider extends SessionProvider {
 
-	/** @var mixed[] */
 	protected $params = [];
-
-	/** @var mixed[] */
 	protected $cookieOptions = [];
 
 	/**

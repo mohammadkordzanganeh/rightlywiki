@@ -218,7 +218,7 @@ class ApiMain extends ApiBase {
 						'cookies' => $sessionCookies,
 						'ip' => $request->getIP(),
 						'userAgent' => $this->getUserAgent(),
-						'wiki' => WikiMap::getCurrentWikiDbDomain()->getId(),
+						'wiki' => wfWikiID(),
 					]
 				);
 			}
@@ -321,7 +321,7 @@ class ApiMain extends ApiBase {
 		$request = $this->getRequest();
 
 		// JSONP mode
-		if ( $request->getCheck( 'callback' ) ) {
+		if ( $request->getVal( 'callback' ) !== null ) {
 			$this->lacksSameOriginSecurity = true;
 			return true;
 		}
@@ -829,17 +829,12 @@ class ApiMain extends ApiBase {
 			'dnt',
 			'origin',
 			/* MediaWiki whitelist */
-			'user-agent',
 			'api-user-agent',
 		] );
 		foreach ( $requestedHeaders as $rHeader ) {
 			$rHeader = strtolower( trim( $rHeader ) );
 			if ( !isset( $allowedAuthorHeaders[$rHeader] ) ) {
-				LoggerFactory::getInstance( 'api-warning' )->warning(
-					'CORS preflight failed on requested header: {header}', [
-						'header' => $rHeader
-					]
-				);
+				wfDebugLog( 'api', 'CORS preflight failed on requested header: ' . $rHeader );
 				return false;
 			}
 		}
@@ -1030,10 +1025,8 @@ class ApiMain extends ApiBase {
 		} else {
 			// Something is seriously wrong
 			$config = $this->getConfig();
-			// TODO: Avoid embedding arbitrary class names in the error code.
 			$class = preg_replace( '#^Wikimedia\\\Rdbms\\\#', '', get_class( $e ) );
 			$code = 'internal_api_error_' . $class;
-			$data = [ 'errorclass' => get_class( $e ) ];
 			if ( $config->get( 'ShowExceptionDetails' ) ) {
 				if ( $e instanceof ILocalizedException ) {
 					$msg = $e->getMessageObject();
@@ -1047,7 +1040,7 @@ class ApiMain extends ApiBase {
 				$params = [ 'apierror-exceptioncaughttype', WebRequest::getRequestId(), get_class( $e ) ];
 			}
 
-			$messages[] = ApiMessage::create( $params, $code, $data );
+			$messages[] = ApiMessage::create( $params, $code );
 		}
 		return $messages;
 	}
@@ -1084,15 +1077,7 @@ class ApiMain extends ApiBase {
 		// Add errors from the exception
 		$modulePath = $e instanceof ApiUsageException ? $e->getModulePath() : null;
 		foreach ( $this->errorMessagesFromException( $e, 'error' ) as $msg ) {
-			if ( ApiErrorFormatter::isValidApiCode( $msg->getApiCode() ) ) {
-				$errorCodes[$msg->getApiCode()] = true;
-			} else {
-				LoggerFactory::getInstance( 'api-warning' )->error( 'Invalid API error code "{code}"', [
-					'code' => $msg->getApiCode(),
-					'exception' => $e,
-				] );
-				$errorCodes['<invalid-code>'] = true;
-			}
+			$errorCodes[$msg->getApiCode()] = true;
 			$formatter->addError( $modulePath, $msg );
 		}
 		foreach ( $this->errorMessagesFromException( $e, 'warning' ) as $msg ) {
@@ -1117,17 +1102,19 @@ class ApiMain extends ApiBase {
 					. $this->msg( 'api-usage-mailinglist-ref' )->inLanguage( $formatter->getLanguage() )->text()
 				)
 			);
-		} elseif ( $config->get( 'ShowExceptionDetails' ) ) {
-			$result->addContentValue(
-				$path,
-				'trace',
-				$this->msg( 'api-exception-trace',
-					get_class( $e ),
-					$e->getFile(),
-					$e->getLine(),
-					MWExceptionHandler::getRedactedTraceAsString( $e )
-				)->inLanguage( $formatter->getLanguage() )->text()
-			);
+		} else {
+			if ( $config->get( 'ShowExceptionDetails' ) ) {
+				$result->addContentValue(
+					$path,
+					'trace',
+					$this->msg( 'api-exception-trace',
+						get_class( $e ),
+						$e->getFile(),
+						$e->getLine(),
+						MWExceptionHandler::getRedactedTraceAsString( $e )
+					)->inLanguage( $formatter->getLanguage() )->text()
+				);
+			}
 		}
 
 		// Add the id and such
@@ -1275,8 +1262,8 @@ class ApiMain extends ApiBase {
 			if ( $lagInfo['lag'] > $maxLag ) {
 				$response = $this->getRequest()->response();
 
-				$response->header( 'Retry-After: ' . max( (int)$maxLag, 5 ) );
-				$response->header( 'X-Database-Lag: ' . (int)$lagInfo['lag'] );
+				$response->header( 'Retry-After: ' . max( intval( $maxLag ), 5 ) );
+				$response->header( 'X-Database-Lag: ' . intval( $lagInfo['lag'] ) );
 
 				if ( $this->getConfig()->get( 'ShowHostnames' ) ) {
 					$this->dieWithError(
@@ -1477,13 +1464,8 @@ class ApiMain extends ApiBase {
 		if ( $numLagged >= ceil( $replicaCount / 2 ) ) {
 			$laggedServers = implode( ', ', $laggedServers );
 			wfDebugLog(
-				'api-readonly', // Deprecate this channel in favor of api-warning?
+				'api-readonly',
 				"Api request failed as read only because the following DBs are lagged: $laggedServers"
-			);
-			LoggerFactory::getInstance( 'api-warning' )->warning(
-				"Api request failed as read only because the following DBs are lagged: {laggeddbs}", [
-					'laggeddbs' => $laggedServers,
-				]
 			);
 
 			$this->dieWithError(
@@ -1530,13 +1512,7 @@ class ApiMain extends ApiBase {
 	 * @param array $params An array with the request parameters
 	 */
 	protected function setupExternalResponse( $module, $params ) {
-		$validMethods = [ 'GET', 'HEAD', 'POST', 'OPTIONS' ];
 		$request = $this->getRequest();
-
-		if ( !in_array( $request->getMethod(), $validMethods ) ) {
-			$this->dieWithError( 'apierror-invalidmethod', null, null, 405 );
-		}
-
 		if ( !$request->wasPosted() && $module->mustBePosted() ) {
 			// Module requires POST. GET request might still be allowed
 			// if $wgDebugApi is true, otherwise fail.
@@ -1590,14 +1566,17 @@ class ApiMain extends ApiBase {
 			$this->setupExternalResponse( $module, $params );
 		}
 
+		// Execute
 		$module->execute();
 		Hooks::run( 'APIAfterExecute', [ &$module ] );
 
 		$this->reportUnusedParams();
 
 		if ( !$this->mInternalMode ) {
+			// append Debug information
 			MWDebug::appendDebugInfoToApiResult( $this->getContext(), $this->getResult() );
 
+			// Print result data
 			$this->printResult();
 		}
 	}
@@ -1627,56 +1606,28 @@ class ApiMain extends ApiBase {
 	 */
 	protected function logRequest( $time, $e = null ) {
 		$request = $this->getRequest();
-		$legacyLogCtx = [
+		$logCtx = [
 			'ts' => time(),
 			'ip' => $request->getIP(),
 			'userAgent' => $this->getUserAgent(),
-			'wiki' => WikiMap::getCurrentWikiDbDomain()->getId(),
+			'wiki' => wfWikiID(),
 			'timeSpentBackend' => (int)round( $time * 1000 ),
 			'hadError' => $e !== null,
 			'errorCodes' => [],
 			'params' => [],
 		];
 
-		$logCtx = [
-			'$schema' => '/mediawiki/api/request/0.0.1',
-			'meta' => [
-				'request_id' => WebRequest::getRequestId(),
-				'id' => UIDGenerator::newUUIDv1(),
-				'dt' => wfTimestamp( TS_ISO_8601 ),
-				'domain' => $this->getConfig()->get( 'ServerName' ),
-				'stream' => 'mediawiki.api-request'
-			],
-			'http' => [
-				'method' => $request->getMethod(),
-				'client_ip' => $request->getIP()
-			],
-			'database' => WikiMap::getCurrentWikiDbDomain()->getId(),
-			'backend_time_ms' => (int)round( $time * 1000 ),
-		];
-
-		// If set, these headers will be logged in http.request_headers.
-		$httpRequestHeadersToLog = [ 'accept-language', 'referer', 'user-agent' ];
-		foreach ( $httpRequestHeadersToLog as $header ) {
-			if ( $request->getHeader( $header ) ) {
-				// Set the header in http.request_headers
-				$logCtx['http']['request_headers'][$header] = $request->getHeader( $header );
-			}
-		}
-
 		if ( $e ) {
-			$logCtx['api_error_codes'] = [];
 			foreach ( $this->errorMessagesFromException( $e ) as $msg ) {
-				$legacyLogCtx['errorCodes'][] = $msg->getApiCode();
-				$logCtx['api_error_codes'][] = $msg->getApiCode();
+				$logCtx['errorCodes'][] = $msg->getApiCode();
 			}
 		}
 
 		// Construct space separated message for 'api' log channel
 		$msg = "API {$request->getMethod()} " .
 			wfUrlencode( str_replace( ' ', '_', $this->getUser()->getName() ) ) .
-			" {$legacyLogCtx['ip']} " .
-			"T={$legacyLogCtx['timeSpentBackend']}ms";
+			" {$logCtx['ip']} " .
+			"T={$logCtx['timeSpentBackend']}ms";
 
 		$sensitive = array_flip( $this->getSensitiveParams() );
 		foreach ( $this->getParamsUsed() as $name ) {
@@ -1695,17 +1646,13 @@ class ApiMain extends ApiBase {
 				$encValue = $this->encodeRequestLogValue( $value );
 			}
 
-			$legacyLogCtx['params'][$name] = $value;
 			$logCtx['params'][$name] = $value;
 			$msg .= " {$name}={$encValue}";
 		}
 
 		wfDebugLog( 'api', $msg, 'private' );
-		// ApiAction channel is for structured data consumers.
-		// The ApiAction was using logging channel is deprecated and is replaced
-		// by the api-request channel.
-		wfDebugLog( 'ApiAction', '', 'private', $legacyLogCtx );
-		wfDebugLog( 'api-request', '', 'private', $logCtx );
+		// ApiAction channel is for structured data consumers
+		wfDebugLog( 'ApiAction', '', 'private', $logCtx );
 	}
 
 	/**

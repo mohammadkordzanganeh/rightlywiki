@@ -36,16 +36,14 @@ class GanConverter extends LanguageConverter {
 		$variants = [],
 		$variantfallbacks = [],
 		$flags = [],
-		$manualLevel = []
-	) {
+		$manualLevel = [] ) {
 		$this->mDescCodeSep = '：';
 		$this->mDescVarSep = '；';
 		parent::__construct( $langobj, $maincode,
 			$variants,
 			$variantfallbacks,
 			$flags,
-			$manualLevel
-		);
+			$manualLevel );
 		$names = [
 			'gan' => '原文',
 			'gan-hans' => '简体',
@@ -96,8 +94,7 @@ class LanguageGan extends LanguageZh {
 		$this->mConverter = new GanConverter( $this, 'gan',
 			$variants, $variantfallbacks,
 			[],
-			$ml
-		);
+			$ml );
 	}
 
 	/**

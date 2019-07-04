@@ -101,7 +101,8 @@ abstract class Action implements MessageLocalizer {
 			if ( !class_exists( $classOrCallable ) ) {
 				return false;
 			}
-			return new $classOrCallable( $page, $context );
+			$obj = new $classOrCallable( $page, $context );
+			return $obj;
 		}
 
 		if ( is_callable( $classOrCallable ) ) {
@@ -141,7 +142,7 @@ abstract class Action implements MessageLocalizer {
 			} else {
 				$actionName = 'view';
 			}
-		} elseif ( $actionName === 'editredlink' ) {
+		} elseif ( $actionName == 'editredlink' ) {
 			$actionName = 'edit';
 		}
 
@@ -313,14 +314,9 @@ abstract class Action implements MessageLocalizer {
 			}
 		}
 
-		// If the action requires an unblock, explicitly check the user's block.
-		if ( $this->requiresUnblock() && $user->isBlockedFrom( $this->getTitle() ) ) {
+		if ( $this->requiresUnblock() && $user->isBlocked() ) {
 			$block = $user->getBlock();
-			if ( $block ) {
-				throw new UserBlockedError( $block );
-			}
-
-			throw new PermissionsError( $this->getName(), [ 'badaccess-group0' ] );
+			throw new UserBlockedError( $block );
 		}
 
 		// This should be checked at the end so that the user won't think the
@@ -358,7 +354,7 @@ abstract class Action implements MessageLocalizer {
 	 */
 	protected function setHeaders() {
 		$out = $this->getOutput();
-		$out->setRobotPolicy( 'noindex,nofollow' );
+		$out->setRobotPolicy( "noindex,nofollow" );
 		$out->setPageTitle( $this->getPageTitle() );
 		$out->setSubtitle( $this->getDescription() );
 		$out->setArticleRelated( true );

@@ -157,7 +157,7 @@
 			if ( warn === undefined ) {
 				warn = mw.log.warn;
 				error = mw.log.error;
-				mw.log.warn = mw.log.error = function () {};
+				mw.log.warn = mw.log.error = $.noop;
 			}
 		}
 
@@ -258,7 +258,7 @@
 				// Check for incomplete animations/requests/etc and throw if there are any.
 				if ( $.timers && $.timers.length !== 0 ) {
 					timers = $.timers.length;
-					// eslint-disable-next-line no-jquery/no-each-util
+					// eslint-disable-next-line no-restricted-properties
 					$.each( $.timers, function ( i, timer ) {
 						var node = timer.elem;
 						mw.log.warn( 'Unfinished animation #' + i + ' in ' + timer.queue + ' queue on ' +
@@ -307,7 +307,7 @@
 		var altPromises = [];
 
 		// When we have ES6 support we'll be able to use Array.from here
-		// eslint-disable-next-line no-jquery/no-each-util
+		// eslint-disable-next-line no-restricted-properties
 		$.each( arguments, function ( i, arg ) {
 			var alt = $.Deferred();
 			altPromises.push( alt );

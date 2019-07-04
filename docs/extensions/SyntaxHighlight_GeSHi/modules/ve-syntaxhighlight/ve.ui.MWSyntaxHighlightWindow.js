@@ -22,6 +22,8 @@ OO.initClass( ve.ui.MWSyntaxHighlightWindow );
 
 /* Static properties */
 
+ve.ui.MWSyntaxHighlightWindow.static.icon = 'alienextension';
+
 ve.ui.MWSyntaxHighlightWindow.static.title = OO.ui.deferMsg( 'syntaxhighlight-visualeditor-mwsyntaxhighlightinspector-title' );
 
 ve.ui.MWSyntaxHighlightWindow.static.dir = 'ltr';
@@ -40,7 +42,7 @@ ve.ui.MWSyntaxHighlightWindow.prototype.initialize = function () {
 		$overlay: this.$overlay,
 		menu: {
 			filterFromInput: true,
-			items: ve.dm.MWSyntaxHighlightNode.static.getLanguages().map( function ( lang ) {
+			items: $.map( ve.dm.MWSyntaxHighlightNode.static.getLanguages(), function ( lang ) {
 				return new OO.ui.MenuOptionWidget( { data: lang, label: lang || noneMsg } );
 			} )
 		},
@@ -143,7 +145,7 @@ ve.ui.MWSyntaxHighlightWindow.prototype.getReadyProcess = function ( data, proce
 ve.ui.MWSyntaxHighlightWindow.prototype.getSetupProcess = function ( data, process ) {
 	return process.next( function () {
 		var attrs = this.selectedNode ? this.selectedNode.getAttribute( 'mw' ).attrs : {},
-			language = attrs.lang ? attrs.lang.toLowerCase() : '',
+			language = attrs.lang || '',
 			showLines = attrs.line !== undefined,
 			startLine = attrs.start;
 

@@ -22,7 +22,8 @@
 namespace Wikimedia\Rdbms;
 
 /**
- * Exception class for replica DB wait errors
+ * Exception class for replica DB wait timeouts
+ * @deprecated since 1.32
  * @ingroup Database
  */
 class DBReplicationWaitError extends DBExpectedError {

@@ -135,9 +135,6 @@ abstract class WikiPageDbTestBase extends MediaWikiLangTestCase {
 		}
 
 		$updater->saveRevision( CommentStoreComment::newUnsavedComment( "testing" ) );
-		if ( !$updater->wasSuccessful() ) {
-			$this->fail( $updater->getStatus()->getWikiText() );
-		}
 
 		return $page;
 	}
@@ -466,13 +463,12 @@ abstract class WikiPageDbTestBase extends MediaWikiLangTestCase {
 		);
 		$logId = $status->getValue();
 		$actorQuery = ActorMigration::newMigration()->getJoin( 'log_user' );
-		$commentQuery = MediaWikiServices::getInstance()->getCommentStore()->getJoin( 'log_comment' );
 		$this->assertSelect(
-			[ 'logging' ] + $actorQuery['tables'] + $commentQuery['tables'], /* table */
+			[ 'logging' ] + $actorQuery['tables'], /* table */
 			[
 				'log_type',
 				'log_action',
-				'log_comment' => $commentQuery['fields']['log_comment_text'],
+				'log_comment',
 				'log_user' => $actorQuery['fields']['log_user'],
 				'log_user_text' => $actorQuery['fields']['log_user_text'],
 				'log_namespace',
@@ -483,13 +479,13 @@ abstract class WikiPageDbTestBase extends MediaWikiLangTestCase {
 				'delete',
 				'delete',
 				'testing user 0 deletion',
-				null,
+				'0',
 				'127.0.0.1',
 				(string)$page->getTitle()->getNamespace(),
 				$page->getTitle()->getDBkey(),
 			] ],
 			[],
-			$actorQuery['joins'] + $commentQuery['joins']
+			$actorQuery['joins']
 		);
 	}
 
@@ -516,13 +512,12 @@ abstract class WikiPageDbTestBase extends MediaWikiLangTestCase {
 		);
 		$logId = $status->getValue();
 		$actorQuery = ActorMigration::newMigration()->getJoin( 'log_user' );
-		$commentQuery = MediaWikiServices::getInstance()->getCommentStore()->getJoin( 'log_comment' );
 		$this->assertSelect(
-			[ 'logging' ] + $actorQuery['tables'] + $commentQuery['tables'], /* table */
+			[ 'logging' ] + $actorQuery['tables'], /* table */
 			[
 				'log_type',
 				'log_action',
-				'log_comment' => $commentQuery['fields']['log_comment_text'],
+				'log_comment',
 				'log_user' => $actorQuery['fields']['log_user'],
 				'log_user_text' => $actorQuery['fields']['log_user_text'],
 				'log_namespace',
@@ -539,7 +534,7 @@ abstract class WikiPageDbTestBase extends MediaWikiLangTestCase {
 				$page->getTitle()->getDBkey(),
 			] ],
 			[],
-			$actorQuery['joins'] + $commentQuery['joins']
+			$actorQuery['joins']
 		);
 	}
 
@@ -568,13 +563,12 @@ abstract class WikiPageDbTestBase extends MediaWikiLangTestCase {
 		);
 		$logId = $status->getValue();
 		$actorQuery = ActorMigration::newMigration()->getJoin( 'log_user' );
-		$commentQuery = MediaWikiServices::getInstance()->getCommentStore()->getJoin( 'log_comment' );
 		$this->assertSelect(
-			[ 'logging' ] + $actorQuery['tables'] + $commentQuery['tables'], /* table */
+			[ 'logging' ] + $actorQuery['tables'], /* table */
 			[
 				'log_type',
 				'log_action',
-				'log_comment' => $commentQuery['fields']['log_comment_text'],
+				'log_comment',
 				'log_user' => $actorQuery['fields']['log_user'],
 				'log_user_text' => $actorQuery['fields']['log_user_text'],
 				'log_namespace',
@@ -591,7 +585,7 @@ abstract class WikiPageDbTestBase extends MediaWikiLangTestCase {
 				$page->getTitle()->getDBkey(),
 			] ],
 			[],
-			$actorQuery['joins'] + $commentQuery['joins']
+			$actorQuery['joins']
 		);
 
 		$this->assertNull(
@@ -737,7 +731,7 @@ abstract class WikiPageDbTestBase extends MediaWikiLangTestCase {
 		$rev = $page->getRevision();
 
 		$this->assertEquals( $page->getLatest(), $rev->getId() );
-		$this->assertEquals( "some text", $rev->getContent()->getText() );
+		$this->assertEquals( "some text", $rev->getContent()->getNativeData() );
 	}
 
 	/**
@@ -753,7 +747,7 @@ abstract class WikiPageDbTestBase extends MediaWikiLangTestCase {
 		$this->createPage( $page, "some text", CONTENT_MODEL_WIKITEXT );
 
 		$content = $page->getContent();
-		$this->assertEquals( "some text", $content->getText() );
+		$this->assertEquals( "some text", $content->getNativeData() );
 	}
 
 	/**
@@ -822,15 +816,6 @@ abstract class WikiPageDbTestBase extends MediaWikiLangTestCase {
 				"#REDIRECT [[Media:hello_world]]",
 				"File:Hello world"
 			],
-			// Test fragments longer than 255 bytes (T207876)
-			[
-				'WikiPageTest_testGetRedirectTarget_4',
-				CONTENT_MODEL_WIKITEXT,
-				// phpcs:ignore Generic.Files.LineLength
-				'#REDIRECT [[Foobar#🏴󠁮󠁬󠁦󠁲󠁿🏴󠁮󠁬󠁦󠁲󠁿🏴󠁮󠁬󠁦󠁲󠁿🏴󠁮󠁬󠁦󠁲󠁿🏴󠁮󠁬󠁦󠁲󠁿🏴󠁮󠁬󠁦󠁲󠁿🏴󠁮󠁬󠁦󠁲󠁿🏴󠁮󠁬󠁦󠁲󠁿🏴󠁮󠁬󠁦󠁲󠁿🏴󠁮󠁬󠁦󠁲󠁿🏴󠁮󠁬󠁦󠁲󠁿🏴󠁮󠁬󠁦󠁲󠁿🏴󠁮󠁬󠁦󠁲󠁿🏴󠁮󠁬󠁦󠁲󠁿🏴󠁮󠁬󠁦󠁲󠁿🏴󠁮󠁬󠁦󠁲󠁿🏴󠁮󠁬󠁦󠁲󠁿🏴󠁮󠁬󠁦󠁲󠁿🏴󠁮󠁬󠁦󠁲󠁿🏴󠁮󠁬󠁦󠁲󠁿🏴󠁮󠁬󠁦󠁲󠁿🏴󠁮󠁬󠁦󠁲󠁿]]',
-				// phpcs:ignore Generic.Files.LineLength
-				'Foobar#🏴󠁮󠁬󠁦󠁲󠁿🏴󠁮󠁬󠁦󠁲󠁿🏴󠁮󠁬󠁦󠁲󠁿🏴󠁮󠁬󠁦󠁲󠁿🏴󠁮󠁬󠁦󠁲󠁿🏴󠁮󠁬󠁦󠁲󠁿🏴󠁮󠁬󠁦󠁲󠁿🏴󠁮󠁬󠁦󠁲󠁿🏴󠁮󠁬󠁦󠁲󠁿🏴󠁮󠁬󠁦󠁲󠁿🏴󠁮󠁬...'
-			]
 		];
 	}
 
@@ -851,7 +836,7 @@ abstract class WikiPageDbTestBase extends MediaWikiLangTestCase {
 
 		# now, test the actual redirect
 		$t = $page->getRedirectTarget();
-		$this->assertEquals( $target, $t ? $t->getFullText() : null );
+		$this->assertEquals( $target, is_null( $t ) ? null : $t->getPrefixedText() );
 	}
 
 	/**
@@ -1109,10 +1094,9 @@ more stuff
 		$page = $this->createPage( $title, $text, $model );
 
 		$content = ContentHandler::makeContent( $with, $page->getTitle(), $page->getContentModel() );
-		/** @var TextContent $c */
 		$c = $page->replaceSectionContent( $section, $content, $sectionTitle );
 
-		$this->assertEquals( $expected, $c ? trim( $c->getText() ) : null );
+		$this->assertEquals( $expected, is_null( $c ) ? null : trim( $c->getNativeData() ) );
 	}
 
 	/**
@@ -1126,10 +1110,9 @@ more stuff
 		$baseRevId = $page->getLatest();
 
 		$content = ContentHandler::makeContent( $with, $page->getTitle(), $page->getContentModel() );
-		/** @var TextContent $c */
 		$c = $page->replaceSectionAtRev( $section, $content, $sectionTitle, $baseRevId );
 
-		$this->assertEquals( $expected, $c ? trim( $c->getText() ) : null );
+		$this->assertEquals( $expected, is_null( $c ) ? null : trim( $c->getNativeData() ) );
 	}
 
 	/**
@@ -1244,7 +1227,7 @@ more stuff
 		$page = new WikiPage( $page->getTitle() );
 		$this->assertEquals( $rev2->getSha1(), $page->getRevision()->getSha1(),
 			"rollback did not revert to the correct revision" );
-		$this->assertEquals( "one\n\ntwo", $page->getContent()->getText() );
+		$this->assertEquals( "one\n\ntwo", $page->getContent()->getNativeData() );
 
 		$rc = MediaWikiServices::getInstance()->getRevisionStore()->getRecentChange(
 			$page->getRevision()->getRevisionRecord()
@@ -1334,7 +1317,7 @@ more stuff
 		$page = new WikiPage( $page->getTitle() );
 		$this->assertEquals( $rev1->getSha1(), $page->getRevision()->getSha1(),
 			"rollback did not revert to the correct revision" );
-		$this->assertEquals( "one", $page->getContent()->getText() );
+		$this->assertEquals( "one", $page->getContent()->getNativeData() );
 	}
 
 	/**
@@ -1560,6 +1543,89 @@ more stuff
 		$this->assertTrue( $page->wasLoadedFrom( IDBAccessObject::READ_LATEST ) );
 		$this->assertTrue( $page->wasLoadedFrom( IDBAccessObject::READ_LOCKING ) );
 		$this->assertTrue( $page->wasLoadedFrom( IDBAccessObject::READ_EXCLUSIVE ) );
+	}
+
+	/**
+	 * @dataProvider provideCommentMigrationOnDeletion
+	 *
+	 * @param int $writeStage
+	 * @param int $readStage
+	 */
+	public function testCommentMigrationOnDeletion( $writeStage, $readStage ) {
+		$this->setMwGlobals( 'wgCommentTableSchemaMigrationStage', $writeStage );
+		$this->overrideMwServices();
+
+		$dbr = wfGetDB( DB_REPLICA );
+
+		$page = $this->createPage(
+			__METHOD__,
+			"foo",
+			CONTENT_MODEL_WIKITEXT
+		);
+		$revid = $page->getLatest();
+		if ( $writeStage > MIGRATION_OLD ) {
+			$comment_id = $dbr->selectField(
+				'revision_comment_temp',
+				'revcomment_comment_id',
+				[ 'revcomment_rev' => $revid ],
+				__METHOD__
+			);
+		}
+
+		$this->setMwGlobals( 'wgCommentTableSchemaMigrationStage', $readStage );
+		$this->overrideMwServices();
+
+		$page->doDeleteArticle( "testing deletion" );
+
+		if ( $readStage > MIGRATION_OLD ) {
+			// Didn't leave behind any 'revision_comment_temp' rows
+			$n = $dbr->selectField(
+				'revision_comment_temp', 'COUNT(*)', [ 'revcomment_rev' => $revid ], __METHOD__
+			);
+			$this->assertEquals( 0, $n, 'no entry in revision_comment_temp after deletion' );
+
+			// Copied or upgraded the comment_id, as applicable
+			$ar_comment_id = $dbr->selectField(
+				'archive',
+				'ar_comment_id',
+				[ 'ar_rev_id' => $revid ],
+				__METHOD__
+			);
+			if ( $writeStage > MIGRATION_OLD ) {
+				$this->assertSame( $comment_id, $ar_comment_id );
+			} else {
+				$this->assertNotEquals( 0, $ar_comment_id );
+			}
+		}
+
+		// Copied rev_comment, if applicable
+		if ( $readStage <= MIGRATION_WRITE_BOTH && $writeStage <= MIGRATION_WRITE_BOTH ) {
+			$ar_comment = $dbr->selectField(
+				'archive',
+				'ar_comment',
+				[ 'ar_rev_id' => $revid ],
+				__METHOD__
+			);
+			$this->assertSame( 'testing', $ar_comment );
+		}
+	}
+
+	public function provideCommentMigrationOnDeletion() {
+		return [
+			[ MIGRATION_OLD, MIGRATION_OLD ],
+			[ MIGRATION_OLD, MIGRATION_WRITE_BOTH ],
+			[ MIGRATION_OLD, MIGRATION_WRITE_NEW ],
+			[ MIGRATION_WRITE_BOTH, MIGRATION_OLD ],
+			[ MIGRATION_WRITE_BOTH, MIGRATION_WRITE_BOTH ],
+			[ MIGRATION_WRITE_BOTH, MIGRATION_WRITE_NEW ],
+			[ MIGRATION_WRITE_BOTH, MIGRATION_NEW ],
+			[ MIGRATION_WRITE_NEW, MIGRATION_WRITE_BOTH ],
+			[ MIGRATION_WRITE_NEW, MIGRATION_WRITE_NEW ],
+			[ MIGRATION_WRITE_NEW, MIGRATION_NEW ],
+			[ MIGRATION_NEW, MIGRATION_WRITE_BOTH ],
+			[ MIGRATION_NEW, MIGRATION_WRITE_NEW ],
+			[ MIGRATION_NEW, MIGRATION_NEW ],
+		];
 	}
 
 	/**
@@ -1819,8 +1885,8 @@ more stuff
 		$fetchedPage = WikiPage::newFromID( $createdPage->getId() );
 		$this->assertSame( $createdPage->getId(), $fetchedPage->getId() );
 		$this->assertEquals(
-			$createdPage->getContent()->getText(),
-			$fetchedPage->getContent()->getText()
+			$createdPage->getContent()->getNativeData(),
+			$fetchedPage->getContent()->getNativeData()
 		);
 	}
 
@@ -1967,7 +2033,7 @@ more stuff
 			wfTimestamp( TS_UNIX, $initialRevision->getTimestamp() ) - 1
 		);
 
-		$olderRevision = new Revision(
+		$olderRevison = new Revision(
 			[
 				'id' => 9989,
 				'page' => $page->getId(),
@@ -1984,7 +2050,7 @@ more stuff
 			]
 		);
 
-		$result = $page->updateIfNewerOn( $this->db, $olderRevision );
+		$result = $page->updateIfNewerOn( $this->db, $olderRevison );
 		$this->assertFalse( $result );
 	}
 
@@ -2191,11 +2257,10 @@ more stuff
 		// Make sure the log entry looks good
 		// log_params is not checked here
 		$actorQuery = ActorMigration::newMigration()->getJoin( 'log_user' );
-		$commentQuery = MediaWikiServices::getInstance()->getCommentStore()->getJoin( 'log_comment' );
 		$this->assertSelect(
-			[ 'logging' ] + $actorQuery['tables'] + $commentQuery['tables'],
+			[ 'logging' ] + $actorQuery['tables'],
 			[
-				'log_comment' => $commentQuery['fields']['log_comment_text'],
+				'log_comment',
 				'log_user' => $actorQuery['fields']['log_user'],
 				'log_user_text' => $actorQuery['fields']['log_user_text'],
 				'log_namespace',
@@ -2210,7 +2275,7 @@ more stuff
 				$page->getTitle()->getDBkey(),
 			] ],
 			[],
-			$actorQuery['joins'] + $commentQuery['joins']
+			$actorQuery['joins']
 		);
 	}
 

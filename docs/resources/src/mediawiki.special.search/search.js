@@ -7,21 +7,33 @@
 
 		// Emulate HTML5 autofocus behavior in non HTML5 compliant browsers
 		if ( !( 'autofocus' in document.createElement( 'input' ) ) ) {
-			$( 'input[autofocus]' ).eq( 0 ).trigger( 'focus' );
+			$( 'input[autofocus]' ).eq( 0 ).focus();
 		}
 
-		// Attach handler for check all/none buttons
+		// Create check all/none button
 		$checkboxes = $( '#powersearch input[id^=mw-search-ns]' );
-		$( '#mw-search-toggleall' ).on( 'click', function () {
-			$checkboxes.prop( 'checked', true );
-		} );
-		$( '#mw-search-togglenone' ).on( 'click', function () {
-			$checkboxes.prop( 'checked', false );
-		} );
+		$( '#mw-search-togglebox' ).append(
+			$( '<label>' )
+				.text( mw.msg( 'powersearch-togglelabel' ) )
+		).append(
+			$( '<input>' ).attr( 'type', 'button' )
+				.attr( 'id', 'mw-search-toggleall' )
+				.prop( 'value', mw.msg( 'powersearch-toggleall' ) )
+				.click( function () {
+					$checkboxes.prop( 'checked', true );
+				} )
+		).append(
+			$( '<input>' ).attr( 'type', 'button' )
+				.attr( 'id', 'mw-search-togglenone' )
+				.prop( 'value', mw.msg( 'powersearch-togglenone' ) )
+				.click( function () {
+					$checkboxes.prop( 'checked', false );
+				} )
+		);
 
 		// Change the header search links to what user entered
 		$headerLinks = $( '.search-types a' );
-		searchWidget = OO.ui.infuse( $( '#searchText' ) );
+		searchWidget = OO.ui.infuse( 'searchText' );
 		updateHeaderLinks = function ( value ) {
 			$headerLinks.each( function () {
 				var parts = $( this ).attr( 'href' ).split( 'search=' ),
@@ -39,7 +51,7 @@
 		updateHeaderLinks( searchWidget.getValue() );
 
 		// When saving settings, use the proper request method (POST instead of GET).
-		$( '#mw-search-powersearch-remember' ).on( 'change', function () {
+		$( '#mw-search-powersearch-remember' ).change( function () {
 			this.form.method = this.checked ? 'post' : 'get';
 		} ).trigger( 'change' );
 

@@ -192,7 +192,11 @@ class MysqlInstaller extends DatabaseInstaller {
 					$existingSchema = false;
 					$this->parent->showMessage( 'config-unknown-collation' );
 				}
-				$existingEngine = $row->Engine ?? $row->Type;
+				if ( isset( $row->Engine ) ) {
+					$existingEngine = $row->Engine;
+				} else {
+					$existingEngine = $row->Type;
+				}
 			}
 		} else {
 			$existingSchema = false;

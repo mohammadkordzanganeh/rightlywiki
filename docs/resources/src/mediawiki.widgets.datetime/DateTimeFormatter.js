@@ -1,3 +1,4 @@
+/* eslint-disable no-restricted-properties */
 ( function () {
 
 	/**
@@ -333,7 +334,6 @@
 							parseValue: this.parseSpecValue
 						};
 						spec.size = Math.max.apply(
-							// eslint-disable-next-line no-jquery/no-map-util
 							null, $.map( spec.values, function ( v ) { return v.length; } )
 						);
 						return spec;
@@ -410,12 +410,10 @@
 			}
 		}
 
-		// eslint-disable-next-line no-restricted-properties
 		if ( v.normalize ) {
-			// eslint-disable-next-line no-restricted-properties
 			v = v.normalize();
 		}
-		re = new RegExp( '^\\s*' + mw.RegExp.escape( v ), 'i' );
+		re = new RegExp( '^\\s*' + v.replace( /([\\{}()|.?*+\-^$\[\]])/g, '\\$1' ), 'i' ); // eslint-disable-line no-useless-escape
 		for ( k in this.values ) {
 			k = +k;
 			if ( !isNaN( k ) && re.test( this.values[ k ] ) ) {

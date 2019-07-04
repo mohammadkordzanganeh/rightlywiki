@@ -40,11 +40,8 @@ class AutoLoaderStructureTest extends MediaWikiTestCase {
 		list( $classesInFile, $aliasesInFile ) = self::parseFile( $contents );
 		$classes = array_keys( $classesInFile );
 		if ( $classes ) {
-			$this->assertCount(
-				1,
-				$classes,
-				"Only one class per file in PSR-4 autoloaded classes ($file)"
-			);
+			$this->assertCount( 1, $classes,
+				"Only one class per file in PSR-4 autoloaded classes ($file)" );
 
 			// Check that the expected class name (based on the filename) is the
 			// same as the one we found.
@@ -81,7 +78,7 @@ class AutoLoaderStructureTest extends MediaWikiTestCase {
 		preg_match_all( '/
 				^ [\t ]* (?:
 					(?:final\s+)? (?:abstract\s+)? (?:class|interface|trait) \s+
-					(?P<class> \w+)
+					(?P<class> [a-zA-Z0-9_]+)
 				|
 					class_alias \s* \( \s*
 						([\'"]) (?P<original> [^\'"]+) \g{-2} \s* , \s*
@@ -89,7 +86,7 @@ class AutoLoaderStructureTest extends MediaWikiTestCase {
 					\) \s* ;
 				|
 					class_alias \s* \( \s*
-						(?P<originalStatic> [\w\\\\]+)::class \s* , \s*
+						(?P<originalStatic> [a-zA-Z0-9_]+)::class \s* , \s*
 						([\'"]) (?P<aliasString> [^\'"]+ ) \g{-2} \s*
 					\) \s* ;
 				)
@@ -99,7 +96,7 @@ class AutoLoaderStructureTest extends MediaWikiTestCase {
 		preg_match( '/
 				^ [\t ]*
 					namespace \s+
-						(\w+(\\\\\w+)*)
+						([a-zA-Z0-9_]+(\\\\[a-zA-Z0-9_]+)*)
 					\s* ;
 			/imx', $contents, $namespaceMatch );
 		$fileNamespace = $namespaceMatch ? $namespaceMatch[1] . '\\' : '';
@@ -112,12 +109,14 @@ class AutoLoaderStructureTest extends MediaWikiTestCase {
 				// 'class Foo {}'
 				$class = $fileNamespace . $match['class'];
 				$classesInFile[$class] = true;
-			} elseif ( !empty( $match['original'] ) ) {
-				// 'class_alias( "Foo", "Bar" );'
-				$aliasesInFile[$match['alias']] = $match['original'];
 			} else {
-				// 'class_alias( Foo::class, "Bar" );'
-				$aliasesInFile[$match['aliasString']] = $fileNamespace . $match['originalStatic'];
+				if ( !empty( $match['original'] ) ) {
+					// 'class_alias( "Foo", "Bar" );'
+					$aliasesInFile[$match['alias']] = $match['original'];
+				} else {
+					// 'class_alias( Foo::class, "Bar" );'
+					$aliasesInFile[$match['aliasString']] = $fileNamespace . $match['originalStatic'];
+				}
 			}
 		}
 
@@ -136,7 +135,9 @@ class AutoLoaderStructureTest extends MediaWikiTestCase {
 			$psr4Namespaces[rtrim( $ns, '\\' ) . '\\'] = rtrim( $path, '/' );
 		}
 
-		foreach ( $expected as $class => $file ) {
+		$files = array_unique( $expected );
+
+		foreach ( $files as $class => $file ) {
 			// Only prefix $IP if it doesn't have it already.
 			// Generally local classes don't have it, and those from extensions and test suites do.
 			if ( substr( $file, 0, 1 ) != '/' && substr( $file, 1, 1 ) != ':' ) {

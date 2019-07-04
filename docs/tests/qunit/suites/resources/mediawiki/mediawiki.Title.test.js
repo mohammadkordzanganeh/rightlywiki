@@ -151,15 +151,15 @@
 		var i;
 		for ( i = 0; i < cases.valid.length; i++ ) {
 			assert.strictEqual(
-				typeof mw.Title.newFromText( cases.valid[ i ] ),
+				$.type( mw.Title.newFromText( cases.valid[ i ] ) ),
 				'object',
 				cases.valid[ i ]
 			);
 		}
 		for ( i = 0; i < cases.invalid.length; i++ ) {
 			assert.strictEqual(
-				mw.Title.newFromText( cases.invalid[ i ] ),
-				null,
+				$.type( mw.Title.newFromText( cases.invalid[ i ] ) ),
+				'null',
 				cases.invalid[ i ]
 			);
 		}
@@ -321,17 +321,6 @@
 		title = title.getTalkPage();
 		assert.strictEqual( title.getPrefixedText(), 'Talk:Foo', 'getTalkPage creates correct title' );
 		assert.strictEqual( title.getFragment(), null, 'getTalkPage does not copy the fragment' );
-	} );
-
-	QUnit.test( 'wantSignaturesNamespace', function ( assert ) {
-		mw.config.set( 'wgExtraSignatureNamespaces', [] );
-		assert.strictEqual( mw.Title.wantSignaturesNamespace( 0 ), false, 'Main namespace has no signatures' );
-		assert.strictEqual( mw.Title.wantSignaturesNamespace( 1 ), true, 'Talk namespace has signatures' );
-		assert.strictEqual( mw.Title.wantSignaturesNamespace( 2 ), false, 'NS2 has no signatures' );
-		assert.strictEqual( mw.Title.wantSignaturesNamespace( 3 ), true, 'NS3 has signatures' );
-
-		mw.config.set( 'wgExtraSignatureNamespaces', [ 0 ] );
-		assert.strictEqual( mw.Title.wantSignaturesNamespace( 0 ), true, 'Main namespace has signatures when explicitly defined' );
 	} );
 
 	QUnit.test( 'Throw error on invalid title', function ( assert ) {
@@ -664,10 +653,6 @@
 
 				assert.notStrictEqual( title, null, prefix + 'Parses successfully' );
 				assert.strictEqual( title.toText(), thisCase.expected, prefix + 'Title as expected' );
-				if ( thisCase.defaultNamespace === undefined ) {
-					title = mw.Title.newFromUserInput( thisCase.title, thisCase.options );
-					assert.strictEqual( title.toText(), thisCase.expected, prefix + 'Skipping namespace argument' );
-				}
 			} else {
 				assert.strictEqual( title, null, thisCase.description + ', should not produce an mw.Title object' );
 			}

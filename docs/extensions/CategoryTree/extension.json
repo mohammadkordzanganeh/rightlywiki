@@ -5,9 +5,6 @@
 	"descriptionmsg": "categorytree-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "parserhook",
-	"requires": {
-		"MediaWiki": ">= 1.33.0"
-	},
 	"ConfigRegistry": {
 		"categorytree": "GlobalVarConfig::newInstance"
 	},
@@ -41,16 +38,7 @@
 	},
 	"ResourceModules": {
 		"ext.categoryTree": {
-			"localBasePath": "modules/ext.categoryTree",
-			"remoteExtPath": "CategoryTree/modules/ext.categoryTree",
-			"styles": "ext.categoryTree.css",
-			"packageFiles": [
-				"ext.categoryTree.js",
-				{
-					"name": "data.json",
-					"callback": "CategoryTreeHooks::getDataForJs"
-				}
-			],
+			"scripts": "ext.categoryTree.js",
 			"targets": [
 				"desktop",
 				"mobile"
@@ -73,12 +61,12 @@
 				"mediawiki.api"
 			]
 		},
-		"ext.categoryTree.styles": {
+		"ext.categoryTree.css": {
 			"targets": [
 				"desktop",
 				"mobile"
 			],
-			"styles": "ext.categoryTree.styles.css"
+			"styles": "ext.categoryTree.css"
 		}
 	},
 	"ResourceFileModulePaths": {
@@ -86,12 +74,20 @@
 		"remoteExtPath": "CategoryTree/modules"
 	},
 	"Hooks": {
-		"ArticleFromTitle": "CategoryTreeHooks::articleFromTitle",
-		"SpecialTrackingCategories::preprocess": "CategoryTreeHooks::onSpecialTrackingCategoriesPreprocess",
-		"SpecialTrackingCategories::generateCatLink": "CategoryTreeHooks::onSpecialTrackingCategoriesGenerateCatLink",
-		"SkinBuildSidebar": "CategoryTreeHooks::onSkinBuildSidebar",
+		"ArticleFromTitle": [
+			"CategoryTreeHooks::articleFromTitle"
+		],
+		"SpecialTrackingCategories::preprocess": [
+			"CategoryTreeHooks::onSpecialTrackingCategoriesPreprocess"
+		],
+		"SpecialTrackingCategories::generateCatLink": [
+			"CategoryTreeHooks::onSpecialTrackingCategoriesGenerateCatLink"
+		],
+		"SkinTemplateOutputPageBeforeExec": "CategoryTreeHooks::skinTemplateOutputPageBeforeExec",
+		"MakeGlobalVariablesScript": "CategoryTreeHooks::getConfigVars",
 		"ParserFirstCallInit": "CategoryTreeHooks::setHooks",
 		"OutputPageMakeCategoryLinks": "CategoryTreeHooks::outputPageMakeCategoryLinks",
+		"SkinJoinCategoryLinks": "CategoryTreeHooks::skinJoinCategoryLinks",
 		"BeforePageDisplay": "CategoryTreeHooks::addHeaders",
 		"BeforePageDisplayMobile": "CategoryTreeHooks::addHeaders",
 		"OutputPageParserOutput": "CategoryTreeHooks::parserOutput"
@@ -100,6 +96,7 @@
 		"CategoryTreeMaxChildren": 200,
 		"CategoryTreeAllowTag": true,
 		"CategoryTreeDisableCache": 21600,
+		"CategoryTreeHTTPCache": false,
 		"CategoryTreeMaxDepth": {
 			"10": 1,
 			"20": 1,

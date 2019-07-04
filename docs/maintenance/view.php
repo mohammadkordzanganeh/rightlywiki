@@ -36,7 +36,7 @@ class ViewCLI extends Maintenance {
 	}
 
 	public function execute() {
-		$title = Title::newFromText( $this->getArg( 0 ) );
+		$title = Title::newFromText( $this->getArg() );
 		if ( !$title ) {
 			$this->fatalError( "Invalid title" );
 		}
@@ -51,7 +51,7 @@ class ViewCLI extends Maintenance {
 			$this->fatalError( "Non-text content models not supported" );
 		}
 
-		$this->output( $content->getText() );
+		$this->output( $content->getNativeData() );
 	}
 }
 

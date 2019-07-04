@@ -32,7 +32,7 @@ class UploadSourceAdapter {
 	/** @var array */
 	public static $sourceRegistrations = [];
 
-	/** @var ImportSource */
+	/** @var string */
 	private $mSource;
 
 	/** @var string */

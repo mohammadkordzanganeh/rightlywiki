@@ -116,7 +116,7 @@
 			$links = $links.filter( ':not( #bodyContent *, #content * )' );
 		}
 
-		$links.on( 'click', function ( e ) {
+		$links.click( function ( e ) {
 			var mwTitle, action, api, $link;
 
 			mwTitle = mw.Title.newFromText( title );

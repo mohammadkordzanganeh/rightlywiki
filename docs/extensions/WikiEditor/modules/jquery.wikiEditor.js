@@ -8,7 +8,7 @@
  *     $( 'textarea#wpTextbox1' ).wikiEditor( 'addModule', 'toolbar', { ... config ... } );
  *
  */
-( function () {
+( function ( $, mw ) {
 
 	var hasOwn = Object.prototype.hasOwnProperty,
 
@@ -211,7 +211,7 @@
 	 */
 	$.fn.wikiEditor = function () {
 		var context, hasFocus, cursorPos,
-			args, modules, module, extension, call;
+			args, modules, module, e, call;
 
 		/* Initialization */
 
@@ -366,7 +366,7 @@
 					context.$buttons.show();
 					return $( '<button>' )
 						.text( $.wikiEditor.autoMsg( options, 'caption' ) )
-						.on( 'click', options.action )
+						.click( options.action )
 						.appendTo( context.$buttons );
 				},
 
@@ -389,16 +389,16 @@
 							.addClass( context.view === options.name ? 'current' : null )
 							.append( $( '<a>' )
 								.attr( 'href', '#' )
-								.on( 'mousedown', function () {
+								.mousedown( function () {
 									// No dragging!
 									return false;
 								} )
-								.on( 'click', function ( event ) {
+								.click( function ( event ) {
 									context.$ui.find( '.wikiEditor-ui-view' ).hide();
 									context.$ui.find( '.' + $( this ).parent().attr( 'rel' ) ).show();
 									context.$tabs.find( 'div' ).removeClass( 'current' );
 									$( this ).parent().addClass( 'current' );
-									$( this ).trigger( 'blur' );
+									$( this ).blur();
 									if ( 'init' in options && typeof options.init === 'function' ) {
 										options.init( context );
 									}
@@ -426,7 +426,7 @@
 				 * Save text selection
 				 */
 				saveSelection: function () {
-					context.$textarea.trigger( 'focus' );
+					context.$textarea.focus();
 					context.savedSelection = {
 						selectionStart: context.$textarea[ 0 ].selectionStart,
 						selectionEnd: context.$textarea[ 0 ].selectionEnd
@@ -438,7 +438,7 @@
 				 */
 				restoreSelection: function () {
 					if ( context.savedSelection ) {
-						context.$textarea.trigger( 'focus' );
+						context.$textarea.focus();
 						context.$textarea[ 0 ].setSelectionRange( context.savedSelection.selectionStart, context.savedSelection.selectionEnd );
 						context.savedSelection = null;
 					}
@@ -478,7 +478,7 @@
 			context.$textarea.prop( 'scrollTop', $( '#wpScrolltop' ).val() );
 			// Restore focus and cursor if needed
 			if ( hasFocus ) {
-				context.$textarea.trigger( 'focus' );
+				context.$textarea.focus();
 				context.$textarea.textSelection( 'setSelection', { start: cursorPos[ 0 ], end: cursorPos[ 1 ] } );
 			}
 
@@ -507,7 +507,7 @@
 			// Setup the initial view
 			context.view = 'wikitext';
 			// Trigger the "resize" event anytime the window is resized
-			$( window ).on( 'resize', function ( event ) {
+			$( window ).resize( function ( event ) {
 				context.fn.trigger( 'resize', event );
 			} );
 		}
@@ -527,13 +527,13 @@
 			for ( module in modules ) {
 				if ( module in $.wikiEditor.modules ) {
 					// Activate all required core extensions on context
-					for ( extension in $.wikiEditor.extensions ) {
+					for ( e in $.wikiEditor.extensions ) {
 						if (
-							$.wikiEditor.isRequired( $.wikiEditor.modules[ module ], extension ) &&
-							context.extensions.indexOf( extension ) === -1
+							$.wikiEditor.isRequired( $.wikiEditor.modules[ module ], e ) &&
+							$.inArray( e, context.extensions ) === -1
 						) {
-							context.extensions[ context.extensions.length ] = extension;
-							$.wikiEditor.extensions[ extension ]( context );
+							context.extensions[ context.extensions.length ] = e;
+							$.wikiEditor.extensions[ e ]( context );
 						}
 					}
 					break;
@@ -555,4 +555,4 @@
 
 	};
 
-}() );
+}( jQuery, mediaWiki ) );

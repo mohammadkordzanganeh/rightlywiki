@@ -23,8 +23,6 @@
  * @author Neil Kandalgaonkar <neilk@wikimedia.org>
  */
 
-use MediaWiki\Shell\Shell;
-
 /**
  * RandomImageGenerator: does what it says on the tin.
  * Can fetch a random image, or also write a number of them to disk with random filenames.
@@ -312,16 +310,16 @@ class RandomImageGenerator {
 		// for now (only works if you have exiv2 installed, a program to read
 		// and manipulate exif).
 		if ( $wgExiv2Command ) {
-			$command = Shell::command( $wgExiv2Command,
-				'-M',
-				"set Exif.Image.Orientation {$orientation['exifCode']}",
-				$filename
-			)->includeStderr();
+			$cmd = wfEscapeShellArg( $wgExiv2Command )
+				. " -M "
+				. wfEscapeShellArg( "set Exif.Image.Orientation " . $orientation['exifCode'] )
+				. " "
+				. wfEscapeShellArg( $filename );
 
-			$result = $command->execute();
-			$retval = $result->getExitCode();
+			$retval = 0;
+			$err = wfShellExec( $cmd, $retval );
 			if ( $retval !== 0 ) {
-				print "Error with $command: $retval, {$result->getStdout()}\n";
+				print "Error with $cmd: $retval, $err\n";
 			}
 		}
 	}
@@ -398,25 +396,22 @@ class RandomImageGenerator {
 	 */
 	public function writeImageWithCommandLine( $spec, $format, $filename ) {
 		global $wgImageMagickConvertCommand;
-
-		$args = [
-			$wgImageMagickConvertCommand,
-			'-size',
-			$spec['width'] . 'x' . $spec['height'],
-			"xc:{$spec['fill']}",
-		];
+		$args = [];
+		$args[] = "-size " . wfEscapeShellArg( $spec['width'] . 'x' . $spec['height'] );
+		$args[] = wfEscapeShellArg( "xc:" . $spec['fill'] );
 		foreach ( $spec['draws'] as $draw ) {
 			$fill = $draw['fill'];
 			$polygon = self::shapePointsToString( $draw['shape'] );
 			$drawCommand = "fill $fill  polygon $polygon";
-			$args[] = '-draw';
-			$args[] = $drawCommand;
+			$args[] = '-draw ' . wfEscapeShellArg( $drawCommand );
 		}
-		$args[] = $filename;
+		$args[] = wfEscapeShellArg( $filename );
 
-		$result = Shell::command( $args )->execute();
+		$command = wfEscapeShellArg( $wgImageMagickConvertCommand ) . " " . implode( " ", $args );
+		$retval = null;
+		wfShellExec( $command, $retval );
 
-		return ( $result->getExitCode() === 0 );
+		return ( $retval === 0 );
 	}
 
 	/**

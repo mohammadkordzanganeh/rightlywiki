@@ -25,7 +25,6 @@ namespace Wikimedia\Rdbms;
 
 use PDO;
 use PDOException;
-use Exception;
 use LockManager;
 use FSLockManager;
 use InvalidArgumentException;
@@ -215,11 +214,6 @@ class DatabaseSqlite extends Database {
 			$this->conn->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_SILENT );
 			# Enforce LIKE to be case sensitive, just like MySQL
 			$this->query( 'PRAGMA case_sensitive_like = 1' );
-
-			$sync = $this->sessionVars['synchronous'] ?? null;
-			if ( in_array( $sync, [ 'EXTRA', 'FULL', 'NORMAL' ], true ) ) {
-				$this->query( "PRAGMA synchronous = $sync" );
-			}
 
 			return $this->conn;
 		}
@@ -654,24 +648,17 @@ class DatabaseSqlite extends Database {
 
 		# SQLite can't handle multi-row inserts, so divide up into multiple single-row inserts
 		if ( isset( $a[0] ) && is_array( $a[0] ) ) {
-			$affectedRowCount = 0;
-			try {
-				$this->startAtomic( $fname, self::ATOMIC_CANCELABLE );
-				foreach ( $a as $v ) {
-					parent::insert( $table, $v, "$fname/multi-row", $options );
-					$affectedRowCount += $this->affectedRows();
+			$ret = true;
+			foreach ( $a as $v ) {
+				if ( !parent::insert( $table, $v, "$fname/multi-row", $options ) ) {
+					$ret = false;
 				}
-				$this->endAtomic( $fname );
-			} catch ( Exception $e ) {
-				$this->cancelAtomic( $fname );
-				throw $e;
 			}
-			$this->affectedRowCount = $affectedRowCount;
 		} else {
-			parent::insert( $table, $a, "$fname/single-row", $options );
+			$ret = parent::insert( $table, $a, "$fname/single-row", $options );
 		}
 
-		return true;
+		return $ret;
 	}
 
 	/**
@@ -679,30 +666,26 @@ class DatabaseSqlite extends Database {
 	 * @param array $uniqueIndexes Unused
 	 * @param string|array $rows
 	 * @param string $fname
+	 * @return bool|ResultWrapper
 	 */
 	function replace( $table, $uniqueIndexes, $rows, $fname = __METHOD__ ) {
 		if ( !count( $rows ) ) {
-			return;
+			return true;
 		}
 
 		# SQLite can't handle multi-row replaces, so divide up into multiple single-row queries
 		if ( isset( $rows[0] ) && is_array( $rows[0] ) ) {
-			$affectedRowCount = 0;
-			try {
-				$this->startAtomic( $fname, self::ATOMIC_CANCELABLE );
-				foreach ( $rows as $v ) {
-					$this->nativeReplace( $table, $v, "$fname/multi-row" );
-					$affectedRowCount += $this->affectedRows();
+			$ret = true;
+			foreach ( $rows as $v ) {
+				if ( !$this->nativeReplace( $table, $v, "$fname/multi-row" ) ) {
+					$ret = false;
 				}
-				$this->endAtomic( $fname );
-			} catch ( Exception $e ) {
-				$this->cancelAtomic( $fname );
-				throw $e;
 			}
-			$this->affectedRowCount = $affectedRowCount;
 		} else {
-			$this->nativeReplace( $table, $rows, "$fname/single-row" );
+			$ret = $this->nativeReplace( $table, $rows, "$fname/single-row" );
 		}
+
+		return $ret;
 	}
 
 	/**
@@ -1018,7 +1001,7 @@ class DatabaseSqlite extends Database {
 			}
 		}
 
-		$res = $this->query( $sql, $fname, self::QUERY_PSEUDO_PERMANENT );
+		$res = $this->query( $sql, $fname );
 
 		// Take over indexes
 		$indexList = $this->query( 'PRAGMA INDEX_LIST(' . $this->addQuotes( $oldName ) . ')' );

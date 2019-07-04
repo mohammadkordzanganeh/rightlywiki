@@ -25,7 +25,7 @@
 
 		// Config for uploads to local wiki.
 		// Can be overridden with foreign wiki config when #loadConfig is called.
-		this.config = require( './config.json' ).UploadDialog;
+		this.config = mw.config.get( 'wgUploadDialog' );
 
 		mw.ForeignUpload.call( this, target, apiconfig );
 	}

@@ -170,7 +170,6 @@ class SideBarTest extends MediaWikiLangTestCase {
 
 	/**
 	 * Simple test to verify our helper assertAttribs() is functional
-	 * @coversNothing
 	 */
 	public function testTestAttributesAssertionHelper() {
 		$this->setMwGlobals( [

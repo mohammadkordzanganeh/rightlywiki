@@ -204,7 +204,7 @@ class GenerateCollationData extends Maintenance {
 		// For each character with an entry in allkeys.txt, overwrite the implicit
 		// entry in $this->weights that came from the UCD.
 		// Also gather a list of tertiary weights, for use in selecting the group header
-		while ( ( $line = fgets( $file ) ) !== false ) {
+		while ( false !== ( $line = fgets( $file ) ) ) {
 			// We're only interested in single-character weights, pick them out with a regex
 			$line = trim( $line );
 			if ( !preg_match( '/^([0-9A-F]+)\s*;\s*([^#]*)/', $line, $m ) ) {
@@ -249,7 +249,11 @@ class GenerateCollationData extends Maintenance {
 			if ( $weight !== $prevWeight ) {
 				$this->groups[$prevWeight] = $group;
 				$prevWeight = $weight;
-				$group = $this->groups[$weight] ?? [];
+				if ( isset( $this->groups[$weight] ) ) {
+					$group = $this->groups[$weight];
+				} else {
+					$group = [];
+				}
 			}
 			$group[] = $cp;
 		}

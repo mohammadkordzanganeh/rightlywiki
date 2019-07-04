@@ -1,26 +1,26 @@
 /*!
- * QUnit 2.9.1
+ * QUnit 2.6.2
  * https://qunitjs.com/
  *
  * Copyright jQuery Foundation and other contributors
  * Released under the MIT license
  * https://jquery.org/license
  *
- * Date: 2019-01-07T16:37Z
+ * Date: 2018-08-19T19:37Z
  */
 (function (global$1) {
   'use strict';
 
   global$1 = global$1 && global$1.hasOwnProperty('default') ? global$1['default'] : global$1;
 
-  var window$1 = global$1.window;
+  var window = global$1.window;
   var self$1 = global$1.self;
   var console = global$1.console;
-  var setTimeout$1 = global$1.setTimeout;
+  var setTimeout = global$1.setTimeout;
   var clearTimeout = global$1.clearTimeout;
 
-  var document$1 = window$1 && window$1.document;
-  var navigator = window$1 && window$1.navigator;
+  var document = window && window.document;
+  var navigator = window && window.navigator;
 
   var localSessionStorage = function () {
   	var x = "qunit-test-string";
@@ -32,24 +32,6 @@
   		return undefined;
   	}
   }();
-
-  /**
-   * Returns a function that proxies to the given method name on the globals
-   * console object. The proxy will also detect if the console doesn't exist and
-   * will appropriately no-op. This allows support for IE9, which doesn't have a
-   * console if the developer tools are not open.
-   */
-  function consoleProxy(method) {
-  	return function () {
-  		if (console) {
-  			console[method].apply(console, arguments);
-  		}
-  	};
-  }
-
-  var Logger = {
-  	warn: consoleProxy("warn")
-  };
 
   var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) {
     return typeof obj;
@@ -147,28 +129,9 @@
   	return new Date().getTime();
   };
 
-  var hasPerformanceApi = detectPerformanceApi();
-  var performance = hasPerformanceApi ? window$1.performance : undefined;
-  var performanceNow = hasPerformanceApi ? performance.now.bind(performance) : now;
-
-  function detectPerformanceApi() {
-  	return window$1 && typeof window$1.performance !== "undefined" && typeof window$1.performance.mark === "function" && typeof window$1.performance.measure === "function";
-  }
-
-  function measure(comment, startMark, endMark) {
-
-  	// `performance.measure` may fail if the mark could not be found.
-  	// reasons a specific mark could not be found include: outside code invoking `performance.clearMarks()`
-  	try {
-  		performance.measure(comment, startMark, endMark);
-  	} catch (ex) {
-  		Logger.warn("performance.measure could not be executed because of ", ex.message);
-  	}
-  }
-
   var defined = {
-  	document: window$1 && window$1.document !== undefined,
-  	setTimeout: setTimeout$1 !== undefined
+  	document: window && window.document !== undefined,
+  	setTimeout: setTimeout !== undefined
   };
 
   // Returns a new Array with the elements that are in a but not in b
@@ -693,10 +656,10 @@
   };
 
   // take a predefined QUnit.config and extend the defaults
-  var globalConfig = window$1 && window$1.QUnit && window$1.QUnit.config;
+  var globalConfig = window && window.QUnit && window.QUnit.config;
 
   // only extend the global config if there is no QUnit overload
-  if (window$1 && window$1.QUnit && !window$1.QUnit.version) {
+  if (window && window.QUnit && !window.QUnit.version) {
   	extend(config, globalConfig);
   }
 
@@ -1006,12 +969,7 @@
   		key: "start",
   		value: function start(recordTime) {
   			if (recordTime) {
-  				this._startTime = performanceNow();
-
-  				if (performance) {
-  					var suiteLevel = this.fullName.length;
-  					performance.mark("qunit_suite_" + suiteLevel + "_start");
-  				}
+  				this._startTime = Date.now();
   			}
 
   			return {
@@ -1032,16 +990,7 @@
   		key: "end",
   		value: function end(recordTime) {
   			if (recordTime) {
-  				this._endTime = performanceNow();
-
-  				if (performance) {
-  					var suiteLevel = this.fullName.length;
-  					performance.mark("qunit_suite_" + suiteLevel + "_end");
-
-  					var suiteName = this.fullName.join(" – ");
-
-  					measure(suiteLevel === 0 ? "QUnit Test Run" : "QUnit Test Suite: " + suiteName, "qunit_suite_" + suiteLevel + "_start", "qunit_suite_" + suiteLevel + "_end");
-  				}
+  				this._endTime = Date.now();
   			}
 
   			return {
@@ -1303,1182 +1252,6 @@
   	}
   }
 
-  function objectOrFunction(x) {
-    var type = typeof x === 'undefined' ? 'undefined' : _typeof(x);
-    return x !== null && (type === 'object' || type === 'function');
-  }
-
-  function isFunction(x) {
-    return typeof x === 'function';
-  }
-
-
-
-  var _isArray = void 0;
-  if (Array.isArray) {
-    _isArray = Array.isArray;
-  } else {
-    _isArray = function _isArray(x) {
-      return Object.prototype.toString.call(x) === '[object Array]';
-    };
-  }
-
-  var isArray = _isArray;
-
-  var len = 0;
-  var vertxNext = void 0;
-  var customSchedulerFn = void 0;
-
-  var asap = function asap(callback, arg) {
-    queue[len] = callback;
-    queue[len + 1] = arg;
-    len += 2;
-    if (len === 2) {
-      // If len is 2, that means that we need to schedule an async flush.
-      // If additional callbacks are queued before the queue is flushed, they
-      // will be processed by this flush that we are scheduling.
-      if (customSchedulerFn) {
-        customSchedulerFn(flush);
-      } else {
-        scheduleFlush();
-      }
-    }
-  };
-
-  function setScheduler(scheduleFn) {
-    customSchedulerFn = scheduleFn;
-  }
-
-  function setAsap(asapFn) {
-    asap = asapFn;
-  }
-
-  var browserWindow = typeof window !== 'undefined' ? window : undefined;
-  var browserGlobal = browserWindow || {};
-  var BrowserMutationObserver = browserGlobal.MutationObserver || browserGlobal.WebKitMutationObserver;
-  var isNode = typeof self === 'undefined' && typeof process !== 'undefined' && {}.toString.call(process) === '[object process]';
-
-  // test for web worker but not in IE10
-  var isWorker = typeof Uint8ClampedArray !== 'undefined' && typeof importScripts !== 'undefined' && typeof MessageChannel !== 'undefined';
-
-  // node
-  function useNextTick() {
-    // node version 0.10.x displays a deprecation warning when nextTick is used recursively
-    // see https://github.com/cujojs/when/issues/410 for details
-    return function () {
-      return process.nextTick(flush);
-    };
-  }
-
-  // vertx
-  function useVertxTimer() {
-    if (typeof vertxNext !== 'undefined') {
-      return function () {
-        vertxNext(flush);
-      };
-    }
-
-    return useSetTimeout();
-  }
-
-  function useMutationObserver() {
-    var iterations = 0;
-    var observer = new BrowserMutationObserver(flush);
-    var node = document.createTextNode('');
-    observer.observe(node, { characterData: true });
-
-    return function () {
-      node.data = iterations = ++iterations % 2;
-    };
-  }
-
-  // web worker
-  function useMessageChannel() {
-    var channel = new MessageChannel();
-    channel.port1.onmessage = flush;
-    return function () {
-      return channel.port2.postMessage(0);
-    };
-  }
-
-  function useSetTimeout() {
-    // Store setTimeout reference so es6-promise will be unaffected by
-    // other code modifying setTimeout (like sinon.useFakeTimers())
-    var globalSetTimeout = setTimeout;
-    return function () {
-      return globalSetTimeout(flush, 1);
-    };
-  }
-
-  var queue = new Array(1000);
-  function flush() {
-    for (var i = 0; i < len; i += 2) {
-      var callback = queue[i];
-      var arg = queue[i + 1];
-
-      callback(arg);
-
-      queue[i] = undefined;
-      queue[i + 1] = undefined;
-    }
-
-    len = 0;
-  }
-
-  function attemptVertx() {
-    try {
-      var vertx = Function('return this')().require('vertx');
-      vertxNext = vertx.runOnLoop || vertx.runOnContext;
-      return useVertxTimer();
-    } catch (e) {
-      return useSetTimeout();
-    }
-  }
-
-  var scheduleFlush = void 0;
-  // Decide what async method to use to triggering processing of queued callbacks:
-  if (isNode) {
-    scheduleFlush = useNextTick();
-  } else if (BrowserMutationObserver) {
-    scheduleFlush = useMutationObserver();
-  } else if (isWorker) {
-    scheduleFlush = useMessageChannel();
-  } else if (browserWindow === undefined && typeof require === 'function') {
-    scheduleFlush = attemptVertx();
-  } else {
-    scheduleFlush = useSetTimeout();
-  }
-
-  function then(onFulfillment, onRejection) {
-    var parent = this;
-
-    var child = new this.constructor(noop);
-
-    if (child[PROMISE_ID] === undefined) {
-      makePromise(child);
-    }
-
-    var _state = parent._state;
-
-
-    if (_state) {
-      var callback = arguments[_state - 1];
-      asap(function () {
-        return invokeCallback(_state, child, callback, parent._result);
-      });
-    } else {
-      subscribe(parent, child, onFulfillment, onRejection);
-    }
-
-    return child;
-  }
-
-  /**
-    `Promise.resolve` returns a promise that will become resolved with the
-    passed `value`. It is shorthand for the following:
-
-    ```javascript
-    let promise = new Promise(function(resolve, reject){
-      resolve(1);
-    });
-
-    promise.then(function(value){
-      // value === 1
-    });
-    ```
-
-    Instead of writing the above, your code now simply becomes the following:
-
-    ```javascript
-    let promise = Promise.resolve(1);
-
-    promise.then(function(value){
-      // value === 1
-    });
-    ```
-
-    @method resolve
-    @static
-    @param {Any} value value that the returned promise will be resolved with
-    Useful for tooling.
-    @return {Promise} a promise that will become fulfilled with the given
-    `value`
-  */
-  function resolve$1(object) {
-    /*jshint validthis:true */
-    var Constructor = this;
-
-    if (object && (typeof object === 'undefined' ? 'undefined' : _typeof(object)) === 'object' && object.constructor === Constructor) {
-      return object;
-    }
-
-    var promise = new Constructor(noop);
-    resolve(promise, object);
-    return promise;
-  }
-
-  var PROMISE_ID = Math.random().toString(36).substring(2);
-
-  function noop() {}
-
-  var PENDING = void 0;
-  var FULFILLED = 1;
-  var REJECTED = 2;
-
-  var TRY_CATCH_ERROR = { error: null };
-
-  function selfFulfillment() {
-    return new TypeError("You cannot resolve a promise with itself");
-  }
-
-  function cannotReturnOwn() {
-    return new TypeError('A promises callback cannot return that same promise.');
-  }
-
-  function getThen(promise) {
-    try {
-      return promise.then;
-    } catch (error) {
-      TRY_CATCH_ERROR.error = error;
-      return TRY_CATCH_ERROR;
-    }
-  }
-
-  function tryThen(then$$1, value, fulfillmentHandler, rejectionHandler) {
-    try {
-      then$$1.call(value, fulfillmentHandler, rejectionHandler);
-    } catch (e) {
-      return e;
-    }
-  }
-
-  function handleForeignThenable(promise, thenable, then$$1) {
-    asap(function (promise) {
-      var sealed = false;
-      var error = tryThen(then$$1, thenable, function (value) {
-        if (sealed) {
-          return;
-        }
-        sealed = true;
-        if (thenable !== value) {
-          resolve(promise, value);
-        } else {
-          fulfill(promise, value);
-        }
-      }, function (reason) {
-        if (sealed) {
-          return;
-        }
-        sealed = true;
-
-        reject(promise, reason);
-      }, 'Settle: ' + (promise._label || ' unknown promise'));
-
-      if (!sealed && error) {
-        sealed = true;
-        reject(promise, error);
-      }
-    }, promise);
-  }
-
-  function handleOwnThenable(promise, thenable) {
-    if (thenable._state === FULFILLED) {
-      fulfill(promise, thenable._result);
-    } else if (thenable._state === REJECTED) {
-      reject(promise, thenable._result);
-    } else {
-      subscribe(thenable, undefined, function (value) {
-        return resolve(promise, value);
-      }, function (reason) {
-        return reject(promise, reason);
-      });
-    }
-  }
-
-  function handleMaybeThenable(promise, maybeThenable, then$$1) {
-    if (maybeThenable.constructor === promise.constructor && then$$1 === then && maybeThenable.constructor.resolve === resolve$1) {
-      handleOwnThenable(promise, maybeThenable);
-    } else {
-      if (then$$1 === TRY_CATCH_ERROR) {
-        reject(promise, TRY_CATCH_ERROR.error);
-        TRY_CATCH_ERROR.error = null;
-      } else if (then$$1 === undefined) {
-        fulfill(promise, maybeThenable);
-      } else if (isFunction(then$$1)) {
-        handleForeignThenable(promise, maybeThenable, then$$1);
-      } else {
-        fulfill(promise, maybeThenable);
-      }
-    }
-  }
-
-  function resolve(promise, value) {
-    if (promise === value) {
-      reject(promise, selfFulfillment());
-    } else if (objectOrFunction(value)) {
-      handleMaybeThenable(promise, value, getThen(value));
-    } else {
-      fulfill(promise, value);
-    }
-  }
-
-  function publishRejection(promise) {
-    if (promise._onerror) {
-      promise._onerror(promise._result);
-    }
-
-    publish(promise);
-  }
-
-  function fulfill(promise, value) {
-    if (promise._state !== PENDING) {
-      return;
-    }
-
-    promise._result = value;
-    promise._state = FULFILLED;
-
-    if (promise._subscribers.length !== 0) {
-      asap(publish, promise);
-    }
-  }
-
-  function reject(promise, reason) {
-    if (promise._state !== PENDING) {
-      return;
-    }
-    promise._state = REJECTED;
-    promise._result = reason;
-
-    asap(publishRejection, promise);
-  }
-
-  function subscribe(parent, child, onFulfillment, onRejection) {
-    var _subscribers = parent._subscribers;
-    var length = _subscribers.length;
-
-
-    parent._onerror = null;
-
-    _subscribers[length] = child;
-    _subscribers[length + FULFILLED] = onFulfillment;
-    _subscribers[length + REJECTED] = onRejection;
-
-    if (length === 0 && parent._state) {
-      asap(publish, parent);
-    }
-  }
-
-  function publish(promise) {
-    var subscribers = promise._subscribers;
-    var settled = promise._state;
-
-    if (subscribers.length === 0) {
-      return;
-    }
-
-    var child = void 0,
-        callback = void 0,
-        detail = promise._result;
-
-    for (var i = 0; i < subscribers.length; i += 3) {
-      child = subscribers[i];
-      callback = subscribers[i + settled];
-
-      if (child) {
-        invokeCallback(settled, child, callback, detail);
-      } else {
-        callback(detail);
-      }
-    }
-
-    promise._subscribers.length = 0;
-  }
-
-  function tryCatch(callback, detail) {
-    try {
-      return callback(detail);
-    } catch (e) {
-      TRY_CATCH_ERROR.error = e;
-      return TRY_CATCH_ERROR;
-    }
-  }
-
-  function invokeCallback(settled, promise, callback, detail) {
-    var hasCallback = isFunction(callback),
-        value = void 0,
-        error = void 0,
-        succeeded = void 0,
-        failed = void 0;
-
-    if (hasCallback) {
-      value = tryCatch(callback, detail);
-
-      if (value === TRY_CATCH_ERROR) {
-        failed = true;
-        error = value.error;
-        value.error = null;
-      } else {
-        succeeded = true;
-      }
-
-      if (promise === value) {
-        reject(promise, cannotReturnOwn());
-        return;
-      }
-    } else {
-      value = detail;
-      succeeded = true;
-    }
-
-    if (promise._state !== PENDING) {
-      // noop
-    } else if (hasCallback && succeeded) {
-      resolve(promise, value);
-    } else if (failed) {
-      reject(promise, error);
-    } else if (settled === FULFILLED) {
-      fulfill(promise, value);
-    } else if (settled === REJECTED) {
-      reject(promise, value);
-    }
-  }
-
-  function initializePromise(promise, resolver) {
-    try {
-      resolver(function resolvePromise(value) {
-        resolve(promise, value);
-      }, function rejectPromise(reason) {
-        reject(promise, reason);
-      });
-    } catch (e) {
-      reject(promise, e);
-    }
-  }
-
-  var id = 0;
-  function nextId() {
-    return id++;
-  }
-
-  function makePromise(promise) {
-    promise[PROMISE_ID] = id++;
-    promise._state = undefined;
-    promise._result = undefined;
-    promise._subscribers = [];
-  }
-
-  function validationError() {
-    return new Error('Array Methods must be provided an Array');
-  }
-
-  var Enumerator = function () {
-    function Enumerator(Constructor, input) {
-      classCallCheck(this, Enumerator);
-
-      this._instanceConstructor = Constructor;
-      this.promise = new Constructor(noop);
-
-      if (!this.promise[PROMISE_ID]) {
-        makePromise(this.promise);
-      }
-
-      if (isArray(input)) {
-        this.length = input.length;
-        this._remaining = input.length;
-
-        this._result = new Array(this.length);
-
-        if (this.length === 0) {
-          fulfill(this.promise, this._result);
-        } else {
-          this.length = this.length || 0;
-          this._enumerate(input);
-          if (this._remaining === 0) {
-            fulfill(this.promise, this._result);
-          }
-        }
-      } else {
-        reject(this.promise, validationError());
-      }
-    }
-
-    createClass(Enumerator, [{
-      key: '_enumerate',
-      value: function _enumerate(input) {
-        for (var i = 0; this._state === PENDING && i < input.length; i++) {
-          this._eachEntry(input[i], i);
-        }
-      }
-    }, {
-      key: '_eachEntry',
-      value: function _eachEntry(entry, i) {
-        var c = this._instanceConstructor;
-        var resolve$$1 = c.resolve;
-
-
-        if (resolve$$1 === resolve$1) {
-          var _then = getThen(entry);
-
-          if (_then === then && entry._state !== PENDING) {
-            this._settledAt(entry._state, i, entry._result);
-          } else if (typeof _then !== 'function') {
-            this._remaining--;
-            this._result[i] = entry;
-          } else if (c === Promise$2) {
-            var promise = new c(noop);
-            handleMaybeThenable(promise, entry, _then);
-            this._willSettleAt(promise, i);
-          } else {
-            this._willSettleAt(new c(function (resolve$$1) {
-              return resolve$$1(entry);
-            }), i);
-          }
-        } else {
-          this._willSettleAt(resolve$$1(entry), i);
-        }
-      }
-    }, {
-      key: '_settledAt',
-      value: function _settledAt(state, i, value) {
-        var promise = this.promise;
-
-
-        if (promise._state === PENDING) {
-          this._remaining--;
-
-          if (state === REJECTED) {
-            reject(promise, value);
-          } else {
-            this._result[i] = value;
-          }
-        }
-
-        if (this._remaining === 0) {
-          fulfill(promise, this._result);
-        }
-      }
-    }, {
-      key: '_willSettleAt',
-      value: function _willSettleAt(promise, i) {
-        var enumerator = this;
-
-        subscribe(promise, undefined, function (value) {
-          return enumerator._settledAt(FULFILLED, i, value);
-        }, function (reason) {
-          return enumerator._settledAt(REJECTED, i, reason);
-        });
-      }
-    }]);
-    return Enumerator;
-  }();
-
-  /**
-    `Promise.all` accepts an array of promises, and returns a new promise which
-    is fulfilled with an array of fulfillment values for the passed promises, or
-    rejected with the reason of the first passed promise to be rejected. It casts all
-    elements of the passed iterable to promises as it runs this algorithm.
-
-    Example:
-
-    ```javascript
-    let promise1 = resolve(1);
-    let promise2 = resolve(2);
-    let promise3 = resolve(3);
-    let promises = [ promise1, promise2, promise3 ];
-
-    Promise.all(promises).then(function(array){
-      // The array here would be [ 1, 2, 3 ];
-    });
-    ```
-
-    If any of the `promises` given to `all` are rejected, the first promise
-    that is rejected will be given as an argument to the returned promises's
-    rejection handler. For example:
-
-    Example:
-
-    ```javascript
-    let promise1 = resolve(1);
-    let promise2 = reject(new Error("2"));
-    let promise3 = reject(new Error("3"));
-    let promises = [ promise1, promise2, promise3 ];
-
-    Promise.all(promises).then(function(array){
-      // Code here never runs because there are rejected promises!
-    }, function(error) {
-      // error.message === "2"
-    });
-    ```
-
-    @method all
-    @static
-    @param {Array} entries array of promises
-    @param {String} label optional string for labeling the promise.
-    Useful for tooling.
-    @return {Promise} promise that is fulfilled when all `promises` have been
-    fulfilled, or rejected if any of them become rejected.
-    @static
-  */
-  function all(entries) {
-    return new Enumerator(this, entries).promise;
-  }
-
-  /**
-    `Promise.race` returns a new promise which is settled in the same way as the
-    first passed promise to settle.
-
-    Example:
-
-    ```javascript
-    let promise1 = new Promise(function(resolve, reject){
-      setTimeout(function(){
-        resolve('promise 1');
-      }, 200);
-    });
-
-    let promise2 = new Promise(function(resolve, reject){
-      setTimeout(function(){
-        resolve('promise 2');
-      }, 100);
-    });
-
-    Promise.race([promise1, promise2]).then(function(result){
-      // result === 'promise 2' because it was resolved before promise1
-      // was resolved.
-    });
-    ```
-
-    `Promise.race` is deterministic in that only the state of the first
-    settled promise matters. For example, even if other promises given to the
-    `promises` array argument are resolved, but the first settled promise has
-    become rejected before the other promises became fulfilled, the returned
-    promise will become rejected:
-
-    ```javascript
-    let promise1 = new Promise(function(resolve, reject){
-      setTimeout(function(){
-        resolve('promise 1');
-      }, 200);
-    });
-
-    let promise2 = new Promise(function(resolve, reject){
-      setTimeout(function(){
-        reject(new Error('promise 2'));
-      }, 100);
-    });
-
-    Promise.race([promise1, promise2]).then(function(result){
-      // Code here never runs
-    }, function(reason){
-      // reason.message === 'promise 2' because promise 2 became rejected before
-      // promise 1 became fulfilled
-    });
-    ```
-
-    An example real-world use case is implementing timeouts:
-
-    ```javascript
-    Promise.race([ajax('foo.json'), timeout(5000)])
-    ```
-
-    @method race
-    @static
-    @param {Array} promises array of promises to observe
-    Useful for tooling.
-    @return {Promise} a promise which settles in the same way as the first passed
-    promise to settle.
-  */
-  function race(entries) {
-    /*jshint validthis:true */
-    var Constructor = this;
-
-    if (!isArray(entries)) {
-      return new Constructor(function (_, reject) {
-        return reject(new TypeError('You must pass an array to race.'));
-      });
-    } else {
-      return new Constructor(function (resolve, reject) {
-        var length = entries.length;
-        for (var i = 0; i < length; i++) {
-          Constructor.resolve(entries[i]).then(resolve, reject);
-        }
-      });
-    }
-  }
-
-  /**
-    `Promise.reject` returns a promise rejected with the passed `reason`.
-    It is shorthand for the following:
-
-    ```javascript
-    let promise = new Promise(function(resolve, reject){
-      reject(new Error('WHOOPS'));
-    });
-
-    promise.then(function(value){
-      // Code here doesn't run because the promise is rejected!
-    }, function(reason){
-      // reason.message === 'WHOOPS'
-    });
-    ```
-
-    Instead of writing the above, your code now simply becomes the following:
-
-    ```javascript
-    let promise = Promise.reject(new Error('WHOOPS'));
-
-    promise.then(function(value){
-      // Code here doesn't run because the promise is rejected!
-    }, function(reason){
-      // reason.message === 'WHOOPS'
-    });
-    ```
-
-    @method reject
-    @static
-    @param {Any} reason value that the returned promise will be rejected with.
-    Useful for tooling.
-    @return {Promise} a promise rejected with the given `reason`.
-  */
-  function reject$1(reason) {
-    /*jshint validthis:true */
-    var Constructor = this;
-    var promise = new Constructor(noop);
-    reject(promise, reason);
-    return promise;
-  }
-
-  function needsResolver() {
-    throw new TypeError('You must pass a resolver function as the first argument to the promise constructor');
-  }
-
-  function needsNew() {
-    throw new TypeError("Failed to construct 'Promise': Please use the 'new' operator, this object constructor cannot be called as a function.");
-  }
-
-  /**
-    Promise objects represent the eventual result of an asynchronous operation. The
-    primary way of interacting with a promise is through its `then` method, which
-    registers callbacks to receive either a promise's eventual value or the reason
-    why the promise cannot be fulfilled.
-
-    Terminology
-    -----------
-
-    - `promise` is an object or function with a `then` method whose behavior conforms to this specification.
-    - `thenable` is an object or function that defines a `then` method.
-    - `value` is any legal JavaScript value (including undefined, a thenable, or a promise).
-    - `exception` is a value that is thrown using the throw statement.
-    - `reason` is a value that indicates why a promise was rejected.
-    - `settled` the final resting state of a promise, fulfilled or rejected.
-
-    A promise can be in one of three states: pending, fulfilled, or rejected.
-
-    Promises that are fulfilled have a fulfillment value and are in the fulfilled
-    state.  Promises that are rejected have a rejection reason and are in the
-    rejected state.  A fulfillment value is never a thenable.
-
-    Promises can also be said to *resolve* a value.  If this value is also a
-    promise, then the original promise's settled state will match the value's
-    settled state.  So a promise that *resolves* a promise that rejects will
-    itself reject, and a promise that *resolves* a promise that fulfills will
-    itself fulfill.
-
-
-    Basic Usage:
-    ------------
-
-    ```js
-    let promise = new Promise(function(resolve, reject) {
-      // on success
-      resolve(value);
-
-      // on failure
-      reject(reason);
-    });
-
-    promise.then(function(value) {
-      // on fulfillment
-    }, function(reason) {
-      // on rejection
-    });
-    ```
-
-    Advanced Usage:
-    ---------------
-
-    Promises shine when abstracting away asynchronous interactions such as
-    `XMLHttpRequest`s.
-
-    ```js
-    function getJSON(url) {
-      return new Promise(function(resolve, reject){
-        let xhr = new XMLHttpRequest();
-
-        xhr.open('GET', url);
-        xhr.onreadystatechange = handler;
-        xhr.responseType = 'json';
-        xhr.setRequestHeader('Accept', 'application/json');
-        xhr.send();
-
-        function handler() {
-          if (this.readyState === this.DONE) {
-            if (this.status === 200) {
-              resolve(this.response);
-            } else {
-              reject(new Error('getJSON: `' + url + '` failed with status: [' + this.status + ']'));
-            }
-          }
-        };
-      });
-    }
-
-    getJSON('/posts.json').then(function(json) {
-      // on fulfillment
-    }, function(reason) {
-      // on rejection
-    });
-    ```
-
-    Unlike callbacks, promises are great composable primitives.
-
-    ```js
-    Promise.all([
-      getJSON('/posts'),
-      getJSON('/comments')
-    ]).then(function(values){
-      values[0] // => postsJSON
-      values[1] // => commentsJSON
-
-      return values;
-    });
-    ```
-
-    @class Promise
-    @param {Function} resolver
-    Useful for tooling.
-    @constructor
-  */
-
-  var Promise$2 = function () {
-    function Promise(resolver) {
-      classCallCheck(this, Promise);
-
-      this[PROMISE_ID] = nextId();
-      this._result = this._state = undefined;
-      this._subscribers = [];
-
-      if (noop !== resolver) {
-        typeof resolver !== 'function' && needsResolver();
-        this instanceof Promise ? initializePromise(this, resolver) : needsNew();
-      }
-    }
-
-    /**
-    The primary way of interacting with a promise is through its `then` method,
-    which registers callbacks to receive either a promise's eventual value or the
-    reason why the promise cannot be fulfilled.
-     ```js
-    findUser().then(function(user){
-      // user is available
-    }, function(reason){
-      // user is unavailable, and you are given the reason why
-    });
-    ```
-     Chaining
-    --------
-     The return value of `then` is itself a promise.  This second, 'downstream'
-    promise is resolved with the return value of the first promise's fulfillment
-    or rejection handler, or rejected if the handler throws an exception.
-     ```js
-    findUser().then(function (user) {
-      return user.name;
-    }, function (reason) {
-      return 'default name';
-    }).then(function (userName) {
-      // If `findUser` fulfilled, `userName` will be the user's name, otherwise it
-      // will be `'default name'`
-    });
-     findUser().then(function (user) {
-      throw new Error('Found user, but still unhappy');
-    }, function (reason) {
-      throw new Error('`findUser` rejected and we're unhappy');
-    }).then(function (value) {
-      // never reached
-    }, function (reason) {
-      // if `findUser` fulfilled, `reason` will be 'Found user, but still unhappy'.
-      // If `findUser` rejected, `reason` will be '`findUser` rejected and we're unhappy'.
-    });
-    ```
-    If the downstream promise does not specify a rejection handler, rejection reasons will be propagated further downstream.
-     ```js
-    findUser().then(function (user) {
-      throw new PedagogicalException('Upstream error');
-    }).then(function (value) {
-      // never reached
-    }).then(function (value) {
-      // never reached
-    }, function (reason) {
-      // The `PedgagocialException` is propagated all the way down to here
-    });
-    ```
-     Assimilation
-    ------------
-     Sometimes the value you want to propagate to a downstream promise can only be
-    retrieved asynchronously. This can be achieved by returning a promise in the
-    fulfillment or rejection handler. The downstream promise will then be pending
-    until the returned promise is settled. This is called *assimilation*.
-     ```js
-    findUser().then(function (user) {
-      return findCommentsByAuthor(user);
-    }).then(function (comments) {
-      // The user's comments are now available
-    });
-    ```
-     If the assimliated promise rejects, then the downstream promise will also reject.
-     ```js
-    findUser().then(function (user) {
-      return findCommentsByAuthor(user);
-    }).then(function (comments) {
-      // If `findCommentsByAuthor` fulfills, we'll have the value here
-    }, function (reason) {
-      // If `findCommentsByAuthor` rejects, we'll have the reason here
-    });
-    ```
-     Simple Example
-    --------------
-     Synchronous Example
-     ```javascript
-    let result;
-     try {
-      result = findResult();
-      // success
-    } catch(reason) {
-      // failure
-    }
-    ```
-     Errback Example
-     ```js
-    findResult(function(result, err){
-      if (err) {
-        // failure
-      } else {
-        // success
-      }
-    });
-    ```
-     Promise Example;
-     ```javascript
-    findResult().then(function(result){
-      // success
-    }, function(reason){
-      // failure
-    });
-    ```
-     Advanced Example
-    --------------
-     Synchronous Example
-     ```javascript
-    let author, books;
-     try {
-      author = findAuthor();
-      books  = findBooksByAuthor(author);
-      // success
-    } catch(reason) {
-      // failure
-    }
-    ```
-     Errback Example
-     ```js
-     function foundBooks(books) {
-     }
-     function failure(reason) {
-     }
-     findAuthor(function(author, err){
-      if (err) {
-        failure(err);
-        // failure
-      } else {
-        try {
-          findBoooksByAuthor(author, function(books, err) {
-            if (err) {
-              failure(err);
-            } else {
-              try {
-                foundBooks(books);
-              } catch(reason) {
-                failure(reason);
-              }
-            }
-          });
-        } catch(error) {
-          failure(err);
-        }
-        // success
-      }
-    });
-    ```
-     Promise Example;
-     ```javascript
-    findAuthor().
-      then(findBooksByAuthor).
-      then(function(books){
-        // found books
-    }).catch(function(reason){
-      // something went wrong
-    });
-    ```
-     @method then
-    @param {Function} onFulfilled
-    @param {Function} onRejected
-    Useful for tooling.
-    @return {Promise}
-    */
-
-    /**
-    `catch` is simply sugar for `then(undefined, onRejection)` which makes it the same
-    as the catch block of a try/catch statement.
-    ```js
-    function findAuthor(){
-    throw new Error('couldn't find that author');
-    }
-    // synchronous
-    try {
-    findAuthor();
-    } catch(reason) {
-    // something went wrong
-    }
-    // async with promises
-    findAuthor().catch(function(reason){
-    // something went wrong
-    });
-    ```
-    @method catch
-    @param {Function} onRejection
-    Useful for tooling.
-    @return {Promise}
-    */
-
-
-    createClass(Promise, [{
-      key: 'catch',
-      value: function _catch(onRejection) {
-        return this.then(null, onRejection);
-      }
-
-      /**
-        `finally` will be invoked regardless of the promise's fate just as native
-        try/catch/finally behaves
-      
-        Synchronous example:
-      
-        ```js
-        findAuthor() {
-          if (Math.random() > 0.5) {
-            throw new Error();
-          }
-          return new Author();
-        }
-      
-        try {
-          return findAuthor(); // succeed or fail
-        } catch(error) {
-          return findOtherAuther();
-        } finally {
-          // always runs
-          // doesn't affect the return value
-        }
-        ```
-      
-        Asynchronous example:
-      
-        ```js
-        findAuthor().catch(function(reason){
-          return findOtherAuther();
-        }).finally(function(){
-          // author was either found, or not
-        });
-        ```
-      
-        @method finally
-        @param {Function} callback
-        @return {Promise}
-      */
-
-    }, {
-      key: 'finally',
-      value: function _finally(callback) {
-        var promise = this;
-        var constructor = promise.constructor;
-
-        if (isFunction(callback)) {
-          return promise.then(function (value) {
-            return constructor.resolve(callback()).then(function () {
-              return value;
-            });
-          }, function (reason) {
-            return constructor.resolve(callback()).then(function () {
-              throw reason;
-            });
-          });
-        }
-
-        return promise.then(callback, callback);
-      }
-    }]);
-    return Promise;
-  }();
-
-  Promise$2.prototype.then = then;
-  Promise$2.all = all;
-  Promise$2.race = race;
-  Promise$2.resolve = resolve$1;
-  Promise$2.reject = reject$1;
-  Promise$2._setScheduler = setScheduler;
-  Promise$2._setAsap = setAsap;
-  Promise$2._asap = asap;
-
-  /*global self*/
-  function polyfill() {
-    var local = void 0;
-
-    if (typeof global !== 'undefined') {
-      local = global;
-    } else if (typeof self !== 'undefined') {
-      local = self;
-    } else {
-      try {
-        local = Function('return this')();
-      } catch (e) {
-        throw new Error('polyfill failed because global object is unavailable in this environment');
-      }
-    }
-
-    var P = local.Promise;
-
-    if (P) {
-      var promiseToString = null;
-      try {
-        promiseToString = Object.prototype.toString.call(P.resolve());
-      } catch (e) {
-        // silently ignored
-      }
-
-      if (promiseToString === '[object Promise]' && !P.cast) {
-        return;
-      }
-    }
-
-    local.Promise = Promise$2;
-  }
-
-  // Strange compat..
-  Promise$2.polyfill = polyfill;
-  Promise$2.Promise = Promise$2;
-
-  var Promise$1 = typeof Promise !== "undefined" ? Promise : Promise$2;
-
   // Register logging callbacks
   function registerLoggingCallbacks(obj) {
   	var i,
@@ -2511,25 +1284,12 @@
   }
 
   function runLoggingCallbacks(key, args) {
-  	var callbacks = config.callbacks[key];
+  	var i, l, callbacks;
 
-  	// Handling 'log' callbacks separately. Unlike the other callbacks,
-  	// the log callback is not controlled by the processing queue,
-  	// but rather used by asserts. Hence to promisfy the 'log' callback
-  	// would mean promisfying each step of a test
-  	if (key === "log") {
-  		callbacks.map(function (callback) {
-  			return callback(args);
-  		});
-  		return;
+  	callbacks = config.callbacks[key];
+  	for (i = 0, l = callbacks.length; i < l; i++) {
+  		callbacks[i](args);
   	}
-
-  	// ensure that each callback is executed serially
-  	return callbacks.reduce(function (promiseChain, callback) {
-  		return promiseChain.then(function () {
-  			return Promise$1.resolve(callback(args));
-  		});
-  	}, Promise$1.resolve([]));
   }
 
   // Doesn't support IE9, it will return undefined on these browsers
@@ -2593,44 +1353,31 @@
   function advance() {
   	advanceTaskQueue();
 
-  	if (!taskQueue.length && !config.blocking && !config.current) {
+  	if (!taskQueue.length) {
   		advanceTestQueue();
   	}
   }
 
   /**
-   * Advances the taskQueue with an increased depth
+   * Advances the taskQueue to the next task if it is ready and not empty.
    */
   function advanceTaskQueue() {
   	var start = now();
   	config.depth = (config.depth || 0) + 1;
 
-  	processTaskQueue(start);
-
-  	config.depth--;
-  }
-
-  /**
-   * Process the first task on the taskQueue as a promise.
-   * Each task is a function returned by https://github.com/qunitjs/qunit/blob/master/src/test.js#L381
-   */
-  function processTaskQueue(start) {
-  	if (taskQueue.length && !config.blocking) {
+  	while (taskQueue.length && !config.blocking) {
   		var elapsedTime = now() - start;
 
   		if (!defined.setTimeout || config.updateRate <= 0 || elapsedTime < config.updateRate) {
   			var task = taskQueue.shift();
-  			Promise$1.resolve(task()).then(function () {
-  				if (!taskQueue.length) {
-  					advance();
-  				} else {
-  					processTaskQueue(start);
-  				}
-  			});
+  			task();
   		} else {
-  			setTimeout$1(advance);
+  			setTimeout(advance);
+  			break;
   		}
   	}
+
+  	config.depth--;
   }
 
   /**
@@ -2751,19 +1498,18 @@
   		failed: config.stats.bad,
   		total: config.stats.all,
   		runtime: runtime
-  	}).then(function () {
+  	});
 
-  		// Clear own storage items if all tests passed
-  		if (storage && config.stats.bad === 0) {
-  			for (var i = storage.length - 1; i >= 0; i--) {
-  				var key = storage.key(i);
+  	// Clear own storage items if all tests passed
+  	if (storage && config.stats.bad === 0) {
+  		for (var i = storage.length - 1; i >= 0; i--) {
+  			var key = storage.key(i);
 
-  				if (key.indexOf("qunit-test-") === 0) {
-  					storage.removeItem(key);
-  				}
+  			if (key.indexOf("qunit-test-") === 0) {
+  				storage.removeItem(key);
   			}
   		}
-  	});
+  	}
   }
 
   var ProcessingQueue = {
@@ -2798,10 +1544,7 @@
   		key: "start",
   		value: function start(recordTime) {
   			if (recordTime) {
-  				this._startTime = performanceNow();
-  				if (performance) {
-  					performance.mark("qunit_test_start");
-  				}
+  				this._startTime = Date.now();
   			}
 
   			return {
@@ -2814,14 +1557,7 @@
   		key: "end",
   		value: function end(recordTime) {
   			if (recordTime) {
-  				this._endTime = performanceNow();
-  				if (performance) {
-  					performance.mark("qunit_test_end");
-
-  					var testName = this.fullName.join(" – ");
-
-  					measure("QUnit Test: " + testName, "qunit_test_start", "qunit_test_end");
-  				}
+  				this._endTime = Date.now();
   			}
 
   			return extend(this.start(), {
@@ -2970,48 +1706,42 @@
   		module = module.parentModule;
   	}
 
-  	// The above push modules from the child to the parent
-  	// return a reversed order with the top being the top most parent module
-  	return modules.reverse();
+  	return modules;
   }
 
   Test.prototype = {
   	before: function before() {
-  		var _this = this;
-
-  		var module = this.module,
+  		var i,
+  		    startModule,
+  		    module = this.module,
   		    notStartedModules = getNotStartedModules(module);
 
-  		// ensure the callbacks are executed serially for each module
-  		var callbackPromises = notStartedModules.reduce(function (promiseChain, startModule) {
-  			return promiseChain.then(function () {
-  				startModule.stats = { all: 0, bad: 0, started: now() };
-  				emit("suiteStart", startModule.suiteReport.start(true));
-  				return runLoggingCallbacks("moduleStart", {
-  					name: startModule.name,
-  					tests: startModule.tests
-  				});
+  		for (i = notStartedModules.length - 1; i >= 0; i--) {
+  			startModule = notStartedModules[i];
+  			startModule.stats = { all: 0, bad: 0, started: now() };
+  			emit("suiteStart", startModule.suiteReport.start(true));
+  			runLoggingCallbacks("moduleStart", {
+  				name: startModule.name,
+  				tests: startModule.tests
   			});
-  		}, Promise$1.resolve([]));
+  		}
 
-  		return callbackPromises.then(function () {
-  			config.current = _this;
+  		config.current = this;
 
-  			_this.testEnvironment = extend({}, module.testEnvironment);
+  		this.testEnvironment = extend({}, module.testEnvironment);
 
-  			_this.started = now();
-  			emit("testStart", _this.testReport.start(true));
-  			return runLoggingCallbacks("testStart", {
-  				name: _this.testName,
-  				module: module.name,
-  				testId: _this.testId,
-  				previousFailure: _this.previousFailure
-  			}).then(function () {
-  				if (!config.pollution) {
-  					saveGlobal();
-  				}
-  			});
+  		this.started = now();
+  		emit("testStart", this.testReport.start(true));
+  		runLoggingCallbacks("testStart", {
+  			name: this.testName,
+  			module: module.name,
+  			testId: this.testId,
+  			previousFailure: this.previousFailure
   		});
+
+  		if (!config.pollution) {
+  			saveGlobal();
+  		}
   	},
 
   	run: function run() {
@@ -3057,11 +1787,11 @@
   	},
 
   	queueHook: function queueHook(hook, hookName, hookOwner) {
-  		var _this2 = this;
+  		var _this = this;
 
   		var callHook = function callHook() {
-  			var promise = hook.call(_this2.testEnvironment, _this2.assert);
-  			_this2.resolvePromise(promise, hookName);
+  			var promise = hook.call(_this.testEnvironment, _this.assert);
+  			_this.resolvePromise(promise, hookName);
   		};
 
   		var runHook = function runHook() {
@@ -3070,7 +1800,7 @@
   					return;
   				}
 
-  				_this2.preserveEnvironment = true;
+  				_this.preserveEnvironment = true;
   			}
 
   			// The 'after' hook should only execute when there are not tests left and
@@ -3079,7 +1809,7 @@
   				return;
   			}
 
-  			config.current = _this2;
+  			config.current = _this;
   			if (config.notrycatch) {
   				callHook();
   				return;
@@ -3087,7 +1817,7 @@
   			try {
   				callHook();
   			} catch (error) {
-  				_this2.pushFailure(hookName + " failed on " + _this2.testName + ": " + (error.message || error), extractStacktrace(error, 0));
+  				_this.pushFailure(hookName + " failed on " + _this.testName + ": " + (error.message || error), extractStacktrace(error, 0));
   			}
   		};
 
@@ -3178,7 +1908,7 @@
   		emit("testEnd", this.testReport.end(true));
   		this.testReport.slimAssertions();
 
-  		return runLoggingCallbacks("testDone", {
+  		runLoggingCallbacks("testDone", {
   			name: testName,
   			module: moduleName,
   			skipped: skipped,
@@ -3194,27 +1924,21 @@
 
   			// Source of Test
   			source: this.stack
-  		}).then(function () {
-  			if (module.testsRun === numberOfTests(module)) {
-  				var completedModules = [module];
-
-  				// Check if the parent modules, iteratively, are done. If that the case,
-  				// we emit the `suiteEnd` event and trigger `moduleDone` callback.
-  				var parent = module.parentModule;
-  				while (parent && parent.testsRun === numberOfTests(parent)) {
-  					completedModules.push(parent);
-  					parent = parent.parentModule;
-  				}
-
-  				return completedModules.reduce(function (promiseChain, completedModule) {
-  					return promiseChain.then(function () {
-  						return logSuiteEnd(completedModule);
-  					});
-  				}, Promise$1.resolve([]));
-  			}
-  		}).then(function () {
-  			config.current = undefined;
   		});
+
+  		if (module.testsRun === numberOfTests(module)) {
+  			logSuiteEnd(module);
+
+  			// Check if the parent modules, iteratively, are done. If that the case,
+  			// we emit the `suiteEnd` event and trigger `moduleDone` callback.
+  			var parent = module.parentModule;
+  			while (parent && parent.testsRun === numberOfTests(parent)) {
+  				logSuiteEnd(parent);
+  				parent = parent.parentModule;
+  			}
+  		}
+
+  		config.current = undefined;
 
   		function logSuiteEnd(module) {
 
@@ -3223,7 +1947,7 @@
   			module.hooks = {};
 
   			emit("suiteEnd", module.suiteReport.end(true));
-  			return runLoggingCallbacks("moduleDone", {
+  			runLoggingCallbacks("moduleDone", {
   				name: module.name,
   				tests: module.tests,
   				failed: module.stats.bad,
@@ -3250,7 +1974,7 @@
 
   		function runTest() {
   			return [function () {
-  				return test.before();
+  				test.before();
   			}].concat(toConsumableArray(test.hooks("before")), [function () {
   				test.preserveTestEnvironment();
   			}], toConsumableArray(test.hooks("beforeEach")), [function () {
@@ -3258,7 +1982,7 @@
   			}], toConsumableArray(test.hooks("afterEach").reverse()), toConsumableArray(test.hooks("after").reverse()), [function () {
   				test.after();
   			}, function () {
-  				return test.finish();
+  				test.finish();
   			}]);
   		}
 
@@ -3578,7 +2302,7 @@
 
   		if (typeof timeoutDuration === "number" && timeoutDuration > 0) {
   			clearTimeout(config.timeout);
-  			config.timeout = setTimeout$1(function () {
+  			config.timeout = setTimeout(function () {
   				pushFailure("Test took longer than " + timeoutDuration + "ms; test timed out.", sourceFromStacktrace(2));
   				internalRecover(test);
   			}, timeoutDuration);
@@ -3632,7 +2356,7 @@
   		if (config.timeout) {
   			clearTimeout(config.timeout);
   		}
-  		config.timeout = setTimeout$1(function () {
+  		config.timeout = setTimeout(function () {
   			if (test.semaphore > 0) {
   				return;
   			}
@@ -3684,6 +2408,24 @@
   		}
   	}
   }
+
+  /**
+   * Returns a function that proxies to the given method name on the globals
+   * console object. The proxy will also detect if the console doesn't exist and
+   * will appropriately no-op. This allows support for IE9, which doesn't have a
+   * console if the developer tools are not open.
+   */
+  function consoleProxy(method) {
+  	return function () {
+  		if (console) {
+  			console[method].apply(console, arguments);
+  		}
+  	};
+  }
+
+  var Logger = {
+  	warn: consoleProxy("warn")
+  };
 
   var Assert = function () {
   	function Assert(testContext) {
@@ -3986,13 +2728,11 @@
   				// We don't want to validate thrown error
   				if (!expected) {
   					result = true;
+  					expected = null;
 
   					// Expected is a regexp
   				} else if (expectedType === "regexp") {
   					result = expected.test(errorString(actual));
-
-  					// Log the string form of the regexp
-  					expected = String(expected);
 
   					// Expected is a constructor, maybe an Error constructor
   				} else if (expectedType === "function" && actual instanceof expected) {
@@ -4001,9 +2741,6 @@
   					// Expected is an Error object
   				} else if (expectedType === "object") {
   					result = actual instanceof expected.constructor && actual.name === expected.name && actual.message === expected.message;
-
-  					// Log the string form of the Error object
-  					expected = errorString(expected);
 
   					// Expected is a validation function which returns true if validation passed
   				} else if (expectedType === "function" && expected.call({}, actual) === true) {
@@ -4014,9 +2751,7 @@
 
   			currentTest.assert.pushResult({
   				result: result,
-
-  				// undefined if it didn't throw
-  				actual: actual && errorString(actual),
+  				actual: actual,
   				expected: expected,
   				message: message
   			});
@@ -4076,13 +2811,11 @@
   				// We don't want to validate
   				if (expected === undefined) {
   					result = true;
+  					expected = actual;
 
   					// Expected is a regexp
   				} else if (expectedType === "regexp") {
   					result = expected.test(errorString(actual));
-
-  					// Log the string form of the regexp
-  					expected = String(expected);
 
   					// Expected is a constructor, maybe an Error constructor
   				} else if (expectedType === "function" && actual instanceof expected) {
@@ -4091,9 +2824,6 @@
   					// Expected is an Error object
   				} else if (expectedType === "object") {
   					result = actual instanceof expected.constructor && actual.name === expected.name && actual.message === expected.message;
-
-  					// Log the string form of the Error object
-  					expected = errorString(expected);
 
   					// Expected is a validation function which returns true if validation passed
   				} else {
@@ -4110,9 +2840,7 @@
 
   				currentTest.assert.pushResult({
   					result: result,
-
-  					// leave rejection value of undefined as-is
-  					actual: actual && errorString(actual),
+  					actual: actual,
   					expected: expected,
   					message: message
   				});
@@ -4134,14 +2862,12 @@
   /**
    * Converts an error into a simple string for comparisons.
    *
-   * @param {Error|Object} error
+   * @param {Error} error
    * @return {String}
    */
   function errorString(error) {
   	var resultErrorString = error.toString();
 
-  	// If the error wasn't a subclass of Error but something like
-  	// an object literal with name and message properties...
   	if (resultErrorString.substring(0, 7) === "[object") {
   		var name = error.name ? error.name.toString() : "Error";
   		var message = error.message ? error.message.toString() : "";
@@ -4166,11 +2892,11 @@
   	if (defined.document) {
 
   		// QUnit may be defined when it is preconfigured but then only QUnit and QUnit.config may be defined.
-  		if (window$1.QUnit && window$1.QUnit.version) {
+  		if (window.QUnit && window.QUnit.version) {
   			throw new Error("QUnit has already been defined.");
   		}
 
-  		window$1.QUnit = QUnit;
+  		window.QUnit = QUnit;
   	}
 
   	// For nodejs
@@ -4212,10 +2938,10 @@
   		if (config.current.ignoreGlobalErrors) {
   			return true;
   		}
-  		pushFailure.apply(undefined, [error.message, error.stacktrace || error.fileName + ":" + error.lineNumber].concat(args));
+  		pushFailure.apply(undefined, [error.message, error.fileName + ":" + error.lineNumber].concat(args));
   	} else {
   		test("global failure", extend(function () {
-  			pushFailure.apply(undefined, [error.message, error.stacktrace || error.fileName + ":" + error.lineNumber].concat(args));
+  			pushFailure.apply(undefined, [error.message, error.fileName + ":" + error.lineNumber].concat(args));
   		}, { validTest: true }));
   	}
 
@@ -4253,10 +2979,10 @@
   var runStarted = false;
 
   // Figure out if we're running the tests from a server or not
-  QUnit.isLocal = !(defined.document && window$1.location.protocol !== "file:");
+  QUnit.isLocal = !(defined.document && window.location.protocol !== "file:");
 
   // Expose the current QUnit version
-  QUnit.version = "2.9.1";
+  QUnit.version = "2.6.2";
 
   extend(QUnit, {
   	on: on,
@@ -4356,17 +3082,12 @@
 
   	// Add a slight delay to allow definition of more modules and tests.
   	if (defined.setTimeout) {
-  		setTimeout$1(function () {
+  		setTimeout(function () {
   			begin();
   		});
   	} else {
   		begin();
   	}
-  }
-
-  function unblockAndAdvanceQueue() {
-  	config.blocking = false;
-  	ProcessingQueue.advance();
   }
 
   function begin() {
@@ -4398,17 +3119,18 @@
   		runLoggingCallbacks("begin", {
   			totalTests: Test.count,
   			modules: modulesLog
-  		}).then(unblockAndAdvanceQueue);
-  	} else {
-  		unblockAndAdvanceQueue();
+  		});
   	}
+
+  	config.blocking = false;
+  	ProcessingQueue.advance();
   }
 
   exportQUnit(QUnit);
 
   (function () {
 
-  	if (typeof window$1 === "undefined" || typeof document$1 === "undefined") {
+  	if (typeof window === "undefined" || typeof document === "undefined") {
   		return;
   	}
 
@@ -4423,7 +3145,7 @@
   			return;
   		}
 
-  		var fixture = document$1.getElementById("qunit-fixture");
+  		var fixture = document.getElementById("qunit-fixture");
   		if (fixture) {
   			config.fixture = fixture.cloneNode(true);
   		}
@@ -4437,12 +3159,12 @@
   			return;
   		}
 
-  		var fixture = document$1.getElementById("qunit-fixture");
+  		var fixture = document.getElementById("qunit-fixture");
   		var resetFixtureType = _typeof(config.fixture);
   		if (resetFixtureType === "string") {
 
   			// support user defined values for `config.fixture`
-  			var newFixture = document$1.createElement("div");
+  			var newFixture = document.createElement("div");
   			newFixture.setAttribute("id", "qunit-fixture");
   			newFixture.innerHTML = config.fixture;
   			fixture.parentNode.replaceChild(newFixture, fixture);
@@ -4458,7 +3180,7 @@
   (function () {
 
   	// Only interact with URLs via window.location
-  	var location = typeof window$1 !== "undefined" && window$1.location;
+  	var location = typeof window !== "undefined" && window.location;
   	if (!location) {
   		return;
   	}
@@ -4583,13 +3305,12 @@
   (function () {
 
   	// Don't load the HTML Reporter on non-browser environments
-  	if (typeof window$1 === "undefined" || !window$1.document) {
+  	if (typeof window === "undefined" || !window.document) {
   		return;
   	}
 
   	var config = QUnit.config,
-  	    hiddenTests = [],
-  	    document = window$1.document,
+  	    document$$1 = window.document,
   	    collapseNext = false,
   	    hasOwn = Object.prototype.hasOwnProperty,
   	    unfilteredUrl = setUrl({ filter: undefined, module: undefined,
@@ -4642,7 +3363,7 @@
   	}
 
   	function id(name) {
-  		return document.getElementById && document.getElementById(name);
+  		return document$$1.getElementById && document$$1.getElementById(name);
   	}
 
   	function abortTests() {
@@ -4737,56 +3458,16 @@
   		updatedUrl = setUrl(params);
 
   		// Check if we can apply the change without a page refresh
-  		if ("hidepassed" === field.name && "replaceState" in window$1.history) {
+  		if ("hidepassed" === field.name && "replaceState" in window.history) {
   			QUnit.urlParams[field.name] = value;
   			config[field.name] = value || false;
   			tests = id("qunit-tests");
   			if (tests) {
-  				var length = tests.children.length;
-  				var children = tests.children;
-
-  				if (field.checked) {
-  					for (var i = 0; i < length; i++) {
-  						var test = children[i];
-
-  						if (test && test.className.indexOf("pass") > -1) {
-  							hiddenTests.push(test);
-  						}
-  					}
-
-  					var _iteratorNormalCompletion = true;
-  					var _didIteratorError = false;
-  					var _iteratorError = undefined;
-
-  					try {
-  						for (var _iterator = hiddenTests[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-  							var hiddenTest = _step.value;
-
-  							tests.removeChild(hiddenTest);
-  						}
-  					} catch (err) {
-  						_didIteratorError = true;
-  						_iteratorError = err;
-  					} finally {
-  						try {
-  							if (!_iteratorNormalCompletion && _iterator.return) {
-  								_iterator.return();
-  							}
-  						} finally {
-  							if (_didIteratorError) {
-  								throw _iteratorError;
-  							}
-  						}
-  					}
-  				} else {
-  					while ((test = hiddenTests.pop()) != null) {
-  						tests.appendChild(test);
-  					}
-  				}
+  				toggleClass(tests, "hidepass", value || false);
   			}
-  			window$1.history.replaceState(null, "", updatedUrl);
+  			window.history.replaceState(null, "", updatedUrl);
   		} else {
-  			window$1.location = updatedUrl;
+  			window.location = updatedUrl;
   		}
   	}
 
@@ -4795,7 +3476,7 @@
   		    arrValue,
   		    i,
   		    querystring = "?",
-  		    location = window$1.location;
+  		    location = window.location;
 
   		params = QUnit.extend(QUnit.extend({}, QUnit.urlParams), params);
 
@@ -4831,7 +3512,7 @@
   			}
   		}
 
-  		window$1.location = setUrl({
+  		window.location = setUrl({
   			filter: filter === "" ? undefined : filter,
   			moduleId: selectedModules.length === 0 ? undefined : selectedModules,
 
@@ -4842,7 +3523,7 @@
   	}
 
   	function toolbarUrlConfigContainer() {
-  		var urlConfigContainer = document.createElement("span");
+  		var urlConfigContainer = document$$1.createElement("span");
 
   		urlConfigContainer.innerHTML = getUrlConfigHtml();
   		addClass(urlConfigContainer, "qunit-url-config");
@@ -4854,7 +3535,7 @@
   	}
 
   	function abortTestsButton() {
-  		var button = document.createElement("button");
+  		var button = document$$1.createElement("button");
   		button.id = "qunit-abort-tests-button";
   		button.innerHTML = "Abort";
   		addEvent(button, "click", abortTests);
@@ -4862,10 +3543,10 @@
   	}
 
   	function toolbarLooseFilter() {
-  		var filter = document.createElement("form"),
-  		    label = document.createElement("label"),
-  		    input = document.createElement("input"),
-  		    button = document.createElement("button");
+  		var filter = document$$1.createElement("form"),
+  		    label = document$$1.createElement("label"),
+  		    input = document$$1.createElement("input"),
+  		    button = document$$1.createElement("button");
 
   		addClass(filter, "qunit-filter");
 
@@ -4881,7 +3562,7 @@
   		label.appendChild(input);
 
   		filter.appendChild(label);
-  		filter.appendChild(document.createTextNode(" "));
+  		filter.appendChild(document$$1.createTextNode(" "));
   		filter.appendChild(button);
   		addEvent(filter, "submit", interceptNavigation);
 
@@ -4907,12 +3588,12 @@
   		var allCheckbox,
   		    commit,
   		    reset,
-  		    moduleFilter = document.createElement("form"),
-  		    label = document.createElement("label"),
-  		    moduleSearch = document.createElement("input"),
-  		    dropDown = document.createElement("div"),
-  		    actions = document.createElement("span"),
-  		    dropDownList = document.createElement("ul"),
+  		    moduleFilter = document$$1.createElement("form"),
+  		    label = document$$1.createElement("label"),
+  		    moduleSearch = document$$1.createElement("input"),
+  		    dropDown = document$$1.createElement("div"),
+  		    actions = document$$1.createElement("span"),
+  		    dropDownList = document$$1.createElement("ul"),
   		    dirty = false;
 
   		moduleSearch.id = "qunit-modulefilter-search";
@@ -4927,7 +3608,7 @@
   		label.appendChild(moduleSearch);
 
   		actions.id = "qunit-modulefilter-actions";
-  		actions.innerHTML = "<button style='display:none'>Apply</button>" + "<button type='reset' style='display:none'>Reset</button>" + "<label class='clickable" + (config.moduleId.length ? "" : " checked") + "'><input type='checkbox'" + (config.moduleId.length ? "" : " checked='checked'") + " />All modules</label>";
+  		actions.innerHTML = "<button style='display:none'>Apply</button>" + "<button type='reset' style='display:none'>Reset</button>" + "<label class='clickable" + (config.moduleId.length ? "" : " checked") + "'><input type='checkbox'" + (config.moduleId.length ? "" : " checked='checked'") + ">All modules</label>";
   		allCheckbox = actions.lastChild.firstChild;
   		commit = actions.firstChild;
   		reset = commit.nextSibling;
@@ -4950,7 +3631,7 @@
   		addEvent(moduleFilter, "reset", function () {
 
   			// Let the reset happen, then update styles
-  			window$1.setTimeout(selectionChange);
+  			window.setTimeout(selectionChange);
   		});
 
   		// Enables show/hide for the dropdown
@@ -4960,8 +3641,8 @@
   			}
 
   			dropDown.style.display = "block";
-  			addEvent(document, "click", hideHandler);
-  			addEvent(document, "keydown", hideHandler);
+  			addEvent(document$$1, "click", hideHandler);
+  			addEvent(document$$1, "keydown", hideHandler);
 
   			// Hide on Escape keydown or outside-container click
   			function hideHandler(e) {
@@ -4972,8 +3653,8 @@
   						moduleSearch.focus();
   					}
   					dropDown.style.display = "none";
-  					removeEvent(document, "click", hideHandler);
-  					removeEvent(document, "keydown", hideHandler);
+  					removeEvent(document$$1, "click", hideHandler);
+  					removeEvent(document$$1, "keydown", hideHandler);
   					moduleSearch.value = "";
   					searchInput();
   				}
@@ -5041,7 +3722,7 @@
   			toolbar.appendChild(toolbarUrlConfigContainer());
   			toolbar.appendChild(toolbarModuleFilter());
   			toolbar.appendChild(toolbarLooseFilter());
-  			toolbar.appendChild(document.createElement("div")).className = "clearfix";
+  			toolbar.appendChild(document$$1.createElement("div")).className = "clearfix";
   		}
   	}
 
@@ -5072,7 +3753,7 @@
 
   		if (tests) {
   			tests.innerHTML = "";
-  			result = document.createElement("p");
+  			result = document$$1.createElement("p");
   			result.id = "qunit-testresult";
   			result.className = "result";
   			tests.parentNode.insertBefore(result, tests);
@@ -5098,7 +3779,7 @@
 
   		if (userAgent) {
   			userAgent.innerHTML = "";
-  			userAgent.appendChild(document.createTextNode("QUnit " + QUnit.version + "; " + navigator.userAgent));
+  			userAgent.appendChild(document$$1.createTextNode("QUnit " + QUnit.version + "; " + navigator.userAgent));
   		}
   	}
 
@@ -5106,7 +3787,7 @@
   		var qunit = id("qunit");
 
   		if (qunit) {
-  			qunit.innerHTML = "<h1 id='qunit-header'>" + escapeText(document.title) + "</h1>" + "<h2 id='qunit-banner'></h2>" + "<div id='qunit-testrunner-toolbar'></div>" + appendFilteredTest() + "<h2 id='qunit-userAgent'></h2>" + "<ol id='qunit-tests'></ol>";
+  			qunit.innerHTML = "<h1 id='qunit-header'>" + escapeText(document$$1.title) + "</h1>" + "<h2 id='qunit-banner'></h2>" + "<div id='qunit-testrunner-toolbar'></div>" + appendFilteredTest() + "<h2 id='qunit-userAgent'></h2>" + "<ol id='qunit-tests'></ol>";
   		}
 
   		appendHeader();
@@ -5114,6 +3795,20 @@
   		appendTestResults();
   		appendUserAgent();
   		appendToolbar();
+  	}
+
+  	function appendTestsList(modules) {
+  		var i, l, x, z, test, moduleObj;
+
+  		for (i = 0, l = modules.length; i < l; i++) {
+  			moduleObj = modules[i];
+
+  			for (x = 0, z = moduleObj.tests.length; x < z; x++) {
+  				test = moduleObj.tests[x];
+
+  				appendTest(test.name, test.testId, moduleObj.name);
+  			}
+  		}
   	}
 
   	function appendTest(name, testId, moduleName) {
@@ -5127,19 +3822,19 @@
   			return;
   		}
 
-  		title = document.createElement("strong");
+  		title = document$$1.createElement("strong");
   		title.innerHTML = getNameHtml(name, moduleName);
 
-  		rerunTrigger = document.createElement("a");
+  		rerunTrigger = document$$1.createElement("a");
   		rerunTrigger.innerHTML = "Rerun";
   		rerunTrigger.href = setUrl({ testId: testId });
 
-  		testBlock = document.createElement("li");
+  		testBlock = document$$1.createElement("li");
   		testBlock.appendChild(title);
   		testBlock.appendChild(rerunTrigger);
   		testBlock.id = "qunit-test-output-" + testId;
 
-  		assertList = document.createElement("ol");
+  		assertList = document$$1.createElement("ol");
   		assertList.className = "qunit-assert-list";
 
   		testBlock.appendChild(assertList);
@@ -5149,7 +3844,7 @@
 
   	// HTML Reporter initialization and load
   	QUnit.begin(function (details) {
-  		var i, moduleObj;
+  		var i, moduleObj, tests;
 
   		// Sort modules by name for the picker
   		for (i = 0; i < details.modules.length; i++) {
@@ -5164,6 +3859,11 @@
 
   		// Initialize QUnit elements
   		appendInterface();
+  		appendTestsList(details.modules);
+  		tests = id("qunit-tests");
+  		if (tests && config.hidepassed) {
+  			addClass(tests, "hidepass");
+  		}
   	});
 
   	QUnit.done(function (details) {
@@ -5185,7 +3885,7 @@
   				if (test.className === "" || test.className === "running") {
   					test.className = "aborted";
   					assertList = test.getElementsByTagName("ol")[0];
-  					assertLi = document.createElement("li");
+  					assertLi = document$$1.createElement("li");
   					assertLi.className = "fail";
   					assertLi.innerHTML = "Test aborted.";
   					assertList.appendChild(assertLi);
@@ -5205,17 +3905,17 @@
   			id("qunit-testresult-display").innerHTML = html;
   		}
 
-  		if (config.altertitle && document.title) {
+  		if (config.altertitle && document$$1.title) {
 
   			// Show ✖ for good, ✔ for bad suite result in title
   			// use escape sequences in case file gets loaded with non-utf-8
   			// charset
-  			document.title = [stats.failedTests ? "\u2716" : "\u2714", document.title.replace(/^[\u2714\u2716] /i, "")].join(" ");
+  			document$$1.title = [stats.failedTests ? "\u2716" : "\u2714", document$$1.title.replace(/^[\u2714\u2716] /i, "")].join(" ");
   		}
 
   		// Scroll back to top to show results
-  		if (config.scrolltop && window$1.scrollTo) {
-  			window$1.scrollTo(0, 0);
+  		if (config.scrolltop && window.scrollTo) {
+  			window.scrollTo(0, 0);
   		}
   	});
 
@@ -5232,15 +3932,19 @@
   	}
 
   	QUnit.testStart(function (details) {
-  		var running, bad;
+  		var running, testBlock, bad;
 
-  		appendTest(details.name, details.testId, details.module);
+  		testBlock = id("qunit-test-output-" + details.testId);
+  		if (testBlock) {
+  			testBlock.className = "running";
+  		} else {
+
+  			// Report later registered tests
+  			appendTest(details.name, details.testId, details.module);
+  		}
 
   		running = id("qunit-testresult-display");
-
   		if (running) {
-  			addClass(running, "running");
-
   			bad = QUnit.config.reorder && details.previousFailure;
 
   			running.innerHTML = [bad ? "Rerunning previously failed test: <br />" : "Running: <br />", getNameHtml(details.name, details.module)].join("");
@@ -5323,7 +4027,7 @@
 
   		assertList = testItem.getElementsByTagName("ol")[0];
 
-  		assertLi = document.createElement("li");
+  		assertLi = document$$1.createElement("li");
   		assertLi.className = details.result ? "pass" : "fail";
   		assertLi.innerHTML = message;
   		assertList.appendChild(assertLi);
@@ -5334,7 +4038,6 @@
   		    time,
   		    testItem,
   		    assertList,
-  		    status,
   		    good,
   		    bad,
   		    testCounts,
@@ -5347,16 +4050,6 @@
   		}
 
   		testItem = id("qunit-test-output-" + details.testId);
-
-  		removeClass(testItem, "running");
-
-  		if (details.failed > 0) {
-  			status = "failed";
-  		} else if (details.todo) {
-  			status = "todo";
-  		} else {
-  			status = details.skipped ? "skipped" : "passed";
-  		}
 
   		assertList = testItem.getElementsByTagName("ol")[0];
 
@@ -5393,7 +4086,7 @@
   			stats.skippedTests++;
 
   			testItem.className = "skipped";
-  			skipped = document.createElement("em");
+  			skipped = document$$1.createElement("em");
   			skipped.className = "qunit-skipped-label";
   			skipped.innerHTML = "skipped";
   			testItem.insertBefore(skipped, testTitle);
@@ -5405,14 +4098,14 @@
   			testItem.className = testPassed ? "pass" : "fail";
 
   			if (details.todo) {
-  				var todoLabel = document.createElement("em");
+  				var todoLabel = document$$1.createElement("em");
   				todoLabel.className = "qunit-todo-label";
   				todoLabel.innerHTML = "todo";
   				testItem.className += " todo";
   				testItem.insertBefore(todoLabel, testTitle);
   			}
 
-  			time = document.createElement("span");
+  			time = document$$1.createElement("span");
   			time.className = "runtime";
   			time.innerHTML = details.runtime + " ms";
   			testItem.insertBefore(time, assertList);
@@ -5428,8 +4121,8 @@
 
   		// Show the source of the test when showing assertions
   		if (details.source) {
-  			sourceName = document.createElement("p");
-  			sourceName.innerHTML = "<strong>Source: </strong>" + escapeText(details.source);
+  			sourceName = document$$1.createElement("p");
+  			sourceName.innerHTML = "<strong>Source: </strong>" + details.source;
   			addClass(sourceName, "qunit-source");
   			if (testPassed) {
   				addClass(sourceName, "qunit-collapsed");
@@ -5439,44 +4132,36 @@
   			});
   			testItem.appendChild(sourceName);
   		}
-
-  		if (config.hidepassed && status === "passed") {
-
-  			// use removeChild instead of remove because of support
-  			hiddenTests.push(testItem);
-
-  			tests.removeChild(testItem);
-  		}
   	});
 
   	// Avoid readyState issue with phantomjs
   	// Ref: #818
   	var notPhantom = function (p) {
   		return !(p && p.version && p.version.major > 0);
-  	}(window$1.phantom);
+  	}(window.phantom);
 
-  	if (notPhantom && document.readyState === "complete") {
+  	if (notPhantom && document$$1.readyState === "complete") {
   		QUnit.load();
   	} else {
-  		addEvent(window$1, "load", QUnit.load);
+  		addEvent(window, "load", QUnit.load);
   	}
 
   	// Wrap window.onerror. We will call the original window.onerror to see if
   	// the existing handler fully handles the error; if not, we will call the
   	// QUnit.onError function.
-  	var originalWindowOnError = window$1.onerror;
+  	var originalWindowOnError = window.onerror;
 
   	// Cover uncaught exceptions
   	// Returning true will suppress the default browser handler,
   	// returning false will let it run.
-  	window$1.onerror = function (message, fileName, lineNumber, columnNumber, errorObj) {
+  	window.onerror = function (message, fileName, lineNumber) {
   		var ret = false;
   		if (originalWindowOnError) {
-  			for (var _len = arguments.length, args = Array(_len > 5 ? _len - 5 : 0), _key = 5; _key < _len; _key++) {
-  				args[_key - 5] = arguments[_key];
+  			for (var _len = arguments.length, args = Array(_len > 3 ? _len - 3 : 0), _key = 3; _key < _len; _key++) {
+  				args[_key - 3] = arguments[_key];
   			}
 
-  			ret = originalWindowOnError.call.apply(originalWindowOnError, [this, message, fileName, lineNumber, columnNumber, errorObj].concat(args));
+  			ret = originalWindowOnError.call.apply(originalWindowOnError, [this, message, fileName, lineNumber].concat(args));
   		}
 
   		// Treat return value as window.onerror itself does,
@@ -5488,14 +4173,6 @@
   				lineNumber: lineNumber
   			};
 
-  			// According to
-  			// https://blog.sentry.io/2016/01/04/client-javascript-reporting-window-onerror,
-  			// most modern browsers support an errorObj argument; use that to
-  			// get a full stack trace if it's available.
-  			if (errorObj && errorObj.stack) {
-  				error.stacktrace = extractStacktrace(errorObj, 0);
-  			}
-
   			ret = QUnit.onError(error);
   		}
 
@@ -5503,7 +4180,7 @@
   	};
 
   	// Listen for unhandled rejections, and call QUnit.onUnhandledRejection
-  	window$1.addEventListener("unhandledrejection", function (event) {
+  	window.addEventListener("unhandledrejection", function (event) {
   		QUnit.onUnhandledRejection(event.reason);
   	});
   })();

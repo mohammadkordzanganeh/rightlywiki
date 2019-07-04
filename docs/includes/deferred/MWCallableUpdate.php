@@ -35,10 +35,6 @@ class MWCallableUpdate implements DeferrableUpdate, DeferrableCallback {
 		}
 	}
 
-	/**
-	 * @private This method is public so that it works with onTransactionResolution()
-	 * @param int $trigger
-	 */
 	public function cancelOnRollback( $trigger ) {
 		if ( $trigger === IDatabase::TRIGGER_ROLLBACK ) {
 			$this->callback = null;

@@ -519,7 +519,7 @@ class SearchHighlighter {
 		$extract = "";
 		$contLang = MediaWikiServices::getInstance()->getContentLanguage();
 		foreach ( $lines as $line ) {
-			if ( $contextlines == 0 ) {
+			if ( 0 == $contextlines ) {
 				break;
 			}
 			++$lineno;

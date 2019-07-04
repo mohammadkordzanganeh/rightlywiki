@@ -134,7 +134,7 @@ class SessionProviderTest extends MediaWikiTestCase {
 			$this->fail( 'Expected exception not thrown' );
 		} catch ( \BadMethodCallException $ex ) {
 			$this->assertSame(
-				'MediaWiki\\Session\\SessionProvider::preventSessionsForUser must be implemented ' .
+				'MediaWiki\\Session\\SessionProvider::preventSessionsForUser must be implmented ' .
 					'when canChangeUser() is false',
 				$ex->getMessage()
 			);

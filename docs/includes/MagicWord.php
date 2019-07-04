@@ -125,7 +125,6 @@ class MagicWord {
 	 * @deprecated since 1.32, use MagicWordFactory::get
 	 */
 	public static function get( $id ) {
-		wfDeprecated( __METHOD__, '1.32' );
 		return MediaWikiServices::getInstance()->getMagicWordFactory()->get( $id );
 	}
 
@@ -136,7 +135,6 @@ class MagicWord {
 	 * @deprecated since 1.32, use MagicWordFactory::getVariableIDs
 	 */
 	public static function getVariableIDs() {
-		wfDeprecated( __METHOD__, '1.32' );
 		return MediaWikiServices::getInstance()->getMagicWordFactory()->getVariableIDs();
 	}
 
@@ -146,7 +144,6 @@ class MagicWord {
 	 * @deprecated since 1.32, use MagicWordFactory::getSubstIDs
 	 */
 	public static function getSubstIDs() {
-		wfDeprecated( __METHOD__, '1.32' );
 		return MediaWikiServices::getInstance()->getMagicWordFactory()->getSubstIDs();
 	}
 
@@ -158,7 +155,6 @@ class MagicWord {
 	 * @deprecated since 1.32, use MagicWordFactory::getCacheTTL
 	 */
 	public static function getCacheTTL( $id ) {
-		wfDeprecated( __METHOD__, '1.32' );
 		return MediaWikiServices::getInstance()->getMagicWordFactory()->getCacheTTL( $id );
 	}
 
@@ -169,7 +165,6 @@ class MagicWord {
 	 * @deprecated since 1.32, use MagicWordFactory::getDoubleUnderscoreArray
 	 */
 	public static function getDoubleUnderscoreArray() {
-		wfDeprecated( __METHOD__, '1.32' );
 		return MediaWikiServices::getInstance()->getMagicWordFactory()->getDoubleUnderscoreArray();
 	}
 

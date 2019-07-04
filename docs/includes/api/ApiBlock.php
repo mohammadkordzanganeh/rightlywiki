@@ -54,18 +54,6 @@ class ApiBlock extends ApiBase {
 			}
 		}
 
-		$editingRestriction = 'sitewide';
-		$pageRestrictions = '';
-		$namespaceRestrictions = '';
-		if ( $this->getConfig()->get( 'EnablePartialBlocks' ) ) {
-			if ( $params['partial'] ) {
-				$editingRestriction = 'partial';
-			}
-
-			$pageRestrictions = implode( "\n", (array)$params['pagerestrictions'] );
-			$namespaceRestrictions = implode( "\n", (array)$params['namespacerestrictions'] );
-		}
-
 		if ( $params['userid'] !== null ) {
 			$username = User::whoIs( $params['userid'] );
 
@@ -119,9 +107,6 @@ class ApiBlock extends ApiBase {
 			'Watch' => $params['watchuser'],
 			'Confirm' => true,
 			'Tags' => $params['tags'],
-			'EditingRestriction' => $editingRestriction,
-			'PageRestrictions' => $pageRestrictions,
-			'NamespaceRestrictions' => $namespaceRestrictions,
 		];
 
 		$status = SpecialBlock::validateTarget( $params['user'], $user );
@@ -140,7 +125,7 @@ class ApiBlock extends ApiBase {
 
 		$block = Block::newFromTarget( $target, null, true );
 		if ( $block instanceof Block ) {
-			$res['expiry'] = ApiResult::formatExpiry( $block->getExpiry(), 'infinite' );
+			$res['expiry'] = ApiResult::formatExpiry( $block->mExpiry, 'infinite' );
 			$res['id'] = $block->getId();
 		} else {
 			# should be unreachable
@@ -157,12 +142,6 @@ class ApiBlock extends ApiBase {
 		$res['allowusertalk'] = $params['allowusertalk'];
 		$res['watchuser'] = $params['watchuser'];
 
-		if ( $this->getConfig()->get( 'EnablePartialBlocks' ) ) {
-			$res['partial'] = $params['partial'];
-			$res['pagerestrictions'] = $params['pagerestrictions'];
-			$res['namespacerestrictions'] = $params['namespacerestrictions'];
-		}
-
 		$this->getResult()->addValue( null, $this->getModuleName(), $res );
 	}
 
@@ -175,7 +154,7 @@ class ApiBlock extends ApiBase {
 	}
 
 	public function getAllowedParams() {
-		$params = [
+		return [
 			'user' => [
 				ApiBase::PARAM_TYPE => 'user',
 			],
@@ -197,21 +176,6 @@ class ApiBlock extends ApiBase {
 				ApiBase::PARAM_ISMULTI => true,
 			],
 		];
-
-		if ( $this->getConfig()->get( 'EnablePartialBlocks' ) ) {
-			$params['partial'] = false;
-			$params['pagerestrictions'] = [
-				ApiBase::PARAM_ISMULTI => true,
-				ApiBase::PARAM_ISMULTI_LIMIT1 => 10,
-				ApiBase::PARAM_ISMULTI_LIMIT2 => 10,
-			];
-			$params['namespacerestrictions'] = [
-				ApiBase::PARAM_ISMULTI => true,
-				ApiBase::PARAM_TYPE => 'namespace',
-			];
-		}
-
-		return $params;
 	}
 
 	public function needsToken() {

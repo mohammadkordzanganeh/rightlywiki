@@ -27,13 +27,11 @@
  * @ingroup Cache
  */
 class EmptyBagOStuff extends BagOStuff {
-	protected function doGet( $key, $flags = 0, &$casToken = null ) {
-		$casToken = null;
-
+	protected function doGet( $key, $flags = 0 ) {
 		return false;
 	}
 
-	public function add( $key, $value, $exp = 0, $flags = 0 ) {
+	public function add( $key, $value, $exp = 0 ) {
 		return true;
 	}
 
@@ -41,12 +39,8 @@ class EmptyBagOStuff extends BagOStuff {
 		return true;
 	}
 
-	public function delete( $key, $flags = 0 ) {
+	public function delete( $key ) {
 		return true;
-	}
-
-	public function incr( $key, $value = 1 ) {
-		return false;
 	}
 
 	public function merge( $key, callable $callback, $exptime = 0, $attempts = 10, $flags = 0 ) {

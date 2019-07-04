@@ -34,7 +34,7 @@
 		} );
 
 		// Add form submission handler
-		$( '#editform' ).on( 'submit', function () {
+		$( '#editform' ).submit( function () {
 			allowCloseWindow.release();
 		} );
 	} );

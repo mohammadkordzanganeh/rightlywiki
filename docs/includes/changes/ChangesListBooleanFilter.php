@@ -112,7 +112,11 @@ class ChangesListBooleanFilter extends ChangesListFilter {
 			$this->showHide = $filterDefinition['showHide'];
 		}
 
-		$this->isReplacedInStructuredUi = $filterDefinition['isReplacedInStructuredUi'] ?? false;
+		if ( isset( $filterDefinition['isReplacedInStructuredUi'] ) ) {
+			$this->isReplacedInStructuredUi = $filterDefinition['isReplacedInStructuredUi'];
+		} else {
+			$this->isReplacedInStructuredUi = false;
+		}
 
 		if ( isset( $filterDefinition['default'] ) ) {
 			$this->setDefault( $filterDefinition['default'] );
@@ -124,7 +128,11 @@ class ChangesListBooleanFilter extends ChangesListFilter {
 			$this->queryCallable = $filterDefinition['queryCallable'];
 		}
 
-		$this->activeValue = $filterDefinition['activeValue'] ?? true;
+		if ( isset( $filterDefinition['activeValue'] ) ) {
+			$this->activeValue = $filterDefinition['activeValue'];
+		} else {
+			$this->activeValue = true;
+		}
 	}
 
 	/**
@@ -161,7 +169,7 @@ class ChangesListBooleanFilter extends ChangesListFilter {
 	 * @inheritDoc
 	 */
 	public function displaysOnUnstructuredUi() {
-		return (bool)$this->showHide;
+		return !!$this->showHide;
 	}
 
 	/**

@@ -29,12 +29,9 @@
 	function Notification( message, options ) {
 		var $notification, $notificationContent;
 
-		$notification = $( '<div>' )
+		$notification = $( '<div class="mw-notification"></div>' )
 			.data( 'mw-notification', this )
-			.addClass( [
-				'mw-notification',
-				options.autoHide ? 'mw-notification-autohide' : 'mw-notification-noautohide'
-			] );
+			.addClass( options.autoHide ? 'mw-notification-autohide' : 'mw-notification-noautohide' );
 
 		if ( options.tag ) {
 			// Sanitize options.tag before it is used by any code. (Including Notification class methods)
@@ -53,13 +50,12 @@
 		}
 
 		if ( options.title ) {
-			$( '<div>' )
-				.addClass( 'mw-notification-title' )
+			$( '<div class="mw-notification-title"></div>' )
 				.text( options.title )
 				.appendTo( $notification );
 		}
 
-		$notificationContent = $( '<div>' ).addClass( 'mw-notification-content' );
+		$notificationContent = $( '<div class="mw-notification-content"></div>' );
 
 		if ( typeof message === 'object' ) {
 			// Handle mw.Message objects separately from DOM nodes and jQuery objects
@@ -247,8 +243,6 @@
 					$area.css( 'display', 'none' );
 					notif.$notification.remove();
 				} else {
-					// FIXME: Use CSS transition
-					// eslint-disable-next-line no-jquery/no-slide
 					notif.$notification.slideUp( 'fast', function () {
 						$( this ).remove();
 					} );
@@ -451,8 +445,8 @@
 		 * @property {Object}
 		 */
 		autoHideSeconds: {
-			short: 5,
-			long: 30
+			'short': 5,
+			'long': 30
 		},
 
 		/**

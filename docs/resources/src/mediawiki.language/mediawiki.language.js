@@ -158,6 +158,10 @@
 			return text;
 		},
 
+		setSpecialCharacters: function ( data ) {
+			this.specialCharacters = data;
+		},
+
 		/**
 		 * Formats language tags according the BCP 47 standard.
 		 * See LanguageCode::bcp47 for the PHP implementation.

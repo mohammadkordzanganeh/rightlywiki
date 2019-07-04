@@ -65,8 +65,7 @@ class PurgeJobUtils {
 
 				$batchSize = $services->getMainConfig()->get( 'UpdateRowsPerQuery' );
 				$ticket = $lbFactory->getEmptyTransactionTicket( $fname );
-				$idBatches = array_chunk( $ids, $batchSize );
-				foreach ( $idBatches as $idBatch ) {
+				foreach ( array_chunk( $ids, $batchSize ) as $idBatch ) {
 					$dbw->update(
 						'page',
 						[ 'page_touched' => $now ],
@@ -76,9 +75,7 @@ class PurgeJobUtils {
 						],
 						$fname
 					);
-					if ( count( $idBatches ) > 1 ) {
-						$lbFactory->commitAndWaitForReplication( $fname, $ticket );
-					}
+					$lbFactory->commitAndWaitForReplication( $fname, $ticket );
 				}
 			}
 		) );

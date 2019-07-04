@@ -65,8 +65,8 @@ class MoveBatch extends Maintenance {
 		$reason = $this->getOption( 'r', '' );
 		$interval = $this->getOption( 'i', 0 );
 		$noredirects = $this->hasOption( 'noredirects' );
-		if ( $this->hasArg( 0 ) ) {
-			$file = fopen( $this->getArg( 0 ), 'r' );
+		if ( $this->hasArg() ) {
+			$file = fopen( $this->getArg(), 'r' );
 		} else {
 			$file = $this->getStdin();
 		}
@@ -86,6 +86,7 @@ class MoveBatch extends Maintenance {
 
 		# Setup complete, now start
 		$dbw = $this->getDB( DB_MASTER );
+		// phpcs:ignore Generic.CodeAnalysis.ForLoopWithTestFunctionCall
 		for ( $linenum = 1; !feof( $file ); $linenum++ ) {
 			$line = fgets( $file );
 			if ( $line === false ) {

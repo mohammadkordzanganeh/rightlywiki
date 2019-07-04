@@ -56,7 +56,7 @@ class GetConfiguration extends Maintenance {
 		$this->addOption( 'format', implode( ', ', self::$outFormats ), false, true );
 	}
 
-	public function validateParamsAndArgs() {
+	protected function validateParamsAndArgs() {
 		$error_out = false;
 
 		# Get the format and make sure it is set to a valid default value

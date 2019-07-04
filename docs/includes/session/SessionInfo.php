@@ -50,19 +50,10 @@ class SessionInfo {
 	/** @var UserInfo|null */
 	private $userInfo = null;
 
-	/** @var bool */
 	private $persisted = false;
-
-	/** @var bool */
 	private $remembered = false;
-
-	/** @var bool */
 	private $forceHTTPS = false;
-
-	/** @var bool */
 	private $idIsSafe = false;
-
-	/** @var bool */
 	private $forceUse = false;
 
 	/** @var array|null */

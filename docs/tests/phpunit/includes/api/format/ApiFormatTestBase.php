@@ -38,7 +38,6 @@ abstract class ApiFormatTestBase extends MediaWikiTestCase {
 			$options = [ 'class' => $options ];
 		}
 		$printerName = $options['name'] ?? $this->printerName;
-		$flags = $options['flags'] ?? 0;
 
 		$context = new RequestContext;
 		$context->setRequest( new FauxRequest( $params, true ) );
@@ -50,7 +49,7 @@ abstract class ApiFormatTestBase extends MediaWikiTestCase {
 		$result = $main->getResult();
 		$result->addArrayType( null, 'default' );
 		foreach ( $data as $k => $v ) {
-			$result->addValue( null, $k, $v, $flags );
+			$result->addValue( null, $k, $v );
 		}
 
 		$ret = [];

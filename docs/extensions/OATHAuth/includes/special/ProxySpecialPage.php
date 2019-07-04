@@ -61,7 +61,7 @@ abstract class ProxySpecialPage extends SpecialPage {
 	/**
 	 * @return string
 	 */
-	public function getName() {
+	function getName() {
 		$this->init();
 		return $this->target->getName();
 	}
@@ -70,7 +70,7 @@ abstract class ProxySpecialPage extends SpecialPage {
 	 * @param string|bool $subpage
 	 * @return Title
 	 */
-	public function getPageTitle( $subpage = false ) {
+	function getPageTitle( $subpage = false ) {
 		$this->init();
 		return $this->target->getPageTitle( $subpage );
 	}
@@ -78,7 +78,7 @@ abstract class ProxySpecialPage extends SpecialPage {
 	/**
 	 * @return string
 	 */
-	public function getLocalName() {
+	function getLocalName() {
 		$this->init();
 		return $this->target->getLocalName();
 	}
@@ -86,7 +86,7 @@ abstract class ProxySpecialPage extends SpecialPage {
 	/**
 	 * @return string
 	 */
-	public function getRestriction() {
+	function getRestriction() {
 		$this->init();
 		return $this->target->getRestriction();
 	}
@@ -94,7 +94,7 @@ abstract class ProxySpecialPage extends SpecialPage {
 	/**
 	 * @return bool
 	 */
-	public function isListed() {
+	function isListed() {
 		$this->init();
 		return $this->target->isListed();
 	}
@@ -103,7 +103,7 @@ abstract class ProxySpecialPage extends SpecialPage {
 	 * @param bool $listed
 	 * @return bool
 	 */
-	public function setListed( $listed ) {
+	function setListed( $listed ) {
 		$this->init();
 		return $this->target->setListed( $listed );
 	}
@@ -112,7 +112,7 @@ abstract class ProxySpecialPage extends SpecialPage {
 	 * @param bool|null $x
 	 * @return bool
 	 */
-	public function listed( $x = null ) {
+	function listed( $x = null ) {
 		$this->init();
 		return $this->target->listed( $x );
 	}
@@ -129,7 +129,7 @@ abstract class ProxySpecialPage extends SpecialPage {
 	 * @param bool|null $x
 	 * @return bool
 	 */
-	public function including( $x = null ) {
+	function including( $x = null ) {
 		$this->init();
 		return $this->target->including( $x );
 	}
@@ -154,7 +154,7 @@ abstract class ProxySpecialPage extends SpecialPage {
 	/**
 	 * @throws PermissionsError
 	 */
-	public function displayRestrictionError() {
+	function displayRestrictionError() {
 		$this->init();
 		$this->target->displayRestrictionError();
 	}
@@ -195,7 +195,7 @@ abstract class ProxySpecialPage extends SpecialPage {
 	/**
 	 * @return string
 	 */
-	public function getDescription() {
+	function getDescription() {
 		$this->init();
 		return $this->target->getDescription();
 	}

@@ -15,7 +15,7 @@
  * along with MediaViewer.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-( function () {
+( function ( mw, $ ) {
 	QUnit.module( 'mmv.ui.TruncatableTextField', QUnit.newMwEnvironment() );
 
 	/**
@@ -61,4 +61,4 @@
 		ttf.set( 'abc' );
 		assert.strictEqual( ttf.$element.text(), 'abc', 'Text is set accurately.' );
 	} );
-}() );
+}( mediaWiki, jQuery ) );

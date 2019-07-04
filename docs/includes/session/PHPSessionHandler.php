@@ -37,8 +37,6 @@ class PHPSessionHandler implements \SessionHandlerInterface {
 
 	/** @var bool Whether PHP session handling is enabled */
 	protected $enable = false;
-
-	/** @var bool */
 	protected $warn = true;
 
 	/** @var SessionManager|null */

@@ -1,7 +1,5 @@
 <?php
 
-use MediaWiki\Shell\Shell;
-
 require __DIR__ . '/../Maintenance.php';
 
 class HHVMMakeRepo extends Maintenance {
@@ -105,7 +103,7 @@ class HHVMMakeRepo extends Maintenance {
 
 		$hhvm = $this->getOption( 'hhvm', 'hhvm' );
 		$verbose = $this->getOption( 'verbose', 3 );
-		$cmd = Shell::escape(
+		$cmd = wfEscapeShellArg(
 			$hhvm,
 			'--hphp',
 			'--target', 'hhbc',
@@ -151,7 +149,6 @@ class HHVMMakeRepo extends Maintenance {
 			),
 			RecursiveIteratorIterator::LEAVES_ONLY
 		);
-		/** @var SplFileInfo $fileInfo */
 		foreach ( $iter as $file => $fileInfo ) {
 			if ( $fileInfo->isFile() ) {
 				$files[] = $file;

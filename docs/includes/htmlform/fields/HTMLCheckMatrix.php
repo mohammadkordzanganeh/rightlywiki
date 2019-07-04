@@ -23,7 +23,7 @@
  *       Not used by OOUI form fields.
  */
 class HTMLCheckMatrix extends HTMLFormField implements HTMLNestedFilterable {
-	private static $requiredParams = [
+	static private $requiredParams = [
 		// Required by underlying HTMLFormField
 		'fieldname',
 		// Required by HTMLCheckMatrix
@@ -91,10 +91,9 @@ class HTMLCheckMatrix extends HTMLFormField implements HTMLNestedFilterable {
 		// Build the column headers
 		$headerContents = Html::rawElement( 'td', [], "\u{00A0}" );
 		foreach ( $columns as $columnLabel => $columnTag ) {
-			$headerContents .= Html::rawElement( 'th', [], $columnLabel );
+			$headerContents .= Html::rawElement( 'td', [], $columnLabel );
 		}
-		$thead = Html::rawElement( 'tr', [], "\n$headerContents\n" );
-		$tableContents .= Html::rawElement( 'thead', [], "\n$thead\n" );
+		$tableContents .= Html::rawElement( 'tr', [], "\n$headerContents\n" );
 
 		$tooltipClass = 'mw-icon-question';
 		if ( isset( $this->mParams['tooltip-class'] ) ) {

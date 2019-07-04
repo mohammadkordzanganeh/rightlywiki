@@ -169,7 +169,7 @@ class ArchivedFile {
 			$conds['fa_sha1'] = $this->sha1;
 		}
 
-		if ( $conds === [] ) {
+		if ( !count( $conds ) ) {
 			throw new MWException( "No specific information for retrieving archived file" );
 		}
 

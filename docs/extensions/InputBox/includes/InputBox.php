@@ -718,11 +718,9 @@ REGEX;
 	 * accidental behaviour.
 	 *
 	 * @see https://phabricator.wikimedia.org/T180485
-	 * @param string $text
-	 * @return string
 	 */
 	private function languageConvert( $text ) {
-		$lang = $this->mParser->getTargetLanguage();
+		$lang = $this->mParser->getConverterLanguage();
 		if ( $lang->hasVariants() && strpos( $text, '-{' ) !== false ) {
 			$text = $lang->convert( $text );
 		}

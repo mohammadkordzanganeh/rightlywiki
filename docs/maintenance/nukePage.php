@@ -39,7 +39,7 @@ class NukePage extends Maintenance {
 	}
 
 	public function execute() {
-		$name = $this->getArg( 0 );
+		$name = $this->getArg();
 		$delete = $this->hasOption( 'delete' );
 
 		$dbw = $this->getDB( DB_MASTER );

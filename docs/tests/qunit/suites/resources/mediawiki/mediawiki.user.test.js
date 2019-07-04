@@ -2,7 +2,6 @@
 	QUnit.module( 'mediawiki.user', QUnit.newMwEnvironment( {
 		setup: function () {
 			this.server = this.sandbox.useFakeServer();
-			this.server.respondImmediately = true;
 			// Cannot stub by simple assignment because read-only.
 			// Instead, stub in tests by using 'delete', and re-create
 			// in teardown using the original descriptor (including its
@@ -45,45 +44,28 @@
 		assert.strictEqual( mw.user.id(), 'John', 'user.id()' );
 	} );
 
-	QUnit.test( 'getGroups (callback)', function ( assert ) {
-		var done = assert.async();
+	QUnit.test( 'getUserInfo', function ( assert ) {
 		mw.config.set( 'wgUserGroups', [ '*', 'user' ] );
 
 		mw.user.getGroups( function ( groups ) {
 			assert.deepEqual( groups, [ '*', 'user' ], 'Result' );
-			done();
 		} );
-	} );
-
-	QUnit.test( 'getGroups (Promise)', function ( assert ) {
-		mw.config.set( 'wgUserGroups', [ '*', 'user' ] );
-
-		return mw.user.getGroups().then( function ( groups ) {
-			assert.deepEqual( groups, [ '*', 'user' ], 'Result' );
-		} );
-	} );
-
-	QUnit.test( 'getRights (callback)', function ( assert ) {
-		var done = assert.async();
-
-		this.server.respond( [ 200, { 'Content-Type': 'application/json' },
-			'{ "query": { "userinfo": { "groups": [ "unused" ], "rights": [ "read", "edit", "createtalk" ] } } }'
-		] );
 
 		mw.user.getRights( function ( rights ) {
 			assert.deepEqual( rights, [ 'read', 'edit', 'createtalk' ], 'Result (callback)' );
-			done();
 		} );
-	} );
 
-	QUnit.test( 'getRights (Promise)', function ( assert ) {
-		this.server.respond( [ 200, { 'Content-Type': 'application/json' },
-			'{ "query": { "userinfo": { "groups": [ "unused" ], "rights": [ "read", "edit", "createtalk" ] } } }'
-		] );
-
-		return mw.user.getRights().then( function ( rights ) {
+		mw.user.getRights().done( function ( rights ) {
 			assert.deepEqual( rights, [ 'read', 'edit', 'createtalk' ], 'Result (promise)' );
 		} );
+
+		this.server.respondWith( /meta=userinfo/, function ( request ) {
+			request.respond( 200, { 'Content-Type': 'application/json' },
+				'{ "query": { "userinfo": { "groups": [ "unused" ], "rights": [ "read", "edit", "createtalk" ] } } }'
+			);
+		} );
+
+		this.server.respond();
 	} );
 
 	QUnit.test( 'generateRandomSessionId', function ( assert ) {

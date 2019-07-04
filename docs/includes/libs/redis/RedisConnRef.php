@@ -33,10 +33,9 @@ class RedisConnRef implements LoggerAwareInterface {
 	protected $pool;
 	/** @var Redis */
 	protected $conn;
-	/** @var string */
-	protected $server;
-	/** @var string|null */
-	protected $lastError;
+
+	protected $server; // string
+	protected $lastError; // string
 
 	/**
 	 * @var LoggerInterface
@@ -45,16 +44,22 @@ class RedisConnRef implements LoggerAwareInterface {
 
 	/**
 	 * No authentication errors.
+	 *
+	 * @var constant
 	 */
 	const AUTH_NO_ERROR = 200;
 
 	/**
 	 * Temporary authentication error; recovered by reauthenticating.
+	 *
+	 * @var constant
 	 */
 	const AUTH_ERROR_TEMPORARY = 201;
 
 	/**
 	 * Authentication error was permanent and could not be recovered.
+	 *
+	 * @var constant
 	 */
 	const AUTH_ERROR_PERMANENT = 202;
 
@@ -205,7 +210,7 @@ class RedisConnRef implements LoggerAwareInterface {
 	/**
 	 * Handle authentication errors and automatically reauthenticate.
 	 *
-	 * @return int self::AUTH_NO_ERROR, self::AUTH_ERROR_TEMPORARY, or self::AUTH_ERROR_PERMANENT
+	 * @return constant self::AUTH_NO_ERROR, self::AUTH_ERROR_TEMPORARY, or self::AUTH_ERROR_PERMANENT
 	 */
 	private function checkAuthentication() {
 		if ( preg_match( '/^ERR operation not permitted\b/', $this->conn->getLastError() ) ) {

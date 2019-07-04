@@ -1,5 +1,6 @@
 <?php
 
+
 /**
  * @group large
  * @covers Pbkdf2Password
@@ -12,6 +13,7 @@ class Pbkdf2PasswordFallbackTest extends PasswordTestCase {
 				'algo' => 'sha256',
 				'cost' => '10000',
 				'length' => '128',
+				'use-hash-extension' => false,
 			],
 		];
 	}

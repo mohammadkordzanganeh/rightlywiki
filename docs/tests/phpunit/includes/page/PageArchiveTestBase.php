@@ -43,14 +43,12 @@ abstract class PageArchiveTestBase extends MediaWikiTestCase {
 			[
 				'page',
 				'revision',
-				'revision_comment_temp',
 				'ip_changes',
 				'text',
 				'archive',
 				'recentchanges',
 				'logging',
 				'page_props',
-				'comment',
 			]
 		);
 	}
@@ -82,7 +80,8 @@ abstract class PageArchiveTestBase extends MediaWikiTestCase {
 
 		$this->tablesUsed += $this->getMcrTablesToReset();
 
-		$this->setMwGlobals( 'wgActorTableSchemaMigrationStage', SCHEMA_COMPAT_NEW );
+		$this->setMwGlobals( 'wgCommentTableSchemaMigrationStage', MIGRATION_OLD );
+		$this->setMwGlobals( 'wgActorTableSchemaMigrationStage', SCHEMA_COMPAT_OLD );
 		$this->setMwGlobals( 'wgContentHandlerUseDB', $this->getContentHandlerUseDB() );
 		$this->setMwGlobals(
 			'wgMultiContentRevisionSchemaMigrationStage',

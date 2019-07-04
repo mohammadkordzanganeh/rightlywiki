@@ -15,7 +15,7 @@
  * along with MultimediaViewer.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-( function () {
+( function ( mw ) {
 	/**
 	 * Represents image width information.
 	 *
@@ -79,4 +79,4 @@
 
 	mw.mmv.model.ThumbnailWidth = ThumbnailWidth;
 
-}() );
+}( mediaWiki ) );

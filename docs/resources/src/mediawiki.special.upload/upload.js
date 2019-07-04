@@ -161,7 +161,7 @@
 		if ( ajaxUploadDestCheck ) {
 			// Insert an event handler that fetches upload warnings when wpDestFile
 			// has been changed
-			$( '#wpDestFile' ).on( 'change', function () {
+			$( '#wpDestFile' ).change( function () {
 				uploadWarning.checkNow( $( this ).val() );
 			} );
 			// Insert a row where the warnings will be displayed just below the
@@ -177,7 +177,7 @@
 
 		if ( mw.config.get( 'wgAjaxLicensePreview' ) && $license.length ) {
 			// License selector check
-			$license.on( 'change', function () {
+			$license.change( function () {
 				// We might show a preview
 				uploadTemplatePreview.getPreview( $license, $( '#mw-license-preview' ) );
 			} );
@@ -193,7 +193,7 @@
 
 		// fillDestFile setup
 		mw.config.get( 'wgUploadSourceIds' ).forEach( function ( sourceId ) {
-			$( '#' + sourceId ).on( 'change', function () {
+			$( '#' + sourceId ).change( function () {
 				var path, slash, backslash, fname;
 				if ( !mw.config.get( 'wgUploadAutoFill' ) ) {
 					return;
@@ -490,7 +490,7 @@
 				};
 				img.src = dataURL;
 			}, mw.config.get( 'wgFileCanRotate' ) ? function ( data ) {
-				var jpegmeta = require( 'mediawiki.libs.jpegmeta' );
+				var jpegmeta = mw.loader.require( 'mediawiki.libs.jpegmeta' );
 				try {
 					meta = jpegmeta( data, file.fileName );
 					// eslint-disable-next-line no-underscore-dangle, camelcase
@@ -537,7 +537,7 @@
 		/* Initialization */
 		if ( hasFileAPI() ) {
 			// Update thumbnail when the file selection control is updated.
-			$( '#wpUploadFile' ).on( 'change', function () {
+			$( '#wpUploadFile' ).change( function () {
 				var file;
 				clearPreview();
 				if ( this.files && this.files.length ) {
@@ -608,7 +608,7 @@
 			namespace: 'uploadwarning'
 		} );
 
-		$uploadForm.on( 'submit', function () {
+		$uploadForm.submit( function () {
 			allowCloseWindow.release();
 		} );
 	} );
@@ -631,7 +631,7 @@
 
 			// Change tabindex only when main div has focus
 			if ( $( this ).is( ':focus' ) ) {
-				$( this ).find( 'a' ).first().trigger( 'focus' );
+				$( this ).find( 'a' ).first().focus();
 				setEditTabindex( '0' );
 			}
 		} );

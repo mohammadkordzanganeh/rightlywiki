@@ -1,6 +1,6 @@
 .mw-apisandbox-toolbar {
 	background: #fff;
-	position: -webkit-sticky;
+	-webkit-position: sticky;
 	position: sticky;
 	top: 0;
 	margin-bottom: -1px;

@@ -12,7 +12,7 @@ class QuickArrayReader {
 	/**
 	 * @param string $string
 	 */
-	public function __construct( $string ) {
+	function __construct( $string ) {
 		$scalarTypes = [
 			T_LNUMBER => true,
 			T_DNUMBER => true,
@@ -98,9 +98,9 @@ class QuickArrayReader {
 							if ( isset( $scalarTypes[$tokens[$i][0]] ) ) {
 								$val = $this->parseScalar( $tokens[$i] );
 							}
-							Wikimedia\suppressWarnings();
+							wfSuppressWarnings();
 							$buildval[$key] = $val;
-							Wikimedia\restoreWarnings();
+							wfRestoreWarnings();
 							while ( isset( $skipTypes[$tokens[++$i][0]] ) ) {
 							}
 
@@ -118,9 +118,9 @@ class QuickArrayReader {
 					if ( is_null( $varindex ) ) {
 						$this->vars[$varname] = $buildval;
 					} else {
-						Wikimedia\suppressWarnings();
+						wfSuppressWarnings();
 						$this->vars[$varname][$varindex] = $buildval;
-						Wikimedia\restoreWarnings();
+						wfRestoreWarnings();
 					}
 					while ( isset( $skipTypes[$tokens[++$i][0]] ) ) {
 					}
@@ -157,7 +157,7 @@ class QuickArrayReader {
 	 *
 	 * @return mixed Parsed value
 	 */
-	private function parseScalar( $token ) {
+	function parseScalar( $token ) {
 		if ( is_array( $token ) ) {
 			$str = $token[1];
 		} else {
@@ -172,16 +172,16 @@ class QuickArrayReader {
 				[ '\\\'' => '\'', '\\\\' => '\\' ] );
 		}
 
-		Wikimedia\suppressWarnings();
+		wfSuppressWarnings();
 		if ( $str !== '' && $str[0] == '"' ) {
 			// Double-quoted string
 			// @fixme trim() call is due to mystery bug where whitespace gets
 			// appended to the token; without it we ended up reading in the
 			// extra quote on the end!
-			Wikimedia\restoreWarnings();
+			wfRestoreWarnings();
 			return stripcslashes( substr( trim( $str ), 1, -1 ) );
 		}
-		Wikimedia\restoreWarnings();
+		wfRestoreWarnings();
 
 		if ( substr( $str, 0, 4 ) === 'true' ) {
 			return true;
@@ -204,7 +204,7 @@ class QuickArrayReader {
 	 * @param string $varname
 	 * @return null|string|array
 	 */
-	public function getVar( $varname ) {
+	function getVar( $varname ) {
 		if ( isset( $this->vars[$varname] ) ) {
 			return $this->vars[$varname];
 		} else {

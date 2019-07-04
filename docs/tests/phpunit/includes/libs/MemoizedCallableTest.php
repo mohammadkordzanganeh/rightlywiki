@@ -1,6 +1,27 @@
 <?php
 /**
- * PHPUnit tests for MemoizedCallable class.
+ * A MemoizedCallable subclass that stores function return values
+ * in an instance property rather than APC or APCu.
+ */
+class ArrayBackedMemoizedCallable extends MemoizedCallable {
+	private $cache = [];
+
+	protected function fetchResult( $key, &$success ) {
+		if ( array_key_exists( $key, $this->cache ) ) {
+			$success = true;
+			return $this->cache[$key];
+		}
+		$success = false;
+		return false;
+	}
+
+	protected function storeResult( $key, $result ) {
+		$this->cache[$key] = $result;
+	}
+}
+
+/**
+ * PHP Unit tests for MemoizedCallable class.
  * @covers MemoizedCallable
  */
 class MemoizedCallableTest extends PHPUnit\Framework\TestCase {
@@ -117,26 +138,5 @@ class MemoizedCallableTest extends PHPUnit\Framework\TestCase {
 	 */
 	public function testNotCallable() {
 		$memoized = new MemoizedCallable( 14 );
-	}
-}
-
-/**
- * A MemoizedCallable subclass that stores function return values
- * in an instance property rather than APC or APCu.
- */
-class ArrayBackedMemoizedCallable extends MemoizedCallable {
-	private $cache = [];
-
-	protected function fetchResult( $key, &$success ) {
-		if ( array_key_exists( $key, $this->cache ) ) {
-			$success = true;
-			return $this->cache[$key];
-		}
-		$success = false;
-		return false;
-	}
-
-	protected function storeResult( $key, $result ) {
-		$this->cache[$key] = $result;
 	}
 }

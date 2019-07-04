@@ -45,7 +45,7 @@ class TextContentHandler extends ContentHandler {
 	public function serializeContent( Content $content, $format = null ) {
 		$this->checkFormat( $format );
 
-		return $content->getText();
+		return $content->getNativeData();
 	}
 
 	/**

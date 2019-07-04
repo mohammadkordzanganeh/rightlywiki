@@ -222,10 +222,12 @@ class CreditsAction extends FormlessAction {
 		$link = $this->link( $user );
 		if ( $user->isAnon() ) {
 			return $this->msg( 'anonuser' )->rawParams( $link )->parse();
-		} elseif ( $this->canShowRealUserName() && $user->getRealName() ) {
-			return $link;
 		} else {
-			return $this->msg( 'siteuser' )->rawParams( $link )->params( $user->getName() )->escaped();
+			if ( $this->canShowRealUserName() && $user->getRealName() ) {
+				return $link;
+			} else {
+				return $this->msg( 'siteuser' )->rawParams( $link )->params( $user->getName() )->escaped();
+			}
 		}
 	}
 

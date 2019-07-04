@@ -4,21 +4,16 @@
  * @package SpamBlacklist
  */
 
-/* eslint-env node, es6 */
+/*jshint node:true */
 module.exports = function ( grunt ) {
-	var conf = grunt.file.readJSON( 'extension.json' );
-
 	grunt.loadNpmTasks( 'grunt-banana-checker' );
-	grunt.loadNpmTasks( 'grunt-eslint' );
 	grunt.loadNpmTasks( 'grunt-jsonlint' );
+	grunt.loadNpmTasks( 'grunt-contrib-jshint' );
 
+	var conf = grunt.file.readJSON( 'extension.json' );
 	grunt.initConfig( {
 		banana: conf.MessagesDirs,
-		eslint: {
-			options: {
-				reportUnusedDisableDirectives: true,
-				cache: true
-			},
+		jshint: {
 			all: [
 				'**/*.js',
 				'!node_modules/**',
@@ -34,6 +29,6 @@ module.exports = function ( grunt ) {
 		}
 	} );
 
-	grunt.registerTask( 'test', [ 'eslint', 'jsonlint', 'banana' ] );
+	grunt.registerTask( 'test', [ 'jsonlint', 'banana', 'jshint' ] );
 	grunt.registerTask( 'default', 'test' );
 };

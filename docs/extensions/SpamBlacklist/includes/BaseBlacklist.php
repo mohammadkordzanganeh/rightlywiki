@@ -57,7 +57,7 @@ abstract class BaseBlacklist {
 	 *
 	 * @param array $settings
 	 */
-	public function __construct( $settings = [] ) {
+	function __construct( $settings = [] ) {
 		foreach ( $settings as $name => $value ) {
 			$this->$name = $value;
 		}
@@ -173,7 +173,6 @@ abstract class BaseBlacklist {
 			}
 		}
 
-		// @phan-suppress-next-line PhanTypeMismatchForeach += makes Phan think $files is a number
 		foreach ( $files as $fileName ) {
 			$matches = [];
 			if ( preg_match( '/^DB: (\w*) (.*)$/', $fileName, $matches ) ) {
@@ -217,7 +216,7 @@ abstract class BaseBlacklist {
 	 * Will be cached locally across multiple invocations.
 	 * @return array set of regular expressions, potentially empty.
 	 */
-	public function getBlacklists() {
+	function getBlacklists() {
 		if ( $this->regexes === false ) {
 			$this->regexes = array_merge(
 				$this->getLocalBlacklists(),
@@ -268,7 +267,7 @@ abstract class BaseBlacklist {
 	 * Fetch (possibly cached) remote blacklists.
 	 * @return array
 	 */
-	private function getSharedBlacklists() {
+	function getSharedBlacklists() {
 		$listType = $this->getBlacklistType();
 
 		wfDebugLog( 'SpamBlacklist', "Loading $listType regex..." );
@@ -306,7 +305,7 @@ abstract class BaseBlacklist {
 	 *
 	 * @note this method is unused atm
 	 */
-	public function clearCache() {
+	function clearCache() {
 		$listType = $this->getBlacklistType();
 
 		$cache = ObjectCache::getMainWANInstance();
@@ -317,7 +316,7 @@ abstract class BaseBlacklist {
 		wfDebugLog( 'SpamBlacklist', "$listType blacklist local cache cleared.\n" );
 	}
 
-	private function buildSharedBlacklists() {
+	function buildSharedBlacklists() {
 		$regexes = [];
 		$listType = $this->getBlacklistType();
 		# Load lists
@@ -345,7 +344,7 @@ abstract class BaseBlacklist {
 		return $regexes;
 	}
 
-	private function getHttpText( $fileName ) {
+	function getHttpText( $fileName ) {
 		global $wgDBname, $messageMemc;
 		$listType = $this->getBlacklistType();
 
@@ -383,7 +382,7 @@ abstract class BaseBlacklist {
 	 * @param string $article
 	 * @return string
 	 */
-	private function getArticleText( $wiki, $article ) {
+	function getArticleText( $wiki, $article ) {
 		wfDebugLog( 'SpamBlacklist',
 			"Fetching {$this->getBlacklistType()} blacklist from '$article' on '$wiki'...\n" );
 

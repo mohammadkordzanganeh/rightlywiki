@@ -23,8 +23,6 @@
  * @file
  */
 
-use MediaWiki\Shell\Shell;
-
 /**
  * @ingroup Dump
  */
@@ -51,8 +49,8 @@ class Dump7ZipOutput extends DumpPipeOutput {
 	 */
 	function setup7zCommand( $file ) {
 		$command = "7za a -bd -si -mx=";
-		$command .= Shell::escape( $this->compressionLevel ) . ' ';
-		$command .= Shell::escape( $file );
+		$command .= wfEscapeShellArg( $this->compressionLevel ) . ' ';
+		$command .= wfEscapeShellArg( $file );
 		// Suppress annoying useless crap from p7zip
 		// Unfortunately this could suppress real error messages too
 		$command .= ' >' . wfGetNull() . ' 2>&1';

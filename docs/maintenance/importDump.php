@@ -112,8 +112,8 @@ TEXT
 			$this->setNsfilter( explode( '|', $this->getOption( 'namespaces' ) ) );
 		}
 
-		if ( $this->hasArg( 0 ) ) {
-			$this->importFromFile( $this->getArg( 0 ) );
+		if ( $this->hasArg() ) {
+			$this->importFromFile( $this->getArg() );
 		} else {
 			$this->importFromStdin();
 		}

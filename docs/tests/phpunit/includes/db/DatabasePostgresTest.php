@@ -1,6 +1,5 @@
 <?php
 
-use Wikimedia\Rdbms\Database;
 use Wikimedia\Rdbms\IDatabase;
 use Wikimedia\Rdbms\DatabasePostgres;
 use Wikimedia\ScopedCallback;
@@ -180,10 +179,4 @@ class DatabasePostgresTest extends MediaWikiTestCase {
 		$this->doTestInsertSelectIgnore();
 	}
 
-	/**
-	 * @covers \Wikimedia\Rdbms\DatabasePostgres::getAttributes
-	 */
-	public function testAttributes() {
-		$this->assertTrue( DatabasePostgres::getAttributes()[Database::ATTR_SCHEMAS_AS_TABLE_GROUPS] );
-	}
 }

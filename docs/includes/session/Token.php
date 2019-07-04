@@ -34,13 +34,8 @@ class Token {
 	 * editing from certain broken proxies. */
 	const SUFFIX = '+\\';
 
-	/** @var string */
 	private $secret = '';
-
-	/** @var string */
 	private $salt = '';
-
-	/** @var bool */
 	private $new = false;
 
 	/**

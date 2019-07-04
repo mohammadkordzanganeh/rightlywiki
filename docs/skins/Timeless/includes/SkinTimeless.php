@@ -5,14 +5,8 @@
  * @ingroup Skins
  */
 class SkinTimeless extends SkinTemplate {
-	/** @var string */
-	public $skinname = 'timeless';
-
-	/** @var string */
-	public $stylename = 'Timeless';
-
-	/** @var string */
-	public $template = 'TimelessTemplate';
+	public $skinname = 'timeless', $stylename = 'Timeless',
+		$template = 'TimelessTemplate';
 
 	/**
 	 * @param OutputPage $out
@@ -44,7 +38,7 @@ class SkinTimeless extends SkinTemplate {
 	 *
 	 * @param OutputPage $out
 	 */
-	public function setupSkinUserCss( OutputPage $out ) {
+	function setupSkinUserCss( OutputPage $out ) {
 		parent::setupSkinUserCss( $out );
 	}
 }
